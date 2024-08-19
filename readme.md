@@ -38,14 +38,14 @@ import Button from "ui/button"
 
 fn Counter(): View {
   let count = state(0)
-      return (
-          <View>
-              <Text>Count: {count}</Text>
-              <Button onPress={() => count.set(count.get() + 1)}>
-                  Increment
-              </Button>
-          </View>
-      )
+  return (
+    <View>
+        <Text>Count: {count}</Text>
+        <Button onPress={() => count.set(count.get() + 1)}>
+            Increment
+        </Button>
+    </View>
+  )
 }
 
 ```
