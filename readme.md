@@ -21,7 +21,7 @@ Basic Photo Capture and Save:
 import camera from "os/camera"
 import storage from "os/storage"
 
-fn takePhotoAndSave() -> Void {
+fn takePhotoAndSave(): void {
     let photo = camera.capture()
     storage.save(photo, "photo.jpg")
 }
@@ -36,7 +36,7 @@ import View from "ui/view"
 import Text from "ui/text"
 import Button from "ui/button"
 
-fn Counter() -> View {
+fn Counter(): View {
   let count = state(0)
       return (
           <View>
@@ -65,10 +65,10 @@ routes = {
 }
 
 middlewares = {
-    authCheck: fn() -> Bool {
+    authCheck: fn(): bool {
         return auth.isAuthenticated()
     },
-    loadUserData: fn(userId: Int) -> User {
+    loadUserData: fn(userId: Int): User {
         return api.getUserData(userId)
     },
 }
@@ -77,7 +77,7 @@ middlewares = {
 Navigation with Middleware:
 
 ```rs
-fn navigate(route: String, params: Dict) -> Void {
+fn navigate(route: string, params: dict): void {
     let routeConfig = config.routes[route]
 
     // Execute middlewares before navigating
