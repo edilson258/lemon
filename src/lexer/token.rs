@@ -5,67 +5,61 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub enum TokenType {
   // Keywords
-  Fn,       // fn
-  Try,      // try
-  Let,      // let
-  If,       // if
-  Else,     // else
-  Return,   // return
-  For,      // for
-  In,       // in
-  While,    // while
-  Break,    // break
-  Continue, // continue
-  True,     // true
-  False,    // false
-  Null,     // null
-  This,     // this
-  Import,   // import
-  From,     // from
-  Keyword,  // fn, let, etc.
+  Fn,    // fn
+  Let,   // let
+  If,    // if
+  Else,  // else
+  Ret,   // return
+  True,  // true
+  False, // false
+  Null,  // null
+  Use,   // use (e.g., use { stdin, stdout } "io")
 
   // Operators
-  Plus,               // +
-  Minus,              // -
-  Star,               // *
-  Slash,              // /
-  Assign,             // =
-  PlusAssign,         // +=
-  MinusAssign,        // -=
-  StarAssign,         // *=
-  SlashAssign,        // /=
-  Equal,              // ==
-  NotEqual,           // !=
-  LessThan,           // <
-  GreaterThan,        // >
-  LessThanOrEqual,    // <=
-  GreaterThanOrEqual, // >=
-  And,                // &&
-  Or,                 // ||
-  Dot,                // .
-  Bang,               // !
-  Question,           // ?
-  Colon,              // :
+  Plus,      // +
+  Minus,     // -
+  Star,      // *
+  Slash,     // /
+  Assign,    // =
+  PlusEq,    // +=
+  MinusEq,   // -=
+  StarEq,    // *=
+  SlashEq,   // /=
+  Eq,        // ==
+  NotEq,     // !=
+  Less,      // <
+  Greater,   // >
+  LessEq,    // <=
+  GreaterEq, // >=
+  Extract,   // ?= (Error extraction operator)
+  Arrow,     // =>
+  And,       // &&
+  Or,        // ||
+  Dot,       // .
+  Bang,      // !
+  Quest,     // ?
+  Colon,     // :
 
   // Delimiters
-  OpenParen,    // (
-  CloseParen,   // )
-  OpenBrace,    // {
-  CloseBrace,   // }
-  OpenBracket,  // [
-  CloseBracket, // ]
-  Semicolon,    // ;
-  Comma,        // ,
+  LParen,   // (
+  RParen,   // )
+  LBrace,   // {
+  RBrace,   // }
+  LBracket, // [
+  RBracket, // ]
+  Semi,     // ;
+  Comma,    // ,
+  // Identifiers and Literals
+  Ident,  // Identifiers like variables and functions (foo)
+  String, // String literals ("foo")
+  Num,    // Numeric literals (42)
+  Bool,   // true, false
 
-  // Identifiers
-  Identifier, // foo
-  String,     // "foo"
-  Number,     // 42
-  Boolean,    // true
-
-  // Misc
-  Comment,
-  EOF,
+  // Comments
+  LineCmt,  // Line comments (// ...)
+  BlockCmt, // Block comments (/* ... */)
+  // Miscellaneous
+  EOF, // End of file
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
@@ -81,29 +75,20 @@ impl Token {
   }
 
   pub fn create_number(text: String, range: Range) -> Self {
-    Self::new(TokenType::Number, Some(text), range)
+    Self::new(TokenType::Num, Some(text), range)
   }
 
   pub fn create_identifier(text: String, range: Range) -> Self {
     match text.as_str() {
       "fn" => Self::new(TokenType::Fn, None, range),
-      "import" => Self::new(TokenType::Import, None, range),
-      "from" => Self::new(TokenType::From, None, range),
-      "try" => Self::new(TokenType::Try, None, range),
       "let" => Self::new(TokenType::Let, None, range),
       "if" => Self::new(TokenType::If, None, range),
       "else" => Self::new(TokenType::Else, None, range),
-      "return" => Self::new(TokenType::Return, None, range),
-      "for" => Self::new(TokenType::For, None, range),
-      "in" => Self::new(TokenType::In, None, range),
-      "while" => Self::new(TokenType::While, None, range),
-      "break" => Self::new(TokenType::Break, None, range),
-      "continue" => Self::new(TokenType::Continue, None, range),
+      "return" => Self::new(TokenType::Ret, None, range),
       "true" => Self::new(TokenType::True, None, range),
       "false" => Self::new(TokenType::False, None, range),
       "null" => Self::new(TokenType::Null, None, range),
-      "this" => Self::new(TokenType::This, None, range),
-      _ => Self::new(TokenType::Identifier, Some(text), range),
+      _ => Self::new(TokenType::Ident, Some(text), range),
     }
   }
 
@@ -112,11 +97,7 @@ impl Token {
   }
 
   pub fn create_boolean(text: String, range: Range) -> Self {
-    Self::new(TokenType::Boolean, Some(text), range)
-  }
-
-  pub fn create_comment(text: String, range: Range) -> Self {
-    Self::new(TokenType::Comment, Some(text), range)
+    Self::new(TokenType::Bool, Some(text), range)
   }
 
   pub fn create_eof(range: Range) -> Self {

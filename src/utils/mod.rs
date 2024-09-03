@@ -1,5 +1,6 @@
 pub mod highlight;
 pub mod range;
+pub mod source;
 pub fn match_number(character: char) -> bool {
   "1234567890.".contains(character)
 }

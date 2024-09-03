@@ -1,2 +1,3 @@
 mod ast;
-mod parse;
+mod parser;
+pub use parser::Parser;

@@ -2,66 +2,61 @@ use super::token::{Token, TokenType};
 
 use crate::{
   diagnostics::report::report_and_exit,
-  utils::{match_number, range::Range},
+  utils::{match_number, range::Range, source::Source},
 };
 
 pub struct Lexer<'l> {
-  raw: &'l str,
-  file_name: &'l str,
   cursor: usize,
   pos_cursor: usize,
+  souce: Source<'l>,
 }
 
 impl<'l> Lexer<'l> {
-  pub fn new(raw: &'l str, file_name: &'l str) -> Self {
-    Self { raw, cursor: 0, pos_cursor: 0, file_name }
+  pub fn new(source: Source<'l>) -> Self {
+    Self { cursor: 0, pos_cursor: 0, souce: source }
   }
 
-  pub fn lex_all(&mut self) -> Vec<Token> {
+  pub fn all_tokens(&mut self) -> Vec<Token> {
     let mut tokens = Vec::new();
     while !self.is_end() {
-      let current = self.lex_next();
+      let current = self.next_token();
       tokens.push(current);
     }
     tokens
   }
 
-  pub fn lex_peek(&mut self) -> Token {
-    // Implement as needed
-    unimplemented!()
-  }
-
-  pub fn lex_next(&mut self) -> Token {
+  pub fn next_token(&mut self) -> Token {
     self.skip_whitespace();
     if self.is_end() {
       let range = self.create_range();
       return Token::create_eof(range);
     }
+
     match self.peek() {
       '0'..='9' => self.read_number(),
       '"' => self.read_string(),
       'a'..='z' | 'A'..='Z' | '_' | '$' => self.read_identifier(),
-      '-' => self.read_check_ahead("-=", TokenType::MinusAssign, TokenType::Minus),
-      '+' => self.read_check_ahead("+=", TokenType::PlusAssign, TokenType::Plus),
-      '*' => self.read_check_ahead("*=", TokenType::StarAssign, TokenType::Star),
-      '/' => self.read_check_ahead("/=", TokenType::SlashAssign, TokenType::Slash),
-      '=' => self.read_check_ahead("==", TokenType::Equal, TokenType::Assign),
-      '!' => self.read_check_ahead("!=", TokenType::NotEqual, TokenType::Bang),
-      '<' => self.read_check_ahead("<=", TokenType::LessThanOrEqual, TokenType::LessThan),
-      '>' => self.read_check_ahead(">=", TokenType::GreaterThanOrEqual, TokenType::GreaterThan),
-      '(' => self.read_simple_token(TokenType::OpenParen, "("),
-      ')' => self.read_simple_token(TokenType::CloseParen, ")"),
-      '{' => self.read_simple_token(TokenType::OpenBrace, "{"),
-      '}' => self.read_simple_token(TokenType::CloseBrace, "}"),
-      '[' => self.read_simple_token(TokenType::OpenBracket, "["),
-      ']' => self.read_simple_token(TokenType::CloseBracket, "]"),
-      ';' => self.read_simple_token(TokenType::Semicolon, ";"),
+      '-' => self.read_check_ahead("-=", TokenType::MinusEq, TokenType::Minus),
+      '+' => self.read_check_ahead("+=", TokenType::PlusEq, TokenType::Plus),
+      '*' => self.read_check_ahead("*=", TokenType::StarEq, TokenType::Star),
+      '/' => self.read_check_ahead("/=", TokenType::SlashEq, TokenType::Slash),
+      '=' => self.read_check_ahead("==", TokenType::Eq, TokenType::Assign),
+      '!' => self.read_check_ahead("!=", TokenType::NotEq, TokenType::Bang),
+      '<' => self.read_check_ahead("<=", TokenType::LessEq, TokenType::Less),
+      '>' => self.read_check_ahead(">=", TokenType::GreaterEq, TokenType::Greater),
+      '(' => self.read_simple_token(TokenType::LParen, "("),
+      ')' => self.read_simple_token(TokenType::RParen, ")"),
+      '{' => self.read_simple_token(TokenType::LBrace, "{"),
+      '}' => self.read_simple_token(TokenType::RBrace, "}"),
+      '[' => self.read_simple_token(TokenType::LBracket, "["),
+      ']' => self.read_simple_token(TokenType::RBracket, "]"),
+      ';' => self.read_simple_token(TokenType::Semi, ";"),
       ',' => self.read_simple_token(TokenType::Comma, ","),
       '.' => self.read_simple_token(TokenType::Dot, "."),
       ':' => self.read_simple_token(TokenType::Colon, ":"),
       _ => {
         let range = self.create_range();
-        report_and_exit("unknown token type", &range, self.raw, self.file_name);
+        report_and_exit("unknown token type", &range, &self.souce);
       }
     }
   }
@@ -104,11 +99,11 @@ impl<'l> Lexer<'l> {
     while !self.is_end() && predicate(self.peek()) {
       self.advance();
     }
-    self.raw[start..self.cursor].to_string()
+    self.souce.raw[start..self.cursor].to_string()
   }
 
   fn advance(&mut self) {
-    if let Some(c) = self.raw[self.cursor..].chars().next() {
+    if let Some(c) = self.souce.raw[self.cursor..].chars().next() {
       self.cursor += c.len_utf8();
     }
   }
@@ -127,7 +122,7 @@ impl<'l> Lexer<'l> {
       let found = self.peek_many(text.len());
       self.advance_by(text.len());
       let text_error = format!("expected '{}', found '{}'", text, found);
-      report_and_exit(&text_error, &self.create_range(), self.raw, self.file_name);
+      report_and_exit(&text_error, &self.create_range(), &self.souce);
     }
   }
 
@@ -135,20 +130,20 @@ impl<'l> Lexer<'l> {
     if self.starts_with(text) {
       self.advance_by(text.len());
     } else {
-      report_and_exit(message, &self.create_range(), self.raw, self.file_name);
+      report_and_exit(message, &self.create_range(), &self.souce);
     }
   }
 
   fn is_end(&self) -> bool {
-    self.cursor >= self.raw.len()
+    return self.cursor >= self.souce.len;
   }
 
   fn peek(&self) -> char {
-    self.raw[self.cursor..].chars().next().unwrap_or('\0') // TODO: handle errors
+    return self.souce.raw[self.cursor..].chars().next().unwrap_or('\0');
   }
 
   fn peek_many(&self, count: usize) -> String {
-    self.raw[self.cursor..].chars().take(count).collect()
+    return self.souce.raw[self.cursor..].chars().take(count).collect();
   }
 
   fn advance_by(&mut self, count: usize) {
@@ -158,7 +153,7 @@ impl<'l> Lexer<'l> {
   }
 
   fn starts_with(&self, s: &str) -> bool {
-    self.raw[self.cursor..].starts_with(s)
+    return self.souce.raw[self.cursor..].starts_with(s);
   }
 
   fn skip_whitespace(&mut self) {

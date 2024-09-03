@@ -1,6 +1,8 @@
 #![allow(dead_code, unused_variables)]
 
-use lexer::lex::Lexer;
+use lexer::Lexer;
+use parser::Parser;
+use utils::source::Source;
 
 mod cli;
 pub mod diagnostics;
@@ -27,9 +29,10 @@ fn main() {
   }
 }
 
-fn read_file(path_name: &str) -> String {
-  let raw = std::fs::read_to_string(path_name).unwrap();
-  return raw;
+fn read_file<'s>(path_name: &'s str) -> Source<'s> {
+  let raw = std::fs::read_to_string(path_name).expect("Failed to read file");
+  let source = Source::new(raw, path_name);
+  return source;
 }
 
 fn run_check(path_name: &str) {
@@ -37,11 +40,11 @@ fn run_check(path_name: &str) {
 }
 
 fn run_compile(path_name: &str) {
-  println!("compiling...");
-  let raw = read_file(path_name);
-  let mut lexer = Lexer::new(&raw, path_name);
-  let tokens = lexer.lex_all();
-  tokens.iter().for_each(|token| println!("{:#?}", token));
+  // println!("compiling...");
+  let source = read_file(path_name);
+  let mut lexer = Lexer::new(source);
+  let mut parser = Parser::new(&mut lexer);
+  let tokens = parser.parse();
 }
 
 fn run(path_name: &str) {
