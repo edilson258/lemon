@@ -11,3 +11,7 @@ impl Range {
     Self { start, end }
   }
 }
+
+pub fn create_range_from(range_start: &Range, range_end: &Range) -> Range {
+  Range { start: range_start.start, end: range_end.end }
+}

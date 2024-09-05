@@ -5,15 +5,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub enum TokenType {
   // Keywords
-  Fn,    // fn
-  Let,   // let
-  If,    // if
-  Else,  // else
-  Ret,   // return
-  True,  // true
-  False, // false
-  Null,  // null
-  Use,   // use (e.g., use { stdin, stdout } "io")
+  Fn,     // fn
+  Let,    // let
+  If,     // if
+  Else,   // else
+  Ret,    // return
+  True,   // true
+  False,  // false
+  Null,   // null
+  Use,    // use (e.g., use { stdin, stdout } "io")
+  Ensure, // ensure
 
   // Operators
   Plus,      // +
@@ -109,8 +110,8 @@ impl Token {
     &self.text.as_ref().expect("Token text is None")
   }
 
-  pub fn get_range(&self) -> &Range {
-    &self.range
+  pub fn get_range(&self) -> Range {
+    self.range.clone()
   }
 
   pub fn get_kind(&self) -> &TokenType {

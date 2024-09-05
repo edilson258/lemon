@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Source<'s> {
   pub raw: String,
   pub name: &'s str,

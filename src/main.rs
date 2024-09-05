@@ -6,6 +6,7 @@ use utils::source::Source;
 
 mod cli;
 pub mod diagnostics;
+pub mod formatter;
 pub mod lexer;
 pub mod parser;
 pub mod utils;
@@ -40,11 +41,12 @@ fn run_check(path_name: &str) {
 }
 
 fn run_compile(path_name: &str) {
-  // println!("compiling...");
   let source = read_file(path_name);
   let mut lexer = Lexer::new(source);
   let mut parser = Parser::new(&mut lexer);
-  let tokens = parser.parse();
+  let ast = parser.parse();
+
+  println!("{:#?}", ast);
 }
 
 fn run(path_name: &str) {

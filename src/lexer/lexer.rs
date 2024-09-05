@@ -9,11 +9,12 @@ pub struct Lexer<'l> {
   cursor: usize,
   pos_cursor: usize,
   souce: Source<'l>,
+  cached: Option<Token>,
 }
 
 impl<'l> Lexer<'l> {
   pub fn new(source: Source<'l>) -> Self {
-    Self { cursor: 0, pos_cursor: 0, souce: source }
+    Self { cursor: 0, pos_cursor: 0, souce: source, cached: None }
   }
 
   pub fn all_tokens(&mut self) -> Vec<Token> {
@@ -25,7 +26,20 @@ impl<'l> Lexer<'l> {
     tokens
   }
 
+  pub fn peek_token(&mut self) -> Token {
+    if self.cached.is_none() {
+      self.cached = Some(self.next_token());
+    }
+    self.cached.clone().unwrap()
+  }
+
   pub fn next_token(&mut self) -> Token {
+    if self.cached.is_some() {
+      let current_token = self.cached.clone().unwrap();
+      self.cached = None;
+      return current_token;
+    }
+
     self.skip_whitespace();
     if self.is_end() {
       let range = self.create_range();
@@ -134,7 +148,7 @@ impl<'l> Lexer<'l> {
     }
   }
 
-  fn is_end(&self) -> bool {
+  pub fn is_end(&self) -> bool {
     return self.cursor >= self.souce.len;
   }
 
@@ -161,5 +175,9 @@ impl<'l> Lexer<'l> {
       self.advance();
       self.pos_cursor = self.cursor;
     }
+  }
+
+  pub fn take_souce(&self) -> Source {
+    self.souce.clone()
   }
 }
