@@ -1,9 +1,8 @@
-#![allow(dead_code, unused_variables)]
+#![allow(unused_variables)]
 
 use lexer::Lexer;
 use parser::Parser;
 use utils::source::Source;
-
 mod cli;
 pub mod diagnostics;
 pub mod formatter;
@@ -22,6 +21,7 @@ fn main() {
       let path_name = matches.get_one::<String>("file").unwrap();
       run_compile(path_name);
     }
+
     Some(("run", matches)) => {
       let path_name = matches.get_one::<String>("file").unwrap();
       run(path_name);
