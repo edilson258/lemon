@@ -5,26 +5,27 @@ use crate::utils::{
   range::Range,
   source::Source,
 };
-use code_highlighter::{highlight_error, highlight_warning};
+use code_highlighter::{highlight_error_with_context, highlight_warning_with_context};
 
 fn report_error(message: &str, range: &Range, source: &Source, warning: bool) {
+  let context = 2; // number of lines of context
   println!("");
+
   if !warning {
     println!("{} {}", highlight_text_with_red("ERROR >>>"), highlight_text_with_white(message));
   } else {
     let warning = highlight_text_with_yellow("WARNING >>>");
     let message = format!("{} {}", warning, highlight_text_with_white(message));
-
     println!("{}", message);
   }
   let file_highlight = highlight_text_with_cyan(&source.name);
   println!("{}", file_highlight);
   println!("");
   if warning {
-    let code_highliter = format!("{}", highlight_warning(range.start, range.end, &source.raw));
+    let code_highliter = format!("{}", highlight_warning_with_context(range.start, range.end, &source.raw, context));
     println!("{}", code_highliter);
   } else {
-    let code_highliter = format!("{}", highlight_error(range.start, range.end, &source.raw));
+    let code_highliter = format!("{}", highlight_error_with_context(range.start, range.end, &source.raw, context));
     println!("{}", code_highliter);
   }
   println!();

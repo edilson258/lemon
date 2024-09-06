@@ -1,5 +1,5 @@
 use crate::diagnostics::report::report_and_exit;
-use crate::lexer::token::{Token, TokenType};
+use crate::lexer::token::TokenType;
 use crate::lexer::Lexer;
 use crate::utils::range::{create_range_from, Range};
 
@@ -36,7 +36,7 @@ impl<'p> Parser<'p> {
       }
       TokenType::Ident => self.parse_expr_statement(),
       _ => {
-        let message = format!("expected statement, found `{}`", token.get_kind());
+        let message = format!("expected statement, found `{}`.", token.get_kind());
         self.report_custom_error(&message, &token.range);
       }
     }
@@ -74,7 +74,7 @@ impl<'p> Parser<'p> {
         ast::Expr::create_ident(ident)
       }
       _ => {
-        let message = format!("expected expression, found `{}`", token.get_kind());
+        let message = format!("expected expression, found `{}`.", token.get_kind());
         self.report_custom_error(&message, &token.range);
       }
     }
@@ -101,7 +101,7 @@ impl<'p> Parser<'p> {
         return ast::LiteralExpr::create_null(literal);
       }
       _ => {
-        let message = format!("expected literal, found `{}`", token.get_kind());
+        let message = format!("expected literal, found `{}`.", token.get_kind());
         let range = &token.range;
         self.report_custom_error(&message, range)
       }
@@ -126,7 +126,7 @@ impl<'p> Parser<'p> {
       (TokenType::True, true) => return ast::BooleanLiteral::create(true, token.get_range()),
       (TokenType::False, false) => return ast::BooleanLiteral::create(false, token.get_range()),
       _ => {
-        let message = format!("expected `{}` found `{}`", value, token.get_kind());
+        let message = format!("expected `{}` found `{}`.", value, token.get_kind());
         self.report_custom_error(&message, &token.get_range())
       }
     }
@@ -150,7 +150,7 @@ impl<'p> Parser<'p> {
     match token.get_kind() {
       TokenType::Ident => self.parse_text_to_type(),
       _ => {
-        let message = format!("unknown type `{}`", token.get_kind());
+        let message = format!("unknown type `{}`.", token.get_kind());
         self.report_custom_error(&message, &token.range);
       }
     }
@@ -199,14 +199,14 @@ impl<'p> Parser<'p> {
   }
 
   fn report_expect(&mut self, current: TokenType, expected: TokenType, range: &Range) -> ! {
-    let message = format!("expected '{}', found '{}'", expected, current);
+    let message = format!("expected '{}', found '{}'.", expected, current);
     report_and_exit(&message, range, &self.lexer.take_souce());
   }
 
-  fn report_unexpected(&mut self, token: Token) -> ! {
-    let message = format!("unexpected token '{}'", token.get_kind());
-    report_and_exit(&message, &token.range, &self.lexer.take_souce());
-  }
+  // fn report_unexpected(&mut self, token: Token) -> ! {
+  //   let message = format!("unexpected token '{}'.", token.get_kind());
+  //   report_and_exit(&message, &token.range, &self.lexer.take_souce());
+  // }
 
   fn report_custom_error(&mut self, message: &str, range: &Range) -> ! {
     report_and_exit(message, range, &self.lexer.take_souce());

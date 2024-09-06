@@ -70,7 +70,7 @@ impl<'l> Lexer<'l> {
       ':' => self.read_simple_token(TokenType::Colon, ":"),
       _ => {
         let range = self.create_range();
-        report_and_exit("unknown token type", &range, &self.souce);
+        report_and_exit("unknown token type.", &range, &self.souce);
       }
     }
   }
@@ -98,8 +98,8 @@ impl<'l> Lexer<'l> {
 
   fn read_string(&mut self) -> Token {
     self.consume_expect("\"");
-    let text = self.read_while(|c| c != '"');
-    self.consume_expect_with_error("\"", "unterminated string");
+    let text = self.read_while(|character| character != '"' && character != '\n');
+    self.consume_expect_with_error("\"", "unterminated string.");
     Token::create_string(text, self.create_range())
   }
 
@@ -135,7 +135,7 @@ impl<'l> Lexer<'l> {
     } else {
       let found = self.peek_many(text.len());
       self.advance_by(text.len());
-      let text_error = format!("expected '{}', found '{}'", text, found);
+      let text_error = format!("expected `{}`, found `{}`.", text, found);
       report_and_exit(&text_error, &self.create_range(), &self.souce);
     }
   }
