@@ -17,6 +17,8 @@ impl Ast {
 pub enum Statement {
   Let(LetStmt),
   Expr(Expr),
+  Fn(FnStmt),
+  Block(BlockStmt),
   Empty,
 }
 
@@ -25,12 +27,14 @@ impl Statement {
     match self {
       Statement::Let(let_stmt) => let_stmt.get_range(),
       Statement::Expr(expr) => expr.get_range(),
+      Statement::Fn(function_stmt) => function_stmt.get_range(),
+      Statement::Block(block_stmt) => block_stmt.get_range(),
       Statement::Empty => Range::new(0, 0),
     }
   }
 
-  pub fn create_let(name: String, ty: Option<AstType>, value: Expr, range: Range) -> Self {
-    Self::Let(LetStmt { name, ty, value, range })
+  pub fn create_let(name: PatType, value: Expr, range: Range) -> Statement {
+    Statement::Let(LetStmt { name, value, range })
   }
 
   pub fn create_expr(expr: Expr, range: Range) -> Self {
@@ -44,8 +48,7 @@ impl Statement {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct LetStmt {
-  pub name: String,
-  pub ty: Option<AstType>,
+  pub name: PatType,
   pub value: Expr,
   pub range: Range,
 }
@@ -55,10 +58,68 @@ impl LetStmt {
     self.range.clone()
   }
 
-  pub fn create(name: String, ty: Option<AstType>, value: Expr, range: Range) -> Self {
-    Self { name, value, ty, range }
+  pub fn create(name: PatType, value: Expr, range: Range) -> Self {
+    Self { name, value, range }
   }
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
+pub struct PatType {
+  pub name: IdentExpr,
+  pub ty: Option<AstType>,
+}
+
+impl PatType {
+  pub fn get_range(&self) -> Range {
+    let left_range = self.name.get_range();
+    if let Some(ty) = &self.ty {
+      let right_range = &ty.get_range();
+      return create_range_from(&left_range, right_range);
+    } else {
+      return left_range;
+    }
+  }
+
+  pub fn create(name: IdentExpr, ty: Option<AstType>) -> Self {
+    Self { name, ty }
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
+pub struct FnStmt {
+  pub name: IdentExpr,
+  pub inputs: Vec<PatType>,
+  pub output: Option<AstType>,
+  pub body: BlockStmt,
+  pub range: Range,
+}
+
+impl FnStmt {
+  pub fn get_range(&self) -> Range {
+    self.range.clone()
+  }
+
+  pub fn create(name: IdentExpr, inputs: Vec<PatType>, body: BlockStmt, output: Option<AstType>, range: Range) -> Self {
+    Self { name, inputs, body, output, range }
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
+pub struct BlockStmt {
+  pub body: Vec<Statement>,
+  pub range: Range,
+}
+
+impl BlockStmt {
+  pub fn get_range(&self) -> Range {
+    return self.range.clone();
+  }
+
+  pub fn create(body: Vec<Statement>, range: Range) -> Self {
+    Self { body, range }
+  }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub enum Expr {
   Literal(LiteralExpr),
@@ -68,7 +129,6 @@ pub enum Expr {
   Call(CallExpr),
   Index(IndexExpr),
   Member(MemberExpr),
-  Function(FunctionExpr),
   If(IfExpr),
   Return(ReturnExpr),
   Ident(IdentExpr),
@@ -83,7 +143,6 @@ impl Expr {
       Expr::Call(call) => call.get_range(),
       Expr::Index(index) => index.get_range(),
       Expr::Member(member) => member.get_range(),
-      Expr::Function(function) => function.get_range(),
       Expr::If(if_expr) => if_expr.get_range(),
       Expr::Return(return_expr) => return_expr.get_range(),
       Expr::List(list) => list.get_range(),
@@ -99,11 +158,11 @@ impl Expr {
     Self::Ident(ident)
   }
 
-  pub fn create_binary(binary: BinaryExpr, range: Range) -> Self {
+  pub fn create_binary(binary: BinaryExpr) -> Self {
     Self::Binary(binary)
   }
 
-  pub fn create_unary(unary: UnaryExpr, range: Range) -> Self {
+  pub fn create_unary(unary: UnaryExpr) -> Self {
     Self::Unary(unary)
   }
 
@@ -117,10 +176,6 @@ impl Expr {
 
   pub fn create_member(member: MemberExpr, range: Range) -> Self {
     Self::Member(member)
-  }
-
-  pub fn create_function(function: FunctionExpr, range: Range) -> Self {
-    Self::Function(function)
   }
 
   pub fn create_if(if_expr: IfExpr, range: Range) -> Self {
@@ -258,46 +313,54 @@ impl ListExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct BinaryExpr {
   pub left: Box<Expr>,
+  // nb: make sure op is a valid binary operator
+  pub op: Operator,
   pub right: Box<Expr>,
+  pub range: Range,
 }
 
 impl BinaryExpr {
   pub fn get_range(&self) -> Range {
-    let left_range = &self.left.get_range();
-    let right_range = &self.right.get_range();
-    create_range_from(left_range, right_range)
+    return self.range.clone();
   }
-
-  pub fn create(left: Box<Expr>, right: Box<Expr>) -> Self {
-    Self { left, right }
+  pub fn create(left: Expr, op: Operator, right: Expr) -> Self {
+    let range = create_range_from(&left.get_range(), &right.get_range());
+    Self { left: Box::new(left), right: Box::new(right), op, range }
   }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct UnaryExpr {
   pub operand: Box<Expr>,
+  pub op: Operator,
+  pub range: Range,
 }
 
 impl UnaryExpr {
   pub fn get_range(&self) -> Range {
-    self.operand.get_range()
+    return self.range.clone();
   }
 
-  pub fn create(operand: Box<Expr>) -> Self {
-    Self { operand }
+  pub fn create(operand: Expr, op: Operator) -> Self {
+    let range = create_range_from(&operand.get_range(), &op.get_range());
+    Self { operand: Box::new(operand), op, range }
   }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct CallExpr {
   pub callee: Box<Expr>,
-  pub arguments: Vec<Expr>,
+  pub args: Vec<Expr>,
   pub range: Range,
 }
 
 impl CallExpr {
   pub fn get_range(&self) -> Range {
     return self.range.clone();
+  }
+
+  pub fn create(callee: Box<Expr>, args: Vec<Expr>, range: Range) -> Self {
+    Self { callee, args, range }
   }
 }
 
@@ -322,20 +385,6 @@ pub struct MemberExpr {
 }
 
 impl MemberExpr {
-  pub fn get_range(&self) -> Range {
-    return self.range.clone();
-  }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
-pub struct FunctionExpr {
-  pub name: String,
-  pub parameters: Vec<String>,
-  pub body: Vec<Statement>,
-  pub range: Range,
-}
-
-impl FunctionExpr {
   pub fn get_range(&self) -> Range {
     return self.range.clone();
   }
@@ -380,7 +429,7 @@ pub enum AstType {
   Char(CharType),
   List(ListType),
   Null(NullType),
-  Function(FunctionType),
+  Fn(FnType),
 }
 
 impl AstType {
@@ -394,7 +443,7 @@ impl AstType {
       AstType::Char(char) => char.get_range(),
       AstType::List(list) => list.get_range(),
       AstType::Null(null) => null.get_range(),
-      AstType::Function(function) => function.get_range(),
+      AstType::Fn(function) => function.get_range(),
     }
   }
 }
@@ -519,18 +568,93 @@ impl NullType {
   }
 }
 // ------
-// FunctionType
+// FnType
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
-pub struct FunctionType {
+pub struct FnType {
   pub range: Range,
 }
 
-impl FunctionType {
+impl FnType {
   pub fn get_range(&self) -> Range {
     self.range.clone()
   }
 
   pub fn create(range: Range) -> Self {
     Self { range }
+  }
+}
+
+// ----------------
+// operator kinds
+//
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
+pub struct Operator {
+  pub kind: OperatorType,
+  pub range: Range,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
+pub enum OperatorType {
+  Plus,      // + binary
+  Minus,     // - unary or binary
+  Star,      // * binary
+  Slash,     // / binary
+  Assign,    // = binary
+  PlusEq,    // += binary
+  MinusEq,   // -= binary
+  StarEq,    // *= binary
+  SlashEq,   // /= binary
+  Eq,        // == binary
+  NotEq,     // != binary
+  Less,      // < binary
+  Greater,   // > binary
+  LessEq,    // <= binary
+  GreaterEq, // >= binary
+  Extract,   // ?= binary
+  Arrow,     // => binary
+  And,       // && binary
+  Or,        // || binary
+  Bang,      // ! unary
+  Quest,     // ? unary
+}
+
+impl Operator {
+  pub fn get_range(&self) -> Range {
+    self.range.clone()
+  }
+
+  pub fn create(kind: OperatorType, range: Range) -> Self {
+    Self { kind, range }
+  }
+
+  pub fn as_binary(&self) -> bool {
+    match self.kind {
+      OperatorType::Plus
+      | OperatorType::Minus
+      | OperatorType::Star
+      | OperatorType::Slash
+      | OperatorType::PlusEq
+      | OperatorType::MinusEq
+      | OperatorType::StarEq
+      | OperatorType::SlashEq
+      | OperatorType::Eq
+      | OperatorType::NotEq
+      | OperatorType::Less
+      | OperatorType::Greater
+      | OperatorType::LessEq
+      | OperatorType::GreaterEq
+      | OperatorType::Extract
+      | OperatorType::Arrow
+      | OperatorType::And
+      | OperatorType::Or => true,
+      _ => false,
+    }
+  }
+  pub fn as_unary(&self) -> bool {
+    match self.kind {
+      OperatorType::Minus | OperatorType::Bang | OperatorType::Quest => true,
+      _ => false,
+    }
   }
 }

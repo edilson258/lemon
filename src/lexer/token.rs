@@ -10,8 +10,6 @@ pub enum TokenType {
   If,     // if
   Else,   // else
   Ret,    // return
-  True,   // true
-  False,  // false
   Null,   // null
   Use,    // use (e.g., use { stdin, stdout } "io")
   Ensure, // ensure
@@ -86,9 +84,9 @@ impl Token {
       "if" => Self::new(TokenType::If, None, range),
       "else" => Self::new(TokenType::Else, None, range),
       "return" => Self::new(TokenType::Ret, None, range),
-      "true" => Self::new(TokenType::True, None, range),
-      "false" => Self::new(TokenType::False, None, range),
       "null" => Self::new(TokenType::Null, None, range),
+      "true" => Self::new(TokenType::Bool, Some(text), range),
+      "false" => Self::new(TokenType::Bool, Some(text), range),
       _ => Self::new(TokenType::Ident, Some(text), range),
     }
   }
@@ -106,14 +104,43 @@ impl Token {
   }
 
   // getters
-  pub fn get_text(&self) -> &str {
-    &self.text.as_ref().expect("Token text is None")
+  pub fn get_text(&self) -> Option<&str> {
+    if let Some(text) = &self.text {
+      return Some(text);
+    }
+    None
   }
 
   pub fn get_range(&self) -> Range {
     self.range.clone()
   }
 
+  pub fn be_operator(&self) -> bool {
+    match self.kind {
+      TokenType::Plus
+      | TokenType::Minus
+      | TokenType::Star
+      | TokenType::Slash
+      | TokenType::Assign
+      | TokenType::PlusEq
+      | TokenType::MinusEq
+      | TokenType::StarEq
+      | TokenType::SlashEq
+      | TokenType::Eq
+      | TokenType::NotEq
+      | TokenType::Less
+      | TokenType::Greater
+      | TokenType::LessEq
+      | TokenType::GreaterEq
+      | TokenType::Extract
+      | TokenType::Arrow
+      | TokenType::And
+      | TokenType::Or
+      | TokenType::Bang
+      | TokenType::Quest => true,
+      _ => false,
+    }
+  }
   pub fn get_kind(&self) -> &TokenType {
     &self.kind
   }

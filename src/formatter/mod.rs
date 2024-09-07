@@ -9,8 +9,6 @@ impl fmt::Display for TokenType {
       TokenType::If => write!(f, "if"),
       TokenType::Else => write!(f, "else"),
       TokenType::Ret => write!(f, "return"),
-      TokenType::True => write!(f, "true"),
-      TokenType::False => write!(f, "false"),
       TokenType::Null => write!(f, "null"),
       TokenType::Use => write!(f, "use"),
       TokenType::Plus => write!(f, "+"),
