@@ -1,20 +1,23 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::range::{create_range_from, Range};
+use crate::{
+  lexer::token::TokenType,
+  utils::range::{create_range_from, Range},
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Ast {
-  pub statements: Vec<Statement>,
+  pub stmts: Vec<Stmt>,
 }
 
 impl Ast {
-  pub fn new(statements: Vec<Statement>) -> Self {
-    Self { statements }
+  pub fn new(stmts: Vec<Stmt>) -> Self {
+    Self { stmts }
   }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
-pub enum Statement {
+pub enum Stmt {
   Let(LetStmt),
   Expr(Expr),
   Fn(FnStmt),
@@ -22,19 +25,19 @@ pub enum Statement {
   Empty,
 }
 
-impl Statement {
+impl Stmt {
   pub fn get_range(&self) -> Range {
     match self {
-      Statement::Let(let_stmt) => let_stmt.get_range(),
-      Statement::Expr(expr) => expr.get_range(),
-      Statement::Fn(function_stmt) => function_stmt.get_range(),
-      Statement::Block(block_stmt) => block_stmt.get_range(),
-      Statement::Empty => Range::new(0, 0),
+      Stmt::Let(let_stmt) => let_stmt.get_range(),
+      Stmt::Expr(expr) => expr.get_range(),
+      Stmt::Fn(function_stmt) => function_stmt.get_range(),
+      Stmt::Block(block_stmt) => block_stmt.get_range(),
+      Stmt::Empty => Range::new(0, 0),
     }
   }
 
-  pub fn create_let(name: PatType, value: Expr, range: Range) -> Statement {
-    Statement::Let(LetStmt { name, value, range })
+  pub fn create_let(name: PatType, value: Expr, range: Range) -> Stmt {
+    Stmt::Let(LetStmt { name, value, range })
   }
 
   pub fn create_expr(expr: Expr, range: Range) -> Self {
@@ -106,7 +109,7 @@ impl FnStmt {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct BlockStmt {
-  pub body: Vec<Statement>,
+  pub body: Vec<Stmt>,
   pub range: Range,
 }
 
@@ -115,7 +118,7 @@ impl BlockStmt {
     return self.range.clone();
   }
 
-  pub fn create(body: Vec<Statement>, range: Range) -> Self {
+  pub fn create(body: Vec<Stmt>, range: Range) -> Self {
     Self { body, range }
   }
 }
@@ -123,7 +126,7 @@ impl BlockStmt {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub enum Expr {
   Literal(LiteralExpr),
-  List(ListExpr),
+  Group(GroupExpr),
   Binary(BinaryExpr),
   Unary(UnaryExpr),
   Call(CallExpr),
@@ -145,7 +148,7 @@ impl Expr {
       Expr::Member(member) => member.get_range(),
       Expr::If(if_expr) => if_expr.get_range(),
       Expr::Return(return_expr) => return_expr.get_range(),
-      Expr::List(list) => list.get_range(),
+      Expr::Group(group) => group.get_range(),
       Expr::Ident(ident) => ident.get_range(),
     }
   }
@@ -166,24 +169,28 @@ impl Expr {
     Self::Unary(unary)
   }
 
-  pub fn create_call(call: CallExpr, range: Range) -> Self {
+  pub fn create_call(call: CallExpr) -> Self {
     Self::Call(call)
   }
 
-  pub fn create_index(index: IndexExpr, range: Range) -> Self {
+  pub fn create_index(index: IndexExpr) -> Self {
     Self::Index(index)
   }
 
-  pub fn create_member(member: MemberExpr, range: Range) -> Self {
+  pub fn create_member(member: MemberExpr) -> Self {
     Self::Member(member)
   }
 
-  pub fn create_if(if_expr: IfExpr, range: Range) -> Self {
+  pub fn create_if(if_expr: IfExpr) -> Self {
     Self::If(if_expr)
   }
 
-  pub fn create_return(return_expr: ReturnExpr, range: Range) -> Self {
+  pub fn create_return(return_expr: ReturnExpr) -> Self {
     Self::Return(return_expr)
+  }
+
+  pub fn create_group(group: GroupExpr) -> Self {
+    Self::Group(group)
   }
 }
 
@@ -300,13 +307,18 @@ impl NullLiteral {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
-pub struct ListExpr {
-  pub elements: Vec<Expr>,
+pub struct GroupExpr {
+  pub range: Range,
+  pub list: Vec<Expr>,
 }
 
-impl ListExpr {
+impl GroupExpr {
   pub fn get_range(&self) -> Range {
-    panic!("ListExpr has no elements");
+    self.range.clone()
+  }
+
+  pub fn create(list: Vec<Expr>, range: Range) -> Self {
+    Self { list, range }
   }
 }
 
@@ -359,8 +371,8 @@ impl CallExpr {
     return self.range.clone();
   }
 
-  pub fn create(callee: Box<Expr>, args: Vec<Expr>, range: Range) -> Self {
-    Self { callee, args, range }
+  pub fn create(callee: Expr, args: Vec<Expr>, range: Range) -> Self {
+    Self { callee: Box::new(callee), args, range }
   }
 }
 
@@ -393,8 +405,8 @@ impl MemberExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct IfExpr {
   pub condition: Box<Expr>,
-  pub consequent: Vec<Statement>,
-  pub alternate: Option<Vec<Statement>>,
+  pub consequent: Vec<Stmt>,
+  pub alternate: Option<Vec<Stmt>>,
   pub range: Range,
 }
 
@@ -413,6 +425,10 @@ pub struct ReturnExpr {
 impl ReturnExpr {
   pub fn get_range(&self) -> Range {
     return self.range.clone();
+  }
+
+  pub fn create(value: Option<Box<Expr>>, range: Range) -> Self {
+    Self { value, range }
   }
 }
 
@@ -651,6 +667,35 @@ impl Operator {
       _ => false,
     }
   }
+
+  pub fn to_operator(kind: &TokenType) -> Option<OperatorType> {
+    let kind = match kind {
+      TokenType::Plus => OperatorType::Plus,
+      TokenType::Minus => OperatorType::Minus,
+      TokenType::Star => OperatorType::Star,
+      TokenType::Slash => OperatorType::Slash,
+      TokenType::Assign => OperatorType::Assign,
+      TokenType::PlusEq => OperatorType::PlusEq,
+      TokenType::MinusEq => OperatorType::MinusEq,
+      TokenType::StarEq => OperatorType::StarEq,
+      TokenType::SlashEq => OperatorType::SlashEq,
+      TokenType::Eq => OperatorType::Eq,
+      TokenType::NotEq => OperatorType::NotEq,
+      TokenType::Less => OperatorType::Less,
+      TokenType::Greater => OperatorType::Greater,
+      TokenType::LessEq => OperatorType::LessEq,
+      TokenType::GreaterEq => OperatorType::GreaterEq,
+      TokenType::Extract => OperatorType::Extract,
+      TokenType::Arrow => OperatorType::Arrow,
+      TokenType::And => OperatorType::And,
+      TokenType::Or => OperatorType::Or,
+      TokenType::Bang => OperatorType::Bang,
+      TokenType::Quest => OperatorType::Quest,
+      _ => return None,
+    };
+    return Some(kind);
+  }
+
   pub fn as_unary(&self) -> bool {
     match self.kind {
       OperatorType::Minus | OperatorType::Bang | OperatorType::Quest => true,

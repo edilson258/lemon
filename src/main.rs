@@ -1,14 +1,16 @@
-#![allow(unused_variables)]
-
 use lexer::Lexer;
 use parser::Parser;
 use utils::source::Source;
+pub mod anf;
 mod cli;
+pub mod core;
 pub mod diagnostics;
 pub mod formatter;
+pub mod ir;
 pub mod lexer;
 pub mod parser;
 pub mod utils;
+use inkwell::context::Context;
 
 fn main() {
   let matches = cli::command_line();
@@ -46,7 +48,19 @@ fn run_compile(path_name: &str) {
   let mut parser = Parser::new(&mut lexer);
   let ast = parser.parse();
 
-  println!("{:#?}", ast);
+  let context = Context::create();
+
+  let mut anf = anf::Anf::new(None);
+  let ant_ast = anf.gen_ast(&ast);
+  println!("{:#?}", ant_ast);
+
+  let mut wat = core::wat::Wat::new();
+  let wasm = wat.gen_ast(&ast);
+  println!("{:#?}", wasm);
+  // let mut ir = ir::Ir::new(&context,
+  //  "lemon_main");
+  // ir.gen_from_ast(&ant_ast);
+  // ir.print_to_string();
 }
 
 fn run(path_name: &str) {

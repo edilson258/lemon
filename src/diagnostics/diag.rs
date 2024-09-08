@@ -1,6 +1,5 @@
-use crate::utils::{range::Range, source::Source};
-
 use super::report::report_diag;
+use crate::utils::{range::Range, source::Source};
 
 #[derive(Debug)]
 pub enum Severity {
@@ -10,7 +9,6 @@ pub enum Severity {
 }
 
 #[derive(Debug)]
-
 pub struct Diag<'a> {
   pub severity: Severity,
   pub message: String,

@@ -20,24 +20,24 @@ impl<'p> Parser<'p> {
     while !self.lexer.is_end() {
       stmts.push(self.parse_stmt());
     }
+    // println!("stmts: {:#?}", stmts);
     ast::Ast::new(stmts)
   }
 
-  fn parse_stmt(&mut self) -> ast::Statement {
+  fn parse_stmt(&mut self) -> ast::Stmt {
     let token = self.lexer.peek_token();
     if self.match_token(TokenType::EOF) {
-      return ast::Statement::create_empty();
+      return ast::Stmt::create_empty();
     };
 
     let stmt = match token.get_kind() {
       TokenType::Let => {
         let let_stmt = self.parse_let_stmt();
-        println!("let_stmt: {:#?}", let_stmt);
-        ast::Statement::Let(let_stmt)
+        ast::Stmt::Let(let_stmt)
       }
       TokenType::Fn => {
         let function_stmt = self.parse_fn_stmt();
-        ast::Statement::Fn(function_stmt)
+        ast::Stmt::Fn(function_stmt)
       }
       _ => self.parse_expr_stmt(),
     };
@@ -116,9 +116,9 @@ impl<'p> Parser<'p> {
   }
 
   // <expr stmt>
-  fn parse_expr_stmt(&mut self) -> ast::Statement {
+  fn parse_expr_stmt(&mut self) -> ast::Stmt {
     let expr = self.parse_expr();
-    return ast::Statement::Expr(expr);
+    return ast::Stmt::Expr(expr);
   }
 
   // <expr>
@@ -151,10 +151,14 @@ impl<'p> Parser<'p> {
 
   fn parse_primary_expr(&mut self) -> ast::Expr {
     let token = self.lexer.peek_token();
-    match token.get_kind() {
+    let mut expr = match token.get_kind() {
       TokenType::Num | TokenType::String | TokenType::Bool | TokenType::Null => {
         let literal = self.parse_literal_expr();
         ast::Expr::create_literal(literal)
+      }
+      TokenType::LParen => {
+        let group = self.parse_group_expr();
+        ast::Expr::create_group(group)
       }
       TokenType::Ident => {
         let ident = self.parse_ident_expr();
@@ -164,14 +168,48 @@ impl<'p> Parser<'p> {
         let message = format!("expected primary expr, found `{}`.", token.get_kind());
         self.report_custom_error(&message, &token.range);
       }
+    };
+
+    while self.match_token(TokenType::LParen) {
+      let call = self.parse_call_expr(expr);
+      expr = ast::Expr::create_call(call);
     }
+    return expr;
+  }
+  // ... ( <args> )
+  fn parse_call_expr(&mut self, callee: ast::Expr) -> ast::CallExpr {
+    let start_range = self.consume_expect(TokenType::LParen); // consume (
+    let mut args = Vec::new();
+    while !self.match_token(TokenType::RParen) {
+      args.push(self.parse_expr());
+      if self.match_token(TokenType::RParen) {
+        break;
+      }
+      self.consume_expect(TokenType::Comma);
+    }
+    let end_range = self.consume_expect(TokenType::RParen); //consume )
+    let arg_range = create_range_from(&start_range, &end_range);
+    let range = create_range_from(&callee.get_range(), &arg_range);
+
+    return ast::CallExpr::create(callee, args, range);
+  }
+  // ( <group> )
+  fn parse_group_expr(&mut self) -> ast::GroupExpr {
+    let start_range = self.consume_expect(TokenType::LParen);
+    let mut list = Vec::new();
+    while !self.match_token(TokenType::RParen) {
+      list.push(self.parse_expr());
+    }
+    let end_range = self.consume_expect(TokenType::RParen);
+    let range = create_range_from(&start_range, &end_range);
+    return ast::GroupExpr::create(list, range);
   }
 
   // <unary>
   fn parse_unary_expr(&mut self) -> ast::UnaryExpr {
     if self.match_any_token(vec![TokenType::Minus, TokenType::Bang, TokenType::Quest]) {
       let operator = self.parse_operator();
-      let operand = self.parse_precedence_expr(Precedence::Low);
+      let operand = self.parse_precedence_expr(Precedence::Una);
       return ast::UnaryExpr::create(operand, operator);
     }
     let token = self.lexer.peek_token();
@@ -260,36 +298,15 @@ impl<'p> Parser<'p> {
 
   // <operator>
   fn parse_operator(&mut self) -> ast::Operator {
-    let token = self.lexer.peek_token();
-    let kind = match token.get_kind() {
-      TokenType::Plus => ast::OperatorType::Plus,
-      TokenType::Minus => ast::OperatorType::Minus,
-      TokenType::Star => ast::OperatorType::Star,
-      TokenType::Slash => ast::OperatorType::Slash,
-      TokenType::Assign => ast::OperatorType::Assign,
-      TokenType::PlusEq => ast::OperatorType::PlusEq,
-      TokenType::MinusEq => ast::OperatorType::MinusEq,
-      TokenType::StarEq => ast::OperatorType::StarEq,
-      TokenType::SlashEq => ast::OperatorType::SlashEq,
-      TokenType::Eq => ast::OperatorType::Eq,
-      TokenType::NotEq => ast::OperatorType::NotEq,
-      TokenType::Less => ast::OperatorType::Less,
-      TokenType::Greater => ast::OperatorType::Greater,
-      TokenType::LessEq => ast::OperatorType::LessEq,
-      TokenType::GreaterEq => ast::OperatorType::GreaterEq,
-      TokenType::Extract => ast::OperatorType::Extract,
-      TokenType::Arrow => ast::OperatorType::Arrow,
-      TokenType::And => ast::OperatorType::And,
-      TokenType::Or => ast::OperatorType::Or,
-      TokenType::Bang => ast::OperatorType::Bang,
-      TokenType::Quest => ast::OperatorType::Quest,
-      _ => {
-        let message = format!("unsupported operator, found `{}`.", token.get_kind());
-        self.report_custom_error(&message, &token.range);
+    let token = self.lexer.next_token();
+    if let Some(kind) = ast::Operator::to_operator(token.get_kind()) {
+      if token.be_operator() {
+        let operator = ast::Operator::create(kind, token.get_range());
+        return operator;
       }
-    };
-    let operator = ast::Operator::create(kind, token.get_range());
-    return operator;
+    }
+    let message = format!("unsupported operator, found `{}`.", token.get_kind());
+    self.report_custom_error(&message, &token.range);
   }
 
   // types
