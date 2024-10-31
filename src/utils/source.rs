@@ -1,14 +1,22 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
-pub struct Source<'s> {
+pub struct Source {
   pub raw: String,
-  pub name: &'s str,
-  pub len: usize,
+  pub name: String,
 }
 
-impl<'s> Source<'s> {
-  pub fn new(raw: String, name: &'s str) -> Self {
-    Self { len: raw.len(), raw, name }
+impl Source {
+  pub fn new(raw: &str, name: &str) -> Self {
+    Self { raw: raw.to_string(), name: name.to_string() }
+  }
+
+  pub fn len(&self) -> usize {
+    self.raw.len()
+  }
+
+  pub fn get_raw(&self) -> String {
+    self.raw.clone()
+  }
+
+  pub fn get_name(&self) -> &str {
+    &self.name
   }
 }

@@ -1,0 +1,16 @@
+let std = load('std')
+let fmt = load('fmt')
+let http = load('http')
+
+let server = http::server();
+
+server::route('/hello/:name', fn(params) = {
+  fn(request, { send }) = {
+    params.method |> match {
+      'GET' => fmt::format('Hello, {}!', params.name),
+      _     => 'Method not allowed'
+    } |> send;
+  }
+});
+
+server::start(9999)

@@ -7,17 +7,15 @@ pub struct Range {
 }
 
 impl Range {
-  pub fn new(start: usize, end: usize) -> Self {
-    Self { start, end }
+  pub fn new(start: usize, end: usize) -> Range {
+    Range { start, end }
   }
-}
-
-impl Default for Range {
-  fn default() -> Self {
-    Self { start: 0, end: 0 }
+  pub fn merge(&mut self, range: &Range) {
+    if range.start < self.start {
+      self.start = range.start;
+    }
+    if range.end > self.end {
+      self.end = range.end;
+    }
   }
-}
-
-pub fn create_range_from(range_start: &Range, range_end: &Range) -> Range {
-  Range { start: range_start.start, end: range_end.end }
 }

@@ -1,54 +1,37 @@
-use super::token::{Token, TokenType};
+use crate::tokens::{Token, TokenType};
+use crate::utils::{match_number, range::Range, report::report_and_exit, source::Source};
 
-use crate::{
-  diagnostics::report::report_and_exit,
-  utils::{match_number, range::Range, source::Source},
-};
-
-pub struct Lexer<'l> {
+pub struct Lexer {
   cursor: usize,
   pos_cursor: usize,
-  souce: Source<'l>,
+  source: Source,
   cached: Option<Token>,
 }
 
-impl<'l> Lexer<'l> {
-  pub fn new(source: Source<'l>) -> Self {
-    Self { cursor: 0, pos_cursor: 0, souce: source, cached: None }
-  }
-
-  pub fn all_tokens(&mut self) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    while !self.is_end() {
-      let current = self.next_token();
-      tokens.push(current);
-    }
-    tokens
+impl Lexer {
+  pub fn new(source: Source) -> Self {
+    Self { cursor: 0, pos_cursor: 0, source, cached: None }
   }
 
   pub fn peek_token(&mut self) -> Token {
-    if self.cached.is_none() {
-      self.cached = Some(self.next_token());
+    if let Some(token) = self.cached.as_ref() {
+      return token.clone();
     }
+    self.cached = Some(self.next_token());
     self.cached.clone().unwrap()
   }
 
   pub fn next_token(&mut self) -> Token {
-    if self.cached.is_some() {
-      let current_token = self.cached.clone().unwrap();
-      self.cached = None;
-      return current_token;
-    }
-
+    self.cached = None;
     self.skip_whitespace();
     if self.is_end() {
-      let range = self.create_range();
-      return Token::create_eof(range);
+      return Token::new_eof(self.create_range());
     }
 
     match self.peek() {
       '0'..='9' => self.read_number(),
       '"' => self.read_string(),
+      '\'' => self.single_quote(),
       'a'..='z' | 'A'..='Z' | '_' | '$' => self.read_identifier(),
       '-' => self.read_check_ahead("-=", TokenType::MinusEq, TokenType::Minus),
       '+' => self.read_check_ahead("+=", TokenType::PlusEq, TokenType::Plus),
@@ -64,15 +47,46 @@ impl<'l> Lexer<'l> {
       '}' => self.read_simple_token(TokenType::RBrace, "}"),
       '[' => self.read_simple_token(TokenType::LBracket, "["),
       ']' => self.read_simple_token(TokenType::RBracket, "]"),
+      '|' => match self.peek_many(2).as_str() {
+        "|>" => self.read_simple_token(TokenType::Pipe, "|>"),
+        "||" => self.read_simple_token(TokenType::Or, "||"),
+        _ => self.handle_unknown_token("|"),
+      },
       ';' => self.read_simple_token(TokenType::Semi, ";"),
       ',' => self.read_simple_token(TokenType::Comma, ","),
       '.' => self.read_simple_token(TokenType::Dot, "."),
       ':' => self.read_simple_token(TokenType::Colon, ":"),
-      _ => {
-        let range = self.create_range();
-        report_and_exit("unknown token type.", &range, &self.souce);
-      }
+      c => self.handle_unknown_token(c.to_string().as_str()),
     }
+  }
+
+  fn handle_unknown_token(&mut self, text: &str) -> ! {
+    self.advance();
+    report_and_exit(&format!("unknown token `{}`.", text), &self.create_range(), &self.source);
+  }
+
+  fn read_number(&mut self) -> Token {
+    let number = self.read_while(match_number);
+    Token::new_number(number, self.create_range())
+  }
+
+  fn read_string(&mut self) -> Token {
+    self.consume_expect("\"");
+    let text = self.read_while(|ch| ch != '"' && ch != '\n');
+    self.consume_expect_with_error("\"", "unterminated string.");
+    Token::new_string(text, self.create_range())
+  }
+
+  fn single_quote(&mut self) -> Token {
+    self.consume_expect("'");
+    let text = self.read_while(|ch| ch != '\'' && ch != '\n');
+    self.consume_expect_with_error("'", "unterminated string.");
+    Token::new_string(text, self.create_range())
+  }
+
+  fn read_identifier(&mut self) -> Token {
+    let text = self.read_while(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch == '$' || ch.is_ascii_digit());
+    Token::new_identifier(text.as_str(), self.create_range())
   }
 
   fn read_simple_token(&mut self, kind: TokenType, text: &str) -> Token {
@@ -90,34 +104,28 @@ impl<'l> Lexer<'l> {
     }
   }
 
-  // Utilities
-  fn read_number(&mut self) -> Token {
-    let number = self.read_while(match_number);
-    Token::create_number(number, self.create_range())
-  }
-
-  fn read_string(&mut self) -> Token {
-    self.consume_expect("\"");
-    let text = self.read_while(|character| character != '"' && character != '\n');
-    self.consume_expect_with_error("\"", "unterminated string.");
-    Token::create_string(text, self.create_range())
-  }
-
-  fn read_identifier(&mut self) -> Token {
-    let text = self.read_while(|c| c.is_ascii_alphabetic() || c == '_' || c == '$' || c.is_ascii_digit());
-    Token::create_identifier(text, self.create_range())
-  }
-
   fn read_while(&mut self, mut predicate: impl FnMut(char) -> bool) -> String {
     let start = self.cursor;
     while !self.is_end() && predicate(self.peek()) {
       self.advance();
     }
-    self.souce.raw[start..self.cursor].to_string()
+    self.source.raw[start..self.cursor].to_string()
   }
 
-  fn advance(&mut self) {
-    if let Some(c) = self.souce.raw[self.cursor..].chars().next() {
+  pub fn is_end(&self) -> bool {
+    self.cursor >= self.source.len()
+  }
+
+  pub fn peek(&self) -> char {
+    self.source.raw[self.cursor..].chars().next().unwrap_or('\0')
+  }
+
+  pub fn peek_many(&self, count: usize) -> String {
+    self.source.raw[self.cursor..].chars().take(count).collect()
+  }
+
+  pub fn advance(&mut self) {
+    if let Some(c) = self.source.raw[self.cursor..].chars().next() {
       self.cursor += c.len_utf8();
     }
   }
@@ -133,10 +141,7 @@ impl<'l> Lexer<'l> {
     if self.starts_with(text) {
       self.advance_by(text.len());
     } else {
-      let found = self.peek_many(text.len());
-      self.advance_by(text.len());
-      let text_error = format!("expected `{}`, found `{}`.", text, found);
-      report_and_exit(&text_error, &self.create_range(), &self.souce);
+      self.report_mismatch(text);
     }
   }
 
@@ -144,20 +149,8 @@ impl<'l> Lexer<'l> {
     if self.starts_with(text) {
       self.advance_by(text.len());
     } else {
-      report_and_exit(message, &self.create_range(), &self.souce);
+      report_and_exit(message, &self.create_range(), &self.source);
     }
-  }
-
-  pub fn is_end(&self) -> bool {
-    return self.cursor >= self.souce.len;
-  }
-
-  fn peek(&self) -> char {
-    return self.souce.raw[self.cursor..].chars().next().unwrap_or('\0');
-  }
-
-  fn peek_many(&self, count: usize) -> String {
-    return self.souce.raw[self.cursor..].chars().take(count).collect();
   }
 
   fn advance_by(&mut self, count: usize) {
@@ -167,7 +160,7 @@ impl<'l> Lexer<'l> {
   }
 
   fn starts_with(&self, s: &str) -> bool {
-    return self.souce.raw[self.cursor..].starts_with(s);
+    self.source.raw[self.cursor..].starts_with(s)
   }
 
   fn skip_whitespace(&mut self) {
@@ -177,7 +170,13 @@ impl<'l> Lexer<'l> {
     }
   }
 
-  pub fn take_souce(&self) -> Source {
-    self.souce.clone()
+  fn report_mismatch(&mut self, expected: &str) -> ! {
+    let found = self.peek_many(expected.len());
+    let text_error = format!("expected `{}`, found `{}`.", expected, found);
+    report_and_exit(&text_error, &self.create_range(), &self.source);
+  }
+
+  pub fn take_source(&self) -> &Source {
+    &self.source
   }
 }
