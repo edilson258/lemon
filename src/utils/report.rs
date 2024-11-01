@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use code_highlighter::{highlight_error_with_context, highlight_warning_with_context};
 
 use super::{range::Range, source::Source};
