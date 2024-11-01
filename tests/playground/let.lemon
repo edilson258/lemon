@@ -1,0 +1,6 @@
+10
+|> print
+
+
+
+let add = fn(a, b) = a + b
