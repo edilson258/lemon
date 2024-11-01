@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::tokens::{Token, TokenType};
 use crate::utils::{match_number, range::Range, report::report_and_exit, source::Source};
 
@@ -12,22 +14,25 @@ impl Lexer {
   pub fn new(source: Source) -> Self {
     Self { cursor: 0, pos_cursor: 0, source, cached: None }
   }
-
   pub fn peek_token(&mut self) -> Token {
-    if let Some(token) = self.cached.as_ref() {
-      return token.clone();
+    if self.cached.is_none() {
+      self.cached = Some(self.read_next_token());
     }
-    self.cached = Some(self.next_token());
     self.cached.clone().unwrap()
   }
 
   pub fn next_token(&mut self) -> Token {
-    self.cached = None;
+    if let Some(token) = self.cached.take() {
+      return token;
+    }
+    self.read_next_token()
+  }
+
+  fn read_next_token(&mut self) -> Token {
     self.skip_whitespace();
     if self.is_end() {
       return Token::new_eof(self.create_range());
     }
-
     match self.peek() {
       '0'..='9' => self.read_number(),
       '"' => self.read_string(),
@@ -37,10 +42,17 @@ impl Lexer {
       '+' => self.read_check_ahead("+=", TokenType::PlusEq, TokenType::Plus),
       '*' => self.read_check_ahead("*=", TokenType::StarEq, TokenType::Star),
       '/' => self.read_check_ahead("/=", TokenType::SlashEq, TokenType::Slash),
-      '=' => self.read_check_ahead("==", TokenType::Eq, TokenType::Assign),
+      '=' => {
+        if self.peek_many(2).as_str() == "=>" {
+          self.read_check_ahead("=>", TokenType::Arrow, TokenType::Assign)
+        } else {
+          self.read_check_ahead("==", TokenType::Eq, TokenType::Assign)
+        }
+      }
       '!' => self.read_check_ahead("!=", TokenType::NotEq, TokenType::Bang),
       '<' => self.read_check_ahead("<=", TokenType::LessEq, TokenType::Less),
       '>' => self.read_check_ahead(">=", TokenType::GreaterEq, TokenType::Greater),
+      ':' => self.read_check_ahead("::", TokenType::DoubleColon, TokenType::Colon),
       '(' => self.read_simple_token(TokenType::LParen, "("),
       ')' => self.read_simple_token(TokenType::RParen, ")"),
       '{' => self.read_simple_token(TokenType::LBrace, "{"),
@@ -55,8 +67,7 @@ impl Lexer {
       ';' => self.read_simple_token(TokenType::Semi, ";"),
       ',' => self.read_simple_token(TokenType::Comma, ","),
       '.' => self.read_simple_token(TokenType::Dot, "."),
-      ':' => self.read_simple_token(TokenType::Colon, ":"),
-      c => self.handle_unknown_token(c.to_string().as_str()),
+      _ => self.handle_unknown_token(self.peek().to_string().as_str()),
     }
   }
 
