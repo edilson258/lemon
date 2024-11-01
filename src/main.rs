@@ -1,11 +1,13 @@
 mod ast;
 mod cli;
+mod diag;
 mod lexer;
+mod loader;
 mod parser;
 mod tokens;
 mod utils;
 use lexer::Lexer;
-use tokens::TokenType;
+use parser::Parser;
 use utils::source::Source;
 
 fn loader(path_name: &str) -> Source {
@@ -15,12 +17,10 @@ fn loader(path_name: &str) -> Source {
 }
 
 fn check(source: Source) {
-  let mut lexer = Lexer::new(source);
-  let mut token = lexer.next_token();
-  while !lexer.is_end() {
-    println!("{:#?}", token);
-    token = lexer.next_token();
-  }
+  let lexer = Lexer::new(source);
+  let mut parser = Parser::new(lexer);
+  let ast = parser.parse_program();
+  println!("{:#?}", ast);
 }
 
 fn main() {
