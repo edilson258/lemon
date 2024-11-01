@@ -5,11 +5,11 @@ let http = load('http')
 let server = http::server();
 
 server::route('/hello/:name', fn(params) = {
-  fn(request, { send }) = {
-    params.method |> match {
-      'GET' => fmt::format('Hello, {}!', params.name),
+  fn(request, response) = {
+    params::method |> match _ {
+      'GET' => fmt::format('Hello, {}!', params::name),
       _     => 'Method not allowed'
-    } |> send;
+    } |> response::send;
   }
 });
 
