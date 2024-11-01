@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub struct Source {
   pub raw: String,
   pub name: String,
