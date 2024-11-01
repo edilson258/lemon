@@ -1,44 +1,43 @@
 use serde::{Deserialize, Serialize};
 
 use crate::utils::range::Range;
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TokenType {
   // Keywords
-  Fn,        // fn
-  Let,       // let
-  If,        // if
-  Else,      // else
-  Ret,       // return
-  Null,      // null
-  Owner,     // owner
-  BorrowMut, // borrow_mut
-  Borrow,    // borrow
+  Fn,    // fn
+  Let,   // let
+  If,    // if
+  Else,  // else
+  Ret,   // return
+  Null,  // null
+  Match, // match
   // Operators
-  Plus,      // +
-  Minus,     // -
-  Star,      // *
-  Slash,     // /
-  Assign,    // =
-  PlusEq,    // +=
-  MinusEq,   // -=
-  StarEq,    // *=
-  SlashEq,   // /=
-  Eq,        // ==
-  NotEq,     // !=
-  Less,      // <
-  Greater,   // >
-  LessEq,    // <=
-  GreaterEq, // >=
-  Extract,   // ?= (Error extraction operator)
-  Arrow,     // =>
-  And,       // &&
-  Or,        // ||
-  Dot,       // .
-  Bang,      // !
-  Quest,     // ?
-  Colon,     // :
-  Pipe,      // |
-  Arroba,    // @
+  Plus,        // +
+  Minus,       // -
+  Star,        // *
+  Slash,       // /
+  Assign,      // =
+  PlusEq,      // +=
+  MinusEq,     // -=
+  StarEq,      // *=
+  SlashEq,     // /=
+  Eq,          // ==
+  NotEq,       // !=
+  Less,        // <
+  Greater,     // >
+  LessEq,      // <=
+  GreaterEq,   // >=
+  Extract,     // ?= (Error extraction operator)
+  Arrow,       // =>
+  And,         // &&
+  Or,          // ||
+  Dot,         // .
+  Bang,        // !
+  Quest,       // ?
+  Colon,       // :
+  DoubleColon, // ::
+  Pipe,        // |
+  At,          // @
 
   // Delimiters
   LParen,   // (
@@ -49,12 +48,10 @@ pub enum TokenType {
   RBracket, // ]
   Semi,     // ;
   Comma,    // ,
-  // Identifiers and Literals
-  Identifier, // Identifiers like variables and functions (foo)
-  String,     // String literals ("foo")
-  Int,        // Numeric literals (42)
-  Bool,       // true, false
-
+  Identifier,
+  String,
+  Num,
+  Bool,
   // Comments
   LineCmt,  // Line comments (// ...)
   BlockCmt, // Block comments (/* ... */)
@@ -62,7 +59,7 @@ pub enum TokenType {
   EOF, // End of file
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Token {
   pub kind: TokenType,
   pub text: Option<String>,
@@ -75,7 +72,7 @@ impl Token {
   }
 
   pub fn new_number(text: String, range: Range) -> Self {
-    Self::new(TokenType::Int, Some(text), range)
+    Self::new(TokenType::Num, Some(text), range)
   }
 
   pub fn new_eof(range: Range) -> Self {
@@ -94,9 +91,7 @@ impl Token {
       "else" => Self::new(TokenType::Else, None, range),
       "return" => Self::new(TokenType::Ret, None, range),
       "null" => Self::new(TokenType::Null, None, range),
-      "owner" => Self::new(TokenType::Owner, None, range),
-      "borrow_mut" => Self::new(TokenType::BorrowMut, None, range),
-      "borrow" => Self::new(TokenType::Borrow, None, range),
+      "match" => Self::new(TokenType::Match, None, range),
       _ => Self::new(TokenType::Identifier, Some(text.to_string()), range),
     }
   }
