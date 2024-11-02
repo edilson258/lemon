@@ -7,6 +7,7 @@ use crate::utils::{range::Range, report::report_and_exit};
 const MIN_PDE: u8 = 0;
 const ADD_PDE: u8 = 1;
 const MUL_PDE: u8 = 2;
+const MAX_PDE: u8 = 3;
 
 // --- parser  -----
 pub struct Parser {
@@ -111,24 +112,11 @@ impl Parser {
       expr = ast::Expr::Binary(binary);
     }
 
-    match self.lexer.peek_token().kind {
-      // call expr
-      TokenType::LParen => {
-        return self.parse_call_expr(expr);
-      }
-      // member expr
-      TokenType::DoubleColon => {
-        return self.parse_member_expr(expr);
-      }
-
-      _ => {
-        return expr;
-      }
-    }
+    return expr;
   }
 
   fn parse_primary(&mut self) -> ast::Expr {
-    match self.lexer.peek_token().kind {
+    let mut expr = match self.lexer.peek_token().kind {
       TokenType::Identifier => ast::Expr::Ident(self.parse_ident()),
       TokenType::Fn => ast::Expr::Fn(self.parse_fn_expr(None)),
       TokenType::Match => ast::Expr::Match(self.parse_match_expr()),
@@ -136,7 +124,18 @@ impl Parser {
         let literal = self.parse_literal();
         ast::Expr::Literal(literal)
       }
+    };
+
+    while self.match_token(TokenType::DoubleColon) || self.match_token(TokenType::LParen) {
+      expr = match self.lexer.peek_token().kind {
+        // call expr
+        TokenType::LParen => self.parse_call_expr(expr),
+        // member expr
+        TokenType::DoubleColon => self.parse_member_expr(expr),
+        _ => continue,
+      };
     }
+    expr
   }
 
   // match <expr> { <arms> } or match _ { <arms> }
@@ -199,7 +198,7 @@ impl Parser {
 
   fn parse_member_expr(&mut self, object: ast::Expr) -> ast::Expr {
     self.take_or_expect(TokenType::DoubleColon); // take the `::`
-    let property = self.parse_expr(MIN_PDE);
+    let property = self.parse_expr(MAX_PDE);
     let mut range = object.get_range().clone();
     range.merge(property.get_range());
     ast::Expr::Member(ast::MemberExpr { object: Box::new(object), property: Box::new(property), range })
