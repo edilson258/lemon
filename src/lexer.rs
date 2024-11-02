@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 
+use crate::diag::Diag;
+use crate::range::Range;
+use crate::report::report_wrap;
+use crate::source::Source;
 use crate::tokens::{Token, TokenType};
-use crate::utils::{match_number, range::Range, report::report_and_exit, source::Source};
 
 pub struct Lexer {
   cursor: usize,
@@ -73,7 +76,9 @@ impl Lexer {
 
   fn handle_unknown_token(&mut self, text: &str) -> ! {
     self.advance();
-    report_and_exit(&format!("unknown token `{}`.", text), &self.create_range(), &self.source);
+    let msg = format!("unknown token `{}`.", text);
+    let diag = self.create_diag(&msg);
+    report_wrap(&diag, &self.source);
   }
 
   fn read_number(&mut self) -> Token {
@@ -160,7 +165,8 @@ impl Lexer {
     if self.starts_with(text) {
       self.advance_by(text.len());
     } else {
-      report_and_exit(message, &self.create_range(), &self.source);
+      let diag = self.create_diag(message);
+      report_wrap(&diag, &self.source);
     }
   }
 
@@ -184,10 +190,20 @@ impl Lexer {
   fn report_mismatch(&mut self, expected: &str) -> ! {
     let found = self.peek_many(expected.len());
     let text_error = format!("expected `{}`, found `{}`.", expected, found);
-    report_and_exit(&text_error, &self.create_range(), &self.source);
+    let diag = self.create_diag(&text_error);
+    report_wrap(&diag, &self.source);
   }
 
   pub fn take_source(&self) -> &Source {
     &self.source
   }
+
+  pub fn create_diag(&mut self, message: &str) -> Diag {
+    let range = self.create_range();
+    Diag::create_err(message.to_string(), range)
+  }
+}
+
+fn match_number(character: char) -> bool {
+  "1234567890.".contains(character)
 }

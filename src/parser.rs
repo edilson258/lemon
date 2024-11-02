@@ -1,7 +1,9 @@
 use crate::ast::{self, Operator};
+use crate::diag::Diag;
 use crate::lexer::Lexer;
+use crate::range::Range;
+use crate::report::report_wrap;
 use crate::tokens::{Token, TokenType};
-use crate::utils::{range::Range, report::report_and_exit};
 
 // --- precedence utils -----
 const MIN_PDE: u8 = 0;
@@ -283,11 +285,17 @@ impl Parser {
   // --- error utils -----
   fn report_expect(&mut self, found: TokenType, expected: TokenType, range: &Range) -> ! {
     let message = format!("expected {:?}, found {:?}.", expected, found);
-    report_and_exit(&message, range, &self.lexer.take_source())
+    let diag = self.create_diag(&message, range);
+    report_wrap(&diag, &self.lexer.take_source());
   }
 
   fn unexpected_expect(&mut self, token: Token, expected: &str) -> ! {
     let message = format!("unexpected {:?}, expected {:?} token.", token.kind, expected);
-    report_and_exit(&message, &token.range, &self.lexer.take_source())
+    let diag = self.create_diag(&message, &token.range);
+    report_wrap(&diag, &self.lexer.take_source());
+  }
+
+  fn create_diag(&self, message: &str, range: &Range) -> Diag {
+    Diag::create_err(message.to_string(), range.clone())
   }
 }

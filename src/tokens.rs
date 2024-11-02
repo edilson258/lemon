@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils::range::Range;
+use crate::range::Range;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TokenType {
   // Keywords

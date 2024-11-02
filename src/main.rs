@@ -4,11 +4,13 @@ mod diag;
 mod lexer;
 mod loader;
 mod parser;
+mod range;
+mod report;
+mod source;
 mod tokens;
-mod utils;
 use lexer::Lexer;
 use parser::Parser;
-use utils::source::Source;
+use source::Source;
 
 fn loader(path_name: &str) -> Source {
   let raw = std::fs::read_to_string(path_name).unwrap();

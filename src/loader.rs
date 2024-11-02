@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{diag::DiagGroup, utils::source::Source};
+use crate::{diag::DiagGroup, source::Source};
 
 use std::path::PathBuf;
 

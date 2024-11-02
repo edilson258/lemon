@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::{tokens::TokenType, utils::range::Range};
+use crate::{range::Range, tokens::TokenType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

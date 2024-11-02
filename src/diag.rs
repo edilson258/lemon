@@ -4,7 +4,11 @@ use std::mem::take;
 
 use serde::{Deserialize, Serialize};
 
-use crate::utils::range::Range;
+use crate::{
+  range::Range,
+  report::{report_err, report_info, report_warn},
+  source::Source,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Severity {
@@ -28,28 +32,35 @@ pub struct Diag {
   pub severity: Severity,
   pub message: String,
   pub range: Range,
-  pub filename: String,
 }
 
 impl Diag {
-  pub fn new(severity: Severity, message: String, range: Range, filename: String) -> Self {
-    Self { severity, message, range, filename }
+  pub fn new(severity: Severity, message: String, range: Range) -> Self {
+    Self { severity, message, range }
   }
 
-  pub fn create_err(message: String, range: Range, filename: String) -> Self {
-    Self::new(Severity::Err, message, range, filename)
+  pub fn create_err(message: String, range: Range) -> Self {
+    Self::new(Severity::Err, message, range)
   }
 
-  pub fn create_warn(message: String, range: Range, filename: String) -> Self {
-    Self::new(Severity::Warn, message, range, filename)
+  pub fn create_warn(message: String, range: Range) -> Self {
+    Self::new(Severity::Warn, message, range)
   }
 
-  pub fn create_info(message: String, range: Range, filename: String) -> Self {
-    Self::new(Severity::Info, message, range, filename)
+  pub fn create_info(message: String, range: Range) -> Self {
+    Self::new(Severity::Info, message, range)
   }
 
   pub fn get_range(&self) -> &Range {
     &self.range
+  }
+
+  pub fn report(&self, source: &Source) {
+    match self.severity {
+      Severity::Err => report_err(&self, &source),
+      Severity::Warn => report_warn(&self, &source),
+      Severity::Info => report_info(&self, &source),
+    }
   }
 }
 
