@@ -33,6 +33,7 @@ pub enum TokenType {
   And,         // &&
   Or,          // ||
   Dot,         // .
+  DoubleDot,   // ..
   Bang,        // !
   Quest,       // ?
   Colon,       // :

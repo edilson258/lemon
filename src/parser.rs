@@ -3,6 +3,7 @@ use crate::diag::Diag;
 use crate::lexer::Lexer;
 use crate::range::Range;
 use crate::report::report_wrap;
+use crate::source::Source;
 use crate::tokens::{Token, TokenType};
 
 // --- precedence utils -----
@@ -266,7 +267,7 @@ impl Parser {
   // --- precedence utils -----
   fn get_pde(&mut self) -> Option<u8> {
     match self.lexer.peek_token().kind {
-      TokenType::Pipe => Some(MIN_PDE),
+      TokenType::Pipe | TokenType::DoubleDot => Some(MIN_PDE),
       TokenType::Plus | TokenType::Minus => Some(ADD_PDE),
       TokenType::Star | TokenType::Slash => Some(MUL_PDE),
       _ => None,
@@ -297,5 +298,9 @@ impl Parser {
 
   fn create_diag(&self, message: &str, range: &Range) -> Diag {
     Diag::create_err(message.to_string(), range.clone())
+  }
+
+  pub fn get_source(&self) -> &Source {
+    self.lexer.take_source()
   }
 }

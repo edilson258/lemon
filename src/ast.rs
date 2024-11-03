@@ -374,25 +374,26 @@ impl NullLiteral {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Operator {
-  ADD,  // +
-  SUB,  // -
-  MUL,  // *
-  DIV,  // /
-  REM,  // %
-  EQ,   // ==
-  NEQ,  // !=
-  LT,   // <
-  GT,   // >
-  AND,  // &&
-  OR,   // ||
-  XOR,  // ^
-  SHL,  // <<
-  SHR,  // >>
-  POW,  // **
-  LE,   // <=
-  GE,   // >=
-  NOT,  // !
-  PIPE, // |>
+  ADD,   // +
+  SUB,   // -
+  MUL,   // *
+  DIV,   // /
+  REM,   // %
+  RANGE, // ..
+  EQ,    // ==
+  NEQ,   // !=
+  LT,    // <
+  GT,    // >
+  AND,   // &&
+  OR,    // ||
+  XOR,   // ^
+  SHL,   // <<
+  SHR,   // >>
+  POW,   // **
+  LE,    // <=
+  GE,    // >=
+  NOT,   // !
+  PIPE,  // |>
 }
 
 impl Operator {
@@ -410,6 +411,7 @@ impl Operator {
       TokenType::Greater => Some(Self::GT),
       TokenType::And => Some(Self::AND),
       TokenType::Or => Some(Self::OR),
+      TokenType::DoubleDot => Some(Self::RANGE),
       // TokenType::Dot => Some(Self::DOT),
       // TokenType::Extract => Some(Self::EXTRACT),
       TokenType::Pipe => Some(Self::PIPE),
