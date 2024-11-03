@@ -1,6 +1,7 @@
 mod ast;
 mod cli;
 mod diag;
+mod evaluator;
 mod lexer;
 mod loader;
 mod parser;
@@ -8,6 +9,7 @@ mod range;
 mod report;
 mod source;
 mod tokens;
+use evaluator::{eval::Evaluator, formatting::display_value};
 use lexer::Lexer;
 use parser::Parser;
 use source::Source;
@@ -23,6 +25,17 @@ fn check(source: Source) {
   let mut parser = Parser::new(lexer);
   let ast = parser.parse_program();
   println!("{:#?}", ast);
+}
+
+fn _eval(source: Source) {
+  let lexer = Lexer::new(source);
+  let mut parser = Parser::new(lexer);
+  let ast = parser.parse_program();
+  let mut eval = Evaluator::new();
+  match eval.eval(&ast) {
+    Ok(value) => println!("Result: {}", display_value(&value)),
+    Err(diag) => diag.report(parser.get_source()),
+  };
 }
 
 fn main() {
@@ -45,6 +58,11 @@ fn main() {
     //   let file = matches.get_one::<String>("file").unwrap();
     //   let source = loader(file);
     // }
+    Some(("eval", matches)) => {
+      let file = matches.get_one::<String>("file").unwrap();
+      let source = loader(file);
+      _eval(source);
+    }
     _ => {
       panic!("unknown command");
     }

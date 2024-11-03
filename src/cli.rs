@@ -7,7 +7,8 @@ pub fn command_line() -> clap::ArgMatches {
     .author(env!("CARGO_PKG_AUTHORS"))
     .subcommand_required(true)
     .arg_required_else_help(true)
-    .subcommand(Command::new("check").about("check lemon file.").arg(Arg::new("file").required(true)))
+    .subcommand(Command::new("check").about("check lemon.").arg(Arg::new("file").required(true)))
+    .subcommand(Command::new("eval").about("evaluate lemon.").arg(Arg::new("file").required(true)))
     .get_matches();
   return matches;
 }

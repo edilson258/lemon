@@ -1,3 +1,7 @@
+fn print(value) = {
+  value + 10
+}
+
 10
 |> print
 
