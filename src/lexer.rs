@@ -44,14 +44,14 @@ impl Lexer {
       '-' => self.read_check_ahead("-=", TokenType::MinusEq, TokenType::Minus),
       '+' => self.read_check_ahead("+=", TokenType::PlusEq, TokenType::Plus),
       '*' => self.read_check_ahead("*=", TokenType::StarEq, TokenType::Star),
-      '/' => self.read_check_ahead("/=", TokenType::SlashEq, TokenType::Slash),
-      '=' => {
-        if self.peek_many(2).as_str() == "=>" {
-          self.read_check_ahead("=>", TokenType::Arrow, TokenType::Assign)
-        } else {
-          self.read_check_ahead("==", TokenType::Eq, TokenType::Assign)
-        }
-      }
+      '/' => match self.peek_many(2).as_str() {
+        "/-" => self.read_commets(),
+        _ => self.read_check_ahead("/=", TokenType::SlashEq, TokenType::Slash),
+      },
+      '=' => match self.peek_many(2).as_str() {
+        "=>" => self.read_check_ahead("=>", TokenType::Arrow, TokenType::Assign),
+        _ => self.read_check_ahead("==", TokenType::Eq, TokenType::Assign),
+      },
       '!' => self.read_check_ahead("!=", TokenType::NotEq, TokenType::Bang),
       '<' => self.read_check_ahead("<=", TokenType::LessEq, TokenType::Less),
       '>' => self.read_check_ahead(">=", TokenType::GreaterEq, TokenType::Greater),
@@ -84,6 +84,32 @@ impl Lexer {
   fn read_number(&mut self) -> Token {
     let number = self.read_while(match_number);
     Token::new_number(number, self.create_range())
+  }
+
+  fn read_commets(&mut self) -> Token {
+    match self.peek_many(3).as_str() {
+      "/--" => self.read_skip_block(),
+      _ => self.read_skip_line(),
+    }
+  }
+
+  fn read_skip_block(&mut self) -> Token {
+    self.consume_expect("/--");
+    let start = self.cursor;
+    while !self.is_end() && !self.starts_with("--/") {
+      self.advance();
+    }
+    self.consume_expect("--/");
+    let text = self.source.raw[start..self.cursor].to_string();
+    let range = self.create_range();
+    return Token::new(TokenType::SkipBlock, Some(text), range);
+  }
+
+  fn read_skip_line(&mut self) -> Token {
+    self.consume_expect("/-");
+    let text = self.read_while(|ch| ch != '\n');
+    let range = self.create_range();
+    return Token::new(TokenType::SkipLine, Some(text), range);
   }
 
   fn read_string(&mut self) -> Token {

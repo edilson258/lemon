@@ -55,8 +55,8 @@ pub enum TokenType {
   Num,
   Bool,
   // Comments
-  LineCmt,  // Line comments (// ...)
-  BlockCmt, // Block comments (/* ... */)
+  SkipLine,  // Line comments
+  SkipBlock, // Block comments
   // Miscellaneous
   EOF, // End of file
 }
