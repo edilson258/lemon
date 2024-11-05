@@ -7,9 +7,9 @@ let server = http::server();
 
 server::route("/hello/:name", fn(params) = {
   fn(request, response) = {
-    params::method |> match _ {
+    params::method |> match {
       "GET" => fmt::format("Hello, {}!", params::name),
-      _     => 'Method not allowed'
+      _     => "Method not allowed"
     } |> response::send;
   }
 });
