@@ -24,9 +24,9 @@ let http = import("http");
 
 let server = http::server();
 
-server::route("/hello/:name", fn({ params, query }) => {
-  let greeting = query::contains("greeting") ? query::get("greeting") : "Hello";
-  fn(request, response) => {
+server::route("/hello/:name", fn({ params, query }) = {
+  let greeting = query::get("greeting")::fill("");
+  fn(request, response) = {
     params::method |> match _ {
       "GET" => {
         let message = fmt::format("{} {}!", greeting, params::name);

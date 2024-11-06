@@ -45,4 +45,12 @@ impl Ctx {
     }
     self.parent.as_mut().and_then(|parent| parent.get_mut(&key));
   }
+
+  pub fn create_ctx_object(&mut self, value: HashMap<String, Value>) -> Ctx {
+    let mut ctx = Ctx::new(Some(Box::new(self.clone())));
+    for (key, value) in value.iter() {
+      ctx.set(key.to_owned(), value.to_owned());
+    }
+    ctx
+  }
 }

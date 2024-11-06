@@ -21,6 +21,7 @@ pub fn display_value<'a>(v: &'a Value) -> impl fmt::Display + 'a {
     Value::Array(ArrayValue { value }) => write!(f, "{}", display_array(v)),
     Value::Object(ObjectValue { value }) => write!(f, "{}", display_object(v)),
     Value::Fn(FnValue { pats, stmt, ctx }) => write!(f, "fn({}) = ...", pats.join(", ")),
+    Value::StdFn(name, _) => write!(f, "std::{}", name),
   })
 }
 

@@ -1,0 +1,28 @@
+
+
+let sum = 10 + 10 + 10 -  10 * 10;
+println("Result: ", sum);
+
+
+let add = fn(x) = {
+  fn(y) = println(x + y);
+}
+
+let sum = add(10);
+
+
+
+
+let sum_callback = fn(x, fun) = {
+  fun(x)
+}
+
+
+
+sum_callback(10, fn(x) = {
+  x * x
+}) |> println;
+
+sum_callback(10, fn(x) = {
+  x + x
+}) |> println;

@@ -1,7 +1,9 @@
 #![allow(dead_code)]
+use std::collections::HashMap;
+
 use crate::ast;
 
-use super::ctx::Ctx;
+use super::{ctx::Ctx, std::StdFn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -12,6 +14,7 @@ pub enum Value {
   Fn(FnValue),
   Array(ArrayValue),
   Object(ObjectValue),
+  StdFn(String, StdFn),
 }
 
 impl Value {
@@ -163,26 +166,16 @@ impl ArrayValue {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObjectValue {
-  pub value: Vec<(String, Value)>,
+  pub value: HashMap<String, Value>,
 }
 
 impl ObjectValue {
-  pub fn get(&self, key: &str) -> Option<&Value> {
-    self.value.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+  pub fn get(&self, key: &str) -> Option<Value> {
+    self.value.get(key).map(|v| v.to_owned())
   }
-
   pub fn set(&mut self, key: String, value: Value) {
-    self.value.push((key, value));
+    self.value.insert(key, value);
   }
-
-  pub fn has(&self, key: &str) -> bool {
-    self.value.iter().any(|(k, _)| k == key)
-  }
-
-  pub fn keys(&self) -> Vec<String> {
-    self.value.iter().map(|(k, _)| k.clone()).collect()
-  }
-
   pub fn values(&self) -> Vec<Value> {
     self.value.iter().map(|(_, v)| v.clone()).collect()
   }
@@ -202,6 +195,16 @@ pub struct FnValue {
 impl FnValue {
   pub fn new(ctx: Ctx, pats: Vec<String>, stmt: Box<ast::Stmts>) -> Self {
     Self { ctx, pats, stmt }
+  }
+
+  pub fn set_parent_value(&mut self, key: &str, value: Value) {
+    match self.ctx.parent.as_mut() {
+      Some(ctx) => ctx.set(key.to_owned(), value),
+      None => {}
+    }
+  }
+  pub fn create_self(&mut self, value: Value) {
+    self.ctx.set("self".to_owned(), value);
   }
 }
 
@@ -225,6 +228,6 @@ pub fn create_array(value: Vec<Value>) -> Value {
   Value::Array(ArrayValue { value })
 }
 
-pub fn create_object(value: Vec<(String, Value)>) -> Value {
+pub fn create_object(value: HashMap<String, Value>) -> Value {
   Value::Object(ObjectValue { value })
 }

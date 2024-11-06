@@ -114,6 +114,7 @@ pub enum Expr {
   Group(GroupExpr),
   Fn(FnExpr),
   Binary(BinaryExpr),
+  Object(ObjectExpr),
   Pipe(PipeExpr),
   Unary(UnaryExpr),
   Call(CallExpr),
@@ -142,12 +143,14 @@ impl Expr {
       Expr::Return(return_expr) => return_expr.get_range(),
       Expr::Ident(ident) => ident.get_range(),
       Expr::Literal(literal) => literal.get_range(),
+      Expr::Object(object) => object.get_range(),
     }
   }
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnExpr {
   pub pats: Vec<Pat>,
+  pub name: Option<Identifier>,
   pub body: Box<Stmts>,
   pub range: Range,
 }
@@ -289,6 +292,30 @@ pub struct IfExpr {
 }
 
 impl IfExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ObjectExpr {
+  pub range: Range,
+  pub fields: Vec<Field>,
+}
+
+impl ObjectExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Field {
+  pub left: Identifier,
+  pub right: Box<Expr>,
+  pub range: Range,
+}
+
+impl Field {
   pub fn get_range(&self) -> &Range {
     &self.range
   }

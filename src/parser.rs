@@ -35,7 +35,7 @@ impl Parser {
 
   // -------- statements -------
   fn parse_stmt(&mut self) -> ast::Stmts {
-    let stmt = match self.lexer.peek_token().kind {
+    let stmt = match self.peek_token().kind {
       TokenType::Let => ast::Stmts::Let(self.parse_let_stmt()),
       TokenType::Fn => self.parse_fn_stmt(),
       TokenType::LBrace => ast::Stmts::Block(self.parse_block_stmt()),
@@ -104,7 +104,7 @@ impl Parser {
         break;
       }
 
-      let range_op = self.lexer.peek_token().range;
+      let range_op = self.peek_token().range;
       let operator = self.take_opeerator_exept();
       let right = self.parse_expr(curr_pde + 1);
       let mut range = expr.get_range().clone();
@@ -119,10 +119,11 @@ impl Parser {
   }
 
   fn parse_primary(&mut self) -> ast::Expr {
-    let mut expr = match self.lexer.peek_token().kind {
+    let mut expr = match self.peek_token().kind {
       TokenType::Identifier => ast::Expr::Ident(self.parse_ident()),
       TokenType::Fn => ast::Expr::Fn(self.parse_fn_expr(None)),
       TokenType::Match => ast::Expr::Match(self.parse_match_expr()),
+      TokenType::LBrace => ast::Expr::Object(self.parse_object_expr()),
       _ => {
         let literal = self.parse_literal();
         ast::Expr::Literal(literal)
@@ -130,7 +131,7 @@ impl Parser {
     };
 
     while self.match_token(TokenType::DoubleColon) || self.match_token(TokenType::LParen) {
-      expr = match self.lexer.peek_token().kind {
+      expr = match self.peek_token().kind {
         // call expr
         TokenType::LParen => self.parse_call_expr(expr),
         // member expr
@@ -174,14 +175,47 @@ impl Parser {
     ast::Arm { guard: Box::new(guard), body, range }
   }
 
+  fn parse_object_expr(&mut self) -> ast::ObjectExpr {
+    let lt_range = self.take_or_expect(TokenType::LBrace); // take the `{`
+    let fields = self.parse_object_fields();
+    let rg_range = self.take_or_expect(TokenType::RBrace); // take the `}`
+    let mut range = lt_range.clone();
+    range.merge(&rg_range);
+    return ast::ObjectExpr { fields, range };
+  }
+
+  fn parse_object_fields(&mut self) -> Vec<ast::Field> {
+    let mut fields = Vec::new();
+    while !self.match_token(TokenType::RBrace) {
+      fields.push(self.parse_field());
+      if self.match_token(TokenType::RBrace) {
+        break;
+      }
+      self.take_or_expect(TokenType::Comma); // take the `,`
+    }
+    fields
+  }
+  fn parse_field(&mut self) -> ast::Field {
+    let left = self.parse_ident();
+    self.take_or_expect(TokenType::Colon); // take the `=`
+    let right = self.parse_expr(MIN_PDE);
+    let mut range = left.get_range().clone();
+    range.merge(right.get_range());
+    ast::Field { left, right: Box::new(right), range }
+  }
+
   // fn(<pats>) = { <stmts> }
   fn parse_fn_expr(&mut self, fn_range: Option<Range>) -> ast::FnExpr {
     let mut range = fn_range.unwrap_or_else(|| self.take_or_expect(TokenType::Fn)); // take the `fn`
+    let mut name = None;
+    if self.match_token(TokenType::Identifier) {
+      name = Some(self.parse_ident())
+    }
     let pats = self.parse_fn_pats();
     self.take_or_expect(TokenType::Assign); // take the `=`
     let body = self.parse_stmt();
     range.merge(body.get_range());
-    ast::FnExpr { pats, body: Box::new(body), range }
+    ast::FnExpr { name, pats, body: Box::new(body), range }
   }
 
   fn parse_call_expr(&mut self, callee: ast::Expr) -> ast::Expr {
@@ -208,7 +242,7 @@ impl Parser {
   }
 
   fn parse_literal(&mut self) -> ast::Literal {
-    let token = self.lexer.next_token();
+    let token = self.next_token();
     match token.kind {
       TokenType::Num => {
         let text = token.text.unwrap();
@@ -237,7 +271,7 @@ impl Parser {
   }
 
   fn parse_ident(&mut self) -> ast::Identifier {
-    let token = self.lexer.next_token();
+    let token = self.next_token();
     if token.kind != TokenType::Identifier {
       self.report_expect(token.kind, TokenType::Identifier, &token.range)
     }
@@ -245,7 +279,7 @@ impl Parser {
   }
   // -------- utils --------
   fn take_or_expect(&mut self, token_type: TokenType) -> Range {
-    let token = self.lexer.next_token();
+    let token = self.next_token();
     if token.kind != token_type {
       self.report_expect(token.kind, token_type, &token.range);
     }
@@ -253,12 +287,12 @@ impl Parser {
   }
 
   fn match_token(&mut self, token_type: TokenType) -> bool {
-    self.lexer.peek_token().kind == token_type
+    self.peek_token().kind == token_type
   }
 
   fn match_and_take(&mut self, token_type: TokenType) -> Option<Range> {
     if self.match_token(token_type) {
-      Some(self.lexer.next_token().range)
+      Some(self.next_token().range)
     } else {
       None
     }
@@ -266,7 +300,7 @@ impl Parser {
 
   // --- precedence utils -----
   fn get_pde(&mut self) -> Option<u8> {
-    match self.lexer.peek_token().kind {
+    match self.peek_token().kind {
       TokenType::Pipe | TokenType::DoubleDot => Some(MIN_PDE),
       TokenType::Plus | TokenType::Minus => Some(ADD_PDE),
       TokenType::Star | TokenType::Slash => Some(MUL_PDE),
@@ -275,7 +309,7 @@ impl Parser {
   }
 
   fn take_opeerator_exept(&mut self) -> Operator {
-    let token = self.lexer.next_token();
+    let token = self.next_token();
     if let Some(operator) = Operator::from_token(&token.kind) {
       operator
     } else {
@@ -299,7 +333,24 @@ impl Parser {
   fn create_diag(&self, message: &str, range: &Range) -> Diag {
     Diag::create_err(message.to_string(), range.clone())
   }
+  fn next_token(&mut self) -> Token {
+    let token = self.lexer.next_token();
+    match token.kind {
+      TokenType::SkipLine | TokenType::SkipBlock => self.next_token(),
+      _ => token,
+    }
+  }
 
+  fn peek_token(&mut self) -> Token {
+    let token = self.lexer.peek_token();
+    match token.kind {
+      TokenType::SkipLine | TokenType::SkipBlock => {
+        self.lexer.next_token();
+        self.peek_token()
+      }
+      _ => token,
+    }
+  }
   pub fn get_source(&self) -> &Source {
     self.lexer.take_source()
   }

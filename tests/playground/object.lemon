@@ -1,0 +1,11 @@
+
+let user = {
+  name: "Yazalde",
+  print_name: fn() = {
+    println("Hello, ", self::name, "!", " I'm ", self::year, "!");
+  },
+  year: 2022,
+};
+
+
+user::print_name(10);

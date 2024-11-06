@@ -1,10 +1,9 @@
-fn print(value) = {
-  value + 10
-}
-
-10
-|> print
+println("hello world");
 
 
 
-let add = fn(a, b) = a + b
+/- let doubled = [1, 2, 3, 4]::map(fn(x) = x * 2);
+
+/--
+[2, 4, 6, 8]
+--/
