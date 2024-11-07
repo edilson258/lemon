@@ -20,7 +20,9 @@ pub fn display_value<'a>(v: &'a Value) -> impl fmt::Display + 'a {
     Value::Bool(BoolValue { value }) => write!(f, "{}", value),
     Value::Array(ArrayValue { value }) => write!(f, "{}", display_array(v)),
     Value::Object(ObjectValue { value }) => write!(f, "{}", display_object(v)),
-    Value::Fn(FnValue { pats, stmt, ctx }) => write!(f, "fn({}) = ...", pats.join(", ")),
+    Value::Fn(FnValue { pats, stmt, ctx, name }) => {
+      write!(f, "fn{}({}) = ...", name.as_ref().map(|n| format!("{} ", n)).unwrap_or("".to_string()), pats.join(", "))
+    }
     Value::StdFn(name, _) => write!(f, "std::{}", name),
   })
 }

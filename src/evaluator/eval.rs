@@ -3,19 +3,21 @@ use std::collections::HashMap;
 
 use super::ctx::Ctx;
 use super::errors;
+use super::stack::CallStack;
 use super::std::{create_std_fn, StdFn};
 use super::value::{create_bool, create_null, create_num, create_object, create_string, FnValue, Value};
 use crate::{ast, diag::Diag, range::Range};
 
 pub struct Evaluator {
   std: HashMap<&'static str, StdFn>,
+  call_stack: CallStack,
 }
 
 type EvalResult = Result<Value, Diag>;
 
 impl Evaluator {
   pub fn new() -> Self {
-    Self { std: create_std_fn() }
+    Self { std: create_std_fn(), call_stack: CallStack::new() }
   }
 
   pub fn eval(&mut self, program: &ast::Program) -> EvalResult {
@@ -43,10 +45,12 @@ impl Evaluator {
   }
 
   fn eval_fn_stmt(&mut self, fn_stmt: &ast::FunctionStmt, ctx: &mut Ctx) -> EvalResult {
+    let name = fn_stmt.name.text.clone();
     let pats: Vec<String> = fn_stmt.pats.iter().map(|pat| pat.ident.text.clone()).collect();
     let fn_ctx = Ctx::new(Some(Box::new(ctx.clone())));
-    let fn_value = FnValue::new(fn_ctx, pats, fn_stmt.body.clone());
-    ctx.set(fn_stmt.name.text.clone(), Value::Fn(fn_value));
+    let mut fn_value = FnValue::new(fn_ctx, Some(name.clone()), pats, fn_stmt.body.clone());
+    fn_value.set_value(&fn_stmt.name.text, Value::Fn(fn_value.clone()));
+    ctx.set(name, Value::Fn(fn_value));
     Ok(create_null())
   }
 
@@ -83,7 +87,7 @@ impl Evaluator {
   fn eval_fn_expr(&mut self, fn_expr: &ast::FnExpr, ctx: &mut Ctx) -> EvalResult {
     let fn_ctx = Ctx::new(Some(Box::new(ctx.clone())));
     let pats: Vec<String> = fn_expr.pats.iter().map(|pat| pat.ident.text.clone()).collect();
-    let fn_value = FnValue::new(fn_ctx, pats, fn_expr.body.clone());
+    let fn_value = FnValue::new(fn_ctx, None, pats, fn_expr.body.clone());
     Ok(Value::Fn(fn_value))
   }
 
@@ -227,6 +231,9 @@ impl Evaluator {
     if let Some(value) = ctx.get(&ident.text) {
       return Ok(value.to_owned());
     }
+    if let Some(value) = self.call_stack.get(&text) {
+      return Ok(value.to_owned());
+    }
 
     if let Some(value) = self.std.get(&text) {
       return Ok(Value::StdFn(text.to_owned(), value.to_owned()));
@@ -278,10 +285,16 @@ impl Evaluator {
       let msg = errors::format_function_arity_mismatch(fn_value.pats.len(), args.len());
       return self.create_diag(msg, range);
     }
+    self.call_stack.push_frame(range.clone())?;
+    self.call_stack.push(Value::Fn(fn_value.clone()));
     for (pat, arg) in fn_value.pats.iter().zip(args.iter()) {
-      ctx.set(pat.to_owned(), arg.to_owned());
+      ctx.set(pat.clone(), arg.to_owned());
     }
-    self.eval_stmt(&fn_value.stmt, &mut ctx)
+    let result = self.eval_stmt(&fn_value.stmt, &mut ctx);
+
+    self.call_stack.pop_frame();
+
+    return result;
   }
 
   fn create_diag(&self, message: String, range: &Range) -> EvalResult {

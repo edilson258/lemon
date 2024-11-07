@@ -188,23 +188,22 @@ impl ObjectValue {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnValue {
   pub ctx: Ctx,
+  pub name: Option<String>,
   pub pats: Vec<String>,
   pub stmt: Box<ast::Stmts>,
 }
 
 impl FnValue {
-  pub fn new(ctx: Ctx, pats: Vec<String>, stmt: Box<ast::Stmts>) -> Self {
-    Self { ctx, pats, stmt }
+  pub fn new(ctx: Ctx, name: Option<String>, pats: Vec<String>, stmt: Box<ast::Stmts>) -> Self {
+    Self { ctx, name, pats, stmt }
   }
 
-  pub fn set_parent_value(&mut self, key: &str, value: Value) {
-    match self.ctx.parent.as_mut() {
-      Some(ctx) => ctx.set(key.to_owned(), value),
-      None => {}
-    }
-  }
   pub fn create_self(&mut self, value: Value) {
     self.ctx.set("self".to_owned(), value);
+  }
+
+  pub fn set_value(&mut self, key: &str, value: Value) {
+    self.ctx.set(key.to_owned(), value);
   }
 }
 

@@ -151,7 +151,7 @@ impl Lexer {
     while !self.is_end() && predicate(self.peek()) {
       self.advance();
     }
-    self.source.raw[start..self.cursor].to_string()
+    self.source.raw[start..self.cursor].to_owned()
   }
 
   pub fn is_end(&self) -> bool {

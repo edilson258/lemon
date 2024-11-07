@@ -1,9 +1,10 @@
-println("hello world");
+
+fn factorial(n) = {
+  match n {
+    0 => 1,
+    _ => n * factorial(n - 1),
+  }
+}
 
 
-
-/- let doubled = [1, 2, 3, 4]::map(fn(x) = x * 2);
-
-/--
-[2, 4, 6, 8]
---/
+println(factorial(10000));
