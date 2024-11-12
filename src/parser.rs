@@ -172,6 +172,7 @@ impl Parser {
       TokenType::Fn => ast::Expr::Fn(self.parse_fn_expr(None)),
       TokenType::Match => ast::Expr::Match(self.parse_match_expr()),
       TokenType::LBrace => ast::Expr::Object(self.parse_object_expr()),
+      TokenType::LBracket => ast::Expr::Array(self.parse_array_expr()),
       TokenType::LParen => ast::Expr::Group(self.parse_group_expr()),
       _ => {
         let literal = self.parse_literal();
@@ -242,6 +243,7 @@ impl Parser {
     ast::Arm { guard: Box::new(guard), body, range }
   }
 
+  // { <ident>: <expr>, ... }
   fn parse_object_expr(&mut self) -> ast::ObjectExpr {
     let lt_range = self.take_or_expect(TokenType::LBrace); // take the `{`
     let fields = self.parse_object_fields();
@@ -269,6 +271,21 @@ impl Parser {
     let mut range = left.get_range().clone();
     range.merge(right.get_range());
     ast::Field { left, right: Box::new(right), range }
+  }
+
+  // [<expr>, ...]
+  fn parse_array_expr(&mut self) -> ast::ArrayExpr {
+    let mut range = self.take_or_expect(TokenType::LBracket); // take the `[`
+    let mut fields = Vec::new();
+    while !self.match_token(TokenType::RBracket) {
+      fields.push(self.parse_expr(MIN_PDE));
+      if self.match_token(TokenType::RBracket) {
+        break;
+      }
+      self.take_or_expect(TokenType::Comma); // take the `,`
+    }
+    range.merge(&self.take_or_expect(TokenType::RBracket)); // take the `]`
+    ast::ArrayExpr { range, fields }
   }
 
   // fn(<pats>) = { <stmts> }

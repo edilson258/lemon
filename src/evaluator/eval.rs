@@ -95,6 +95,7 @@ impl Evaluator {
       // ast::Expr::Return(return_expr) => self.eval_return_expr(return_expr, ctx),
       ast::Expr::Ident(ident) => self.eval_ident(ident, ctx),
       ast::Expr::Object(object) => self.eval_object_expr(object, ctx),
+      ast::Expr::Array(array) => self.eval_array_expr(array, ctx),
       ast::Expr::Literal(literal) => self.eval_literal(literal, ctx),
       _ => self.create_diag("unknown expression".to_owned(), &expr.get_range()),
     }
@@ -333,6 +334,13 @@ impl Evaluator {
     Ok(value_factory::create_object(value))
   }
 
+  fn eval_array_expr(&mut self, array: &ast::ArrayExpr, ctx: &mut Ctx) -> EvalResult {
+    let mut value = Vec::with_capacity(array.fields.len());
+    for expr in &array.fields {
+      value.push(self.eval_expr(expr, ctx)?);
+    }
+    Ok(value_factory::create_array(value))
+  }
   fn eval_literal(&mut self, literal: &ast::Literal, ctx: &mut Ctx) -> EvalResult {
     match literal {
       ast::Literal::Number(number) => Ok(value_factory::create_num(number.text.parse::<f64>().unwrap())),

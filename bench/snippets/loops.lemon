@@ -1,0 +1,35 @@
+let io = import("std::io");
+let fmt = import("core::fmt");
+
+let nums = [1, 2, 3, 4, 5];
+
+io::println(nums);
+/--
+
+for num in numbers {
+  let text = fmt::format("num: {}", num);
+  io::println(text);
+}
+
+for index, name in ["Alice", "Bob", "Charlie"] {
+  let text = fmt::format("name: {}, at: {}", name, index);
+  io::println(text);
+}
+
+let count = 0;
+while count < 3 {
+  fmt::print("counting: {}", count);
+  count = count + 1;
+}
+
+loop {
+  if count == 5 {
+    io::println("done.");
+    break;
+  }
+  count = count + 1;
+}
+numbers |> foreach(fn(num) = {
+  fmt::print("Squared: {}", num * num);
+});
+--/

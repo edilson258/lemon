@@ -115,6 +115,7 @@ pub enum Expr {
   Fn(FnExpr),
   Binary(BinaryExpr),
   Object(ObjectExpr),
+  Array(ArrayExpr),
   Pipe(PipeExpr),
   Unary(UnaryExpr),
   Call(CallExpr),
@@ -145,6 +146,7 @@ impl Expr {
       Expr::Ident(ident) => ident.get_range(),
       Expr::Literal(literal) => literal.get_range(),
       Expr::Object(object) => object.get_range(),
+      Expr::Array(array) => array.get_range(),
       Expr::Import(import) => import.get_range(),
     }
   }
@@ -318,6 +320,21 @@ pub struct Field {
 }
 
 impl Field {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ArrayExpr {
+  pub range: Range,
+  pub fields: Vec<Expr>,
+}
+
+impl ArrayExpr {
+  pub fn new(fields: Vec<Expr>, range: Range) -> Self {
+    Self { fields, range }
+  }
   pub fn get_range(&self) -> &Range {
     &self.range
   }
