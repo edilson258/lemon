@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::collections::HashMap;
 
-use super::value::Value;
+use super::value::{ObjectValue, Value};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ctx {
@@ -44,6 +44,11 @@ impl Ctx {
       *value = curr;
     }
     self.parent.as_mut().and_then(|parent| parent.get_mut(&key));
+  }
+
+  pub fn to_object(&self) -> ObjectValue {
+    let value = self.hash.clone();
+    ObjectValue { value }
   }
 
   pub fn create_ctx_object(&mut self, value: HashMap<String, Value>) -> Ctx {

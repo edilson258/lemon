@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+#![allow(dead_code)]
+
+use std::path::PathBuf;
 
 use crate::{diag::Diag, range::Range};
 
@@ -6,49 +8,45 @@ use super::value::Value;
 
 const STACK_SIZE: usize = 999;
 pub struct CallStack {
-  frames: Vec<HashMap<String, Value>>,
-  pointers: Vec<usize>,
+  frames: Vec<Vec<Value>>,
+  path: PathBuf,
+}
+
+pub struct StackTrace {
+  pub paths: Vec<PathBuf>,
 }
 
 impl CallStack {
-  pub fn new() -> Self {
-    Self { frames: Vec::new(), pointers: Vec::new() }
+  pub fn new(path: PathBuf) -> Self {
+    Self { frames: Vec::with_capacity(STACK_SIZE), path }
   }
 
   pub fn push_frame(&mut self, range: Range) -> Result<(), Diag> {
     if self.overflow() {
-      return Err(Diag::create_err("stack overflow in recursive call".to_owned(), range));
+      return Err(Diag::create_err("stack overflow in recursive call".to_owned(), range, self.path.clone()));
     }
-    self.frames.push(HashMap::new());
-    self.pointers.push(self.frames.len() - 1);
+    self.frames.push(Vec::new());
     Ok(())
   }
 
   pub fn pop_frame(&mut self) {
-    if let Some(frame_index) = self.pointers.pop() {
-      self.frames.truncate(frame_index);
-    }
+    self.frames.pop();
   }
 
   pub fn push(&mut self, value: Value) {
     if let Some(frame) = self.frames.last_mut() {
-      match &value {
-        Value::Fn(fn_value) => {
-          // todo: check if name is already in the frame
-          frame.insert(fn_value.name.clone().unwrap(), value);
-        }
-        _ => {}
-      }
+      frame.push(value);
     }
   }
 
-  pub fn get(&self, name: &str) -> Option<&Value> {
-    for frame in self.frames.iter().rev() {
-      return frame.get(name);
-    }
-    return None;
+  pub fn pop(&mut self) -> Option<Value> {
+    self.frames.last_mut().and_then(|frame| frame.pop())
+  }
+
+  pub fn get_last_value(&self) -> Option<&Value> {
+    self.frames.last().and_then(|frame| frame.last())
   }
   pub fn overflow(&self) -> bool {
-    self.pointers.len() > STACK_SIZE
+    self.frames.len() >= STACK_SIZE
   }
 }

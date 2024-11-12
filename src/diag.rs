@@ -1,13 +1,12 @@
 #![allow(dead_code)]
 
-use std::mem::take;
+use std::{mem::take, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
   range::Range,
   report::{report_err, report_info, report_warn},
-  source::Source,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -32,34 +31,35 @@ pub struct Diag {
   pub severity: Severity,
   pub message: String,
   pub range: Range,
+  pub path: PathBuf,
 }
 
 impl Diag {
-  pub fn new(severity: Severity, message: String, range: Range) -> Self {
-    Self { severity, message, range }
+  pub fn new(severity: Severity, message: String, range: Range, path: PathBuf) -> Self {
+    Self { severity, message, range, path }
   }
 
-  pub fn create_err(message: String, range: Range) -> Self {
-    Self::new(Severity::Err, message, range)
+  pub fn create_err(message: String, range: Range, path: PathBuf) -> Self {
+    Self::new(Severity::Err, message, range, path)
   }
 
-  pub fn create_warn(message: String, range: Range) -> Self {
-    Self::new(Severity::Warn, message, range)
+  pub fn create_warn(message: String, range: Range, path: PathBuf) -> Self {
+    Self::new(Severity::Warn, message, range, path)
   }
 
-  pub fn create_info(message: String, range: Range) -> Self {
-    Self::new(Severity::Info, message, range)
+  pub fn create_info(message: String, range: Range, path: PathBuf) -> Self {
+    Self::new(Severity::Info, message, range, path)
   }
 
   pub fn get_range(&self) -> &Range {
     &self.range
   }
 
-  pub fn report(&self, source: &Source) {
+  pub fn report(&self) {
     match self.severity {
-      Severity::Err => report_err(&self, &source),
-      Severity::Warn => report_warn(&self, &source),
-      Severity::Info => report_info(&self, &source),
+      Severity::Err => report_err(&self),
+      Severity::Warn => report_warn(&self),
+      Severity::Info => report_info(&self),
     }
   }
 }

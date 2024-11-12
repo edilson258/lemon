@@ -1,28 +1,26 @@
-
-
+/--
 let sum = 10 + 10 + 10 -  10 * 10;
-println("Result: ", sum);
 
+println("result: ", sum);
 
-let add = fn(x) = {
-  fn(y) = println(x + y);
-}
+let add = fn(x) = fn(y) = println(x + y);
+
 
 let sum = add(10);
 
+let call_back = fn(x, fun) = fun(x)
+
+
+call_back(10, fn(x) = x * x) |> println;
+
+call_back(10, fn(x) = x + x) |> println;
+--/
 
 
 
-let sum_callback = fn(x, fun) = {
-  fun(x)
-}
+fn assert(x, err) = match x {
+  true => null,
+  _ => err |> println,
+};
 
-
-
-sum_callback(10, fn(x) = {
-  x * x
-}) |> println;
-
-sum_callback(10, fn(x) = {
-  x + x
-}) |> println;
+assert(10 > 20, "error");

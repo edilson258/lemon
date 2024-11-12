@@ -1,0 +1,8 @@
+
+fn assert(x, err) = match x {
+  true => null,
+  _ => {
+    println(err);
+    std::exit(1);
+  }
+};

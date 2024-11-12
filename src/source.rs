@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 
+use std::path::PathBuf;
+
+#[derive(Debug, Clone)]
 pub struct Source {
   pub raw: String,
-  pub name: String,
+  pub path: PathBuf,
 }
 
 impl Source {
-  pub fn new(raw: &str, name: &str) -> Self {
-    Self { raw: raw.to_string(), name: name.to_string() }
+  pub fn new(raw: &str, path: &str) -> Self {
+    Self { raw: raw.to_string(), path: PathBuf::from(path) }
   }
 
   pub fn len(&self) -> usize {
@@ -18,7 +21,7 @@ impl Source {
     self.raw.clone()
   }
 
-  pub fn get_name(&self) -> &str {
-    &self.name
+  pub fn get_filename(&self) -> String {
+    self.path.display().to_string()
   }
 }

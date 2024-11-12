@@ -5,41 +5,47 @@ use crate::range::Range;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TokenType {
   // Keywords
-  Fn,    // fn
-  Let,   // let
-  If,    // if
-  Else,  // else
-  Ret,   // return
-  Null,  // null
-  Match, // match
+  Fn,     // fn
+  Let,    // let
+  If,     // if
+  Else,   // else
+  Ret,    // return
+  Null,   // null
+  Match,  // match
+  Import, // import
   // Operators
-  Plus,        // +
-  Minus,       // -
-  Star,        // *
-  Slash,       // /
-  Assign,      // =
-  PlusEq,      // +=
-  MinusEq,     // -=
-  StarEq,      // *=
-  SlashEq,     // /=
-  Eq,          // ==
-  NotEq,       // !=
-  Less,        // <
-  Greater,     // >
-  LessEq,      // <=
-  GreaterEq,   // >=
-  Extract,     // ?= (Error extraction operator)
-  Arrow,       // =>
-  And,         // &&
-  Or,          // ||
-  Dot,         // .
-  DoubleDot,   // ..
-  Bang,        // !
-  Quest,       // ?
-  Colon,       // :
-  DoubleColon, // ::
-  Pipe,        // |
-  At,          // @
+  Plus,       // +
+  Minus,      // -
+  Star,       // *
+  Slash,      // /
+  Assign,     // =
+  Pow,        // ^
+  PowEq,      // ^=
+  Rem,        // %
+  RemEq,      // %=
+  PlusEq,     // +=
+  MinusEq,    // -=
+  StarEq,     // *=
+  SlashEq,    // /=
+  Eq,         // ==
+  NotEq,      // !=
+  Less,       // <
+  Greater,    // >
+  LessEq,     // <=
+  GreaterEq,  // >=
+  Extract,    // ?= (Error extraction operator)
+  Arrow,      // =>
+  And,        // &&
+  Or,         // ||
+  Dot,        // .
+  DotDot,     // ..
+  Bang,       // !
+  Quest,      // ?
+  Colon,      // :
+  ColonColon, // ::
+  Pipe,       // |>
+  Bar,        // |
+  At,         // @
 
   // Delimiters
   LParen,   // (
@@ -94,6 +100,9 @@ impl Token {
       "return" => Self::new(TokenType::Ret, None, range),
       "null" => Self::new(TokenType::Null, None, range),
       "match" => Self::new(TokenType::Match, None, range),
+      "false" => Self::new(TokenType::Bool, Some("false".to_owned()), range),
+      "true" => Self::new(TokenType::Bool, Some("true".to_owned()), range),
+      "import" => Self::new(TokenType::Import, None, range),
       _ => Self::new(TokenType::Identifier, Some(text.to_string()), range),
     }
   }

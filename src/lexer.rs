@@ -37,13 +37,33 @@ impl Lexer {
       return Token::new_eof(self.create_range());
     }
     match self.peek() {
+      'a'..='z' | 'A'..='Z' | '_' | '$' => self.read_identifier(),
       '0'..='9' => self.read_number(),
       '"' => self.read_string(),
       '\'' => self.single_quote(),
-      'a'..='z' | 'A'..='Z' | '_' | '$' => self.read_identifier(),
       '-' => self.read_check_ahead("-=", TokenType::MinusEq, TokenType::Minus),
       '+' => self.read_check_ahead("+=", TokenType::PlusEq, TokenType::Plus),
       '*' => self.read_check_ahead("*=", TokenType::StarEq, TokenType::Star),
+      '%' => self.read_check_ahead("%=", TokenType::RemEq, TokenType::Rem),
+      '^' => self.read_check_ahead("^=", TokenType::PowEq, TokenType::Pow),
+      '.' => self.read_check_ahead("..", TokenType::DotDot, TokenType::Dot),
+      '!' => self.read_check_ahead("!=", TokenType::NotEq, TokenType::Bang),
+      '<' => self.read_check_ahead("<=", TokenType::LessEq, TokenType::Less),
+      '>' => self.read_check_ahead(">=", TokenType::GreaterEq, TokenType::Greater),
+      ':' => self.read_check_ahead("::", TokenType::ColonColon, TokenType::Colon),
+      '(' => self.read_simple_token(TokenType::LParen, "("),
+      ')' => self.read_simple_token(TokenType::RParen, ")"),
+      '{' => self.read_simple_token(TokenType::LBrace, "{"),
+      '}' => self.read_simple_token(TokenType::RBrace, "}"),
+      '[' => self.read_simple_token(TokenType::LBracket, "["),
+      ']' => self.read_simple_token(TokenType::RBracket, "]"),
+      ';' => self.read_simple_token(TokenType::Semi, ";"),
+      ',' => self.read_simple_token(TokenType::Comma, ","),
+      '|' => match self.peek_many(2).as_str() {
+        "|>" => self.read_simple_token(TokenType::Pipe, "|>"),
+        "||" => self.read_simple_token(TokenType::Or, "||"),
+        _ => self.read_simple_token(TokenType::Bar, "|"),
+      },
       '/' => match self.peek_many(2).as_str() {
         "/-" => self.read_commets(),
         _ => self.read_check_ahead("/=", TokenType::SlashEq, TokenType::Slash),
@@ -52,24 +72,6 @@ impl Lexer {
         "=>" => self.read_check_ahead("=>", TokenType::Arrow, TokenType::Assign),
         _ => self.read_check_ahead("==", TokenType::Eq, TokenType::Assign),
       },
-      '!' => self.read_check_ahead("!=", TokenType::NotEq, TokenType::Bang),
-      '<' => self.read_check_ahead("<=", TokenType::LessEq, TokenType::Less),
-      '>' => self.read_check_ahead(">=", TokenType::GreaterEq, TokenType::Greater),
-      ':' => self.read_check_ahead("::", TokenType::DoubleColon, TokenType::Colon),
-      '(' => self.read_simple_token(TokenType::LParen, "("),
-      ')' => self.read_simple_token(TokenType::RParen, ")"),
-      '{' => self.read_simple_token(TokenType::LBrace, "{"),
-      '}' => self.read_simple_token(TokenType::RBrace, "}"),
-      '[' => self.read_simple_token(TokenType::LBracket, "["),
-      ']' => self.read_simple_token(TokenType::RBracket, "]"),
-      '|' => match self.peek_many(2).as_str() {
-        "|>" => self.read_simple_token(TokenType::Pipe, "|>"),
-        "||" => self.read_simple_token(TokenType::Or, "||"),
-        _ => self.handle_unknown_token("|"),
-      },
-      ';' => self.read_simple_token(TokenType::Semi, ";"),
-      ',' => self.read_simple_token(TokenType::Comma, ","),
-      '.' => self.read_simple_token(TokenType::Dot, "."),
       _ => self.handle_unknown_token(self.peek().to_string().as_str()),
     }
   }
@@ -78,7 +80,7 @@ impl Lexer {
     self.advance();
     let msg = format!("unknown token `{}`.", text);
     let diag = self.create_diag(&msg);
-    report_wrap(&diag, &self.source);
+    report_wrap(&diag);
   }
 
   fn read_number(&mut self) -> Token {
@@ -114,18 +116,45 @@ impl Lexer {
 
   fn read_string(&mut self) -> Token {
     self.consume_expect("\"");
-    let text = self.read_while(|ch| ch != '"' && ch != '\n');
+    let text = self.read_escaped_string('"');
     self.consume_expect_with_error("\"", "unterminated string.");
     Token::new_string(text, self.create_range())
   }
 
   fn single_quote(&mut self) -> Token {
     self.consume_expect("'");
-    let text = self.read_while(|ch| ch != '\'' && ch != '\n');
+    let text = self.read_escaped_string('\'');
     self.consume_expect_with_error("'", "unterminated string.");
     Token::new_string(text, self.create_range())
   }
 
+  fn read_escaped_string(&mut self, delimiter: char) -> String {
+    let mut text = String::new();
+    while !self.is_end() && self.peek() != '\n' {
+      let peeked = self.peek();
+      if peeked == delimiter {
+        break;
+      }
+      if peeked == '\\' {
+        self.advance();
+        match self.peek() {
+          'n' => text.push('\n'),
+          't' => text.push('\t'),
+          '\\' => text.push('\\'),
+          '\'' => text.push('\''),
+          '"' => text.push('"'),
+          _ => {
+            text.push('\\');
+            text.push(self.peek());
+          }
+        }
+      } else {
+        text.push(peeked);
+      }
+      self.advance();
+    }
+    text
+  }
   fn read_identifier(&mut self) -> Token {
     let text = self.read_while(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch == '$' || ch.is_ascii_digit());
     Token::new_identifier(text.as_str(), self.create_range())
@@ -192,7 +221,7 @@ impl Lexer {
       self.advance_by(text.len());
     } else {
       let diag = self.create_diag(message);
-      report_wrap(&diag, &self.source);
+      report_wrap(&diag);
     }
   }
 
@@ -217,7 +246,7 @@ impl Lexer {
     let found = self.peek_many(expected.len());
     let text_error = format!("expected `{}`, found `{}`.", expected, found);
     let diag = self.create_diag(&text_error);
-    report_wrap(&diag, &self.source);
+    report_wrap(&diag);
   }
 
   pub fn take_source(&self) -> &Source {
@@ -226,10 +255,35 @@ impl Lexer {
 
   pub fn create_diag(&mut self, message: &str) -> Diag {
     let range = self.create_range();
-    Diag::create_err(message.to_string(), range)
+    Diag::create_err(message.to_string(), range, self.source.path.clone())
   }
 }
 
 fn match_number(character: char) -> bool {
   "1234567890.".contains(character)
+}
+
+fn unescape_string(input: &str) -> String {
+  let mut result = String::with_capacity(input.len());
+  let mut chars = input.chars();
+
+  while let Some(ch) = chars.next() {
+    if ch == '\\' {
+      match chars.next() {
+        Some('n') => result.push('\n'),
+        Some('t') => result.push('\t'),
+        Some('"') => result.push('"'),
+        Some('\\') => result.push('\\'),
+        Some(other) => {
+          result.push('\\');
+          result.push(other);
+        }
+        None => break,
+      }
+    } else {
+      result.push(ch);
+    }
+  }
+
+  result
 }

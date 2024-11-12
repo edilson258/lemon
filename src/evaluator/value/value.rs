@@ -1,9 +1,9 @@
 #![allow(dead_code)]
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Bytes};
 
 use crate::ast;
 
-use super::{ctx::Ctx, std::StdFn};
+use super::{ctx::Ctx, native::NativeFn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -14,7 +14,10 @@ pub enum Value {
   Fn(FnValue),
   Array(ArrayValue),
   Object(ObjectValue),
-  StdFn(String, StdFn),
+  NativeFn(NativeFnValue),
+  Buffer(BufferValue),
+  Bytes(BytesValue),
+  Stream(StreamValue),
 }
 
 impl Value {
@@ -23,6 +26,18 @@ impl Value {
   }
   pub fn is_number(&self) -> bool {
     matches!(self, Value::Num(_))
+  }
+
+  pub fn is_buffer(&self) -> bool {
+    matches!(self, Value::Buffer(_))
+  }
+
+  pub fn is_bytes(&self) -> bool {
+    matches!(self, Value::Bytes(_))
+  }
+
+  pub fn is_stream(&self) -> bool {
+    matches!(self, Value::Stream(_))
   }
 
   pub fn is_string(&self) -> bool {
@@ -53,8 +68,36 @@ impl Value {
       (Value::Null(_), Value::Null(_)) => true,
       (Value::Array(lt), Value::Array(rt)) => lt.is_eq(rt),
       (Value::Object(lt), Value::Object(rt)) => lt.is_eq(rt),
+      (Value::Buffer(lt), Value::Buffer(rt)) => lt.is_eq(rt),
+      (Value::Bytes(lt), Value::Bytes(rt)) => lt.is_eq(rt),
+      (Value::Stream(lt), Value::Stream(rt)) => lt.is_eq(rt),
+      (Value::NativeFn(lt), Value::NativeFn(rt)) => lt.is_eq(rt),
       _ => false,
     }
+  }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NativeFnValue {
+  pub name: &'static str,
+  pub native: NativeFn,
+}
+
+impl NativeFnValue {
+  pub fn new(name: &'static str, native: NativeFn) -> Self {
+    Self { name, native }
+  }
+
+  pub fn get_name(&self) -> &str {
+    &self.name
+  }
+
+  pub fn get_native(&self) -> &NativeFn {
+    &self.native
+  }
+
+  pub fn is_eq(&self, other: &NativeFnValue) -> bool {
+    self.name == other.name && self.native.eq(&other.native)
   }
 }
 
@@ -170,6 +213,9 @@ pub struct ObjectValue {
 }
 
 impl ObjectValue {
+  pub fn new() -> Self {
+    Self { value: HashMap::new() }
+  }
   pub fn get(&self, key: &str) -> Option<Value> {
     self.value.get(key).map(|v| v.to_owned())
   }
@@ -183,19 +229,26 @@ impl ObjectValue {
   pub fn is_eq(&self, value: &ObjectValue) -> bool {
     self.value.iter().zip(value.value.iter()).all(|(lt, rt)| lt.0 == rt.0 && lt.1.is_eq(&rt.1))
   }
+
+  pub fn with_native(natives: &HashMap<&'static str, NativeFnValue>) -> Self {
+    let mut obj = ObjectValue { value: HashMap::with_capacity(natives.len()) };
+    for (key, native) in natives {
+      obj.value.insert(key.to_string(), Value::NativeFn(native.clone()));
+    }
+    obj
+  }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnValue {
   pub ctx: Ctx,
-  pub name: Option<String>,
   pub pats: Vec<String>,
   pub stmt: Box<ast::Stmts>,
 }
 
 impl FnValue {
-  pub fn new(ctx: Ctx, name: Option<String>, pats: Vec<String>, stmt: Box<ast::Stmts>) -> Self {
-    Self { ctx, name, pats, stmt }
+  pub fn new(ctx: Ctx, pats: Vec<String>, stmt: Box<ast::Stmts>) -> Self {
+    Self { ctx, pats, stmt }
   }
 
   pub fn create_self(&mut self, value: Value) {
@@ -229,4 +282,141 @@ pub fn create_array(value: Vec<Value>) -> Value {
 
 pub fn create_object(value: HashMap<String, Value>) -> Value {
   Value::Object(ObjectValue { value })
+}
+
+pub fn create_buffer(value: Vec<u8>) -> Value {
+  Value::Buffer(BufferValue { value })
+}
+
+pub fn create_bytes(value: Vec<u8>) -> Value {
+  Value::Bytes(BytesValue::new(value))
+}
+
+pub fn create_stream() -> Value {
+  Value::Stream(StreamValue::new())
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BufferValue {
+  pub value: Vec<u8>,
+}
+
+impl BufferValue {
+  pub fn new() -> Self {
+    Self { value: Vec::new() }
+  }
+
+  pub fn with_capacity(capacity: usize) -> Self {
+    Self { value: Vec::with_capacity(capacity) }
+  }
+
+  pub fn from_vec(value: Vec<u8>) -> Self {
+    Self { value }
+  }
+
+  pub fn len(&self) -> usize {
+    self.value.len()
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.value.is_empty()
+  }
+
+  pub fn capacity(&self) -> usize {
+    self.value.capacity()
+  }
+
+  pub fn clear(&mut self) {
+    self.value.clear();
+  }
+
+  pub fn extend_from_slice(&mut self, other: &[u8]) {
+    self.value.extend_from_slice(other);
+  }
+
+  pub fn as_slice(&self) -> &[u8] {
+    &self.value
+  }
+
+  pub fn to_vec(&self) -> Vec<u8> {
+    self.value.clone()
+  }
+
+  pub fn is_eq(&self, other: &BufferValue) -> bool {
+    self.value == other.value
+  }
+}
+
+// BytesValue para iteração sobre bytes
+#[derive(Debug, Clone, PartialEq)]
+pub struct BytesValue {
+  pub value: Vec<u8>,
+  position: usize,
+}
+
+impl BytesValue {
+  pub fn new(value: Vec<u8>) -> Self {
+    Self { value, position: 0 }
+  }
+
+  pub fn next(&mut self) -> Option<u8> {
+    if self.position < self.value.len() {
+      let byte = self.value[self.position];
+      self.position += 1;
+      Some(byte)
+    } else {
+      None
+    }
+  }
+
+  pub fn reset(&mut self) {
+    self.position = 0;
+  }
+
+  pub fn position(&self) -> usize {
+    self.position
+  }
+
+  pub fn is_eq(&self, other: &BytesValue) -> bool {
+    self.value == other.value
+  }
+}
+
+// StreamValue para leitura de streams
+#[derive(Debug, Clone, PartialEq)]
+pub struct StreamValue {
+  pub buffer: Vec<u8>,
+  pub position: usize,
+}
+
+impl StreamValue {
+  pub fn new() -> Self {
+    Self { buffer: Vec::new(), position: 0 }
+  }
+
+  pub fn with_capacity(capacity: usize) -> Self {
+    Self { buffer: Vec::with_capacity(capacity), position: 0 }
+  }
+
+  pub fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+    let available = self.buffer.len() - self.position;
+    let to_read = std::cmp::min(available, buf.len());
+
+    if to_read == 0 {
+      return Ok(0);
+    }
+
+    buf[..to_read].copy_from_slice(&self.buffer[self.position..self.position + to_read]);
+    self.position += to_read;
+    Ok(to_read)
+  }
+
+  pub fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+    self.buffer.extend_from_slice(buf);
+    Ok(buf.len())
+  }
+
+  pub fn is_eq(&self, other: &StreamValue) -> bool {
+    self.buffer == other.buffer
+  }
 }

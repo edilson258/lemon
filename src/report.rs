@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use crate::{
-  diag::{Diag, Severity},
-  source::Source,
-};
+use std::fs;
+
+use crate::diag::{Diag, Severity};
 use dunh::{high_err_ctx, high_info_ctx, high_warn_ctx};
 
 const LONES_CTX: usize = 2;
@@ -11,27 +10,27 @@ const LONES_CTX: usize = 2;
 // ---
 //
 
-pub fn report_err(diag: &Diag, source: &Source) {
-  report(diag, &source)
+pub fn report_err(diag: &Diag) {
+  report(diag)
 }
 
-pub fn report_warn(diag: &Diag, source: &Source) {
-  report(diag, &source)
+pub fn report_warn(diag: &Diag) {
+  report(diag)
 }
 
-pub fn report_info(diag: &Diag, source: &Source) {
-  report(diag, &source)
+pub fn report_info(diag: &Diag) {
+  report(diag)
 }
 
-pub fn report_wrap(diag: &Diag, source: &Source) -> ! {
-  report(diag, &source);
+pub fn report_wrap(diag: &Diag) -> ! {
+  report(diag);
   std::process::exit(1);
 }
 
 // -- utils --
 //
 
-fn report(diag: &Diag, source: &Source) {
+fn report(diag: &Diag) {
   println!(""); // -- new line
 
   let slug = match diag.severity {
@@ -41,12 +40,13 @@ fn report(diag: &Diag, source: &Source) {
   };
   println!("{} {}", slug, text_white(&diag.message)); // -- message
 
-  println!("{}", text_gray(source.get_name())); // -- filename
+  println!("{}", text_gray(&diag.path.display().to_string())); // -- filename
 
+  let raw = fs::read_to_string(&diag.path).unwrap();
   let code = match diag.severity {
-    Severity::Err => high_err_ctx(diag.range.start, diag.range.end, &source.raw, LONES_CTX),
-    Severity::Warn => high_warn_ctx(diag.range.start, diag.range.end, &source.raw, LONES_CTX),
-    Severity::Info => high_info_ctx(diag.range.start, diag.range.end, &source.raw, LONES_CTX),
+    Severity::Err => high_err_ctx(diag.range.start, diag.range.end, &raw, LONES_CTX),
+    Severity::Warn => high_warn_ctx(diag.range.start, diag.range.end, &raw, LONES_CTX),
+    Severity::Info => high_info_ctx(diag.range.start, diag.range.end, &raw, LONES_CTX),
   };
 
   println!("{}", code);

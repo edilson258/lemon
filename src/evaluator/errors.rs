@@ -6,19 +6,39 @@ use super::value::Value;
 pub fn format_mismatched_types(expected: &str, found: &Value) -> String {
   format!("expected `{}`, found `{}`", expected, display_value(found))
 }
+pub fn format_error<T: ToString>(err: T) -> String {
+  format!("error: {}", err.to_string().to_lowercase())
+}
 
 pub fn format_missing_property(property: &Value) -> String {
   format!("missing property `{}`", display_value(property))
+}
+
+pub fn format_missing_module(module: &str) -> String {
+  format!("not found module `{}`", module)
 }
 
 pub fn format_expected_function(value: &Value) -> String {
   format!("expected function, found `{}`", display_value(value))
 }
 
+pub fn format_expected_number(value: &Value) -> String {
+  format!("expected number, found `{}`", display_value(value))
+}
+
 pub fn format_undeclared_variable(name: &str) -> String {
   format!("cannot find value `{}` in this scope", name)
 }
 
+// cannot access field of non-object
+pub fn format_missing_field() -> String {
+  format!("cannot access field of non-object")
+}
+
+pub fn format_missing_fn_in_module(name: &str, module: &str) -> String {
+  format!("not found `{}`, in `{}`", name, module)
+}
+// not found `exit`, in module `process`
 pub fn format_function_arity_mismatch(expected: usize, found: usize) -> String {
   match expected {
     1 => format!("expected 1 arg, found `{}`", found),
@@ -38,6 +58,7 @@ pub fn format_unsupported_operator(left: &Value, operator: &Operator, right: &Va
     MUL => format!("cannot multiply `{}` and `{}`", display_value(left), display_value(right)),
     DIV => format!("cannot divide `{}` by `{}`", display_value(left), display_value(right)),
     REM => format!("cannot take modulus of `{}` and `{}`", display_value(left), display_value(right)),
+    REQ => format!("cannot take modulus of `{}` and `{}`", display_value(left), display_value(right)),
     EQ => format!("cannot compare `{}` and `{}`", display_value(left), display_value(right)),
     AND => format!("cannot perform `and` on `{}` and `{}`", display_value(left), display_value(right)),
     OR => format!("cannot perform `or` on `{}` and `{}`", display_value(left), display_value(right)),
@@ -53,6 +74,7 @@ pub fn format_unsupported_operator(left: &Value, operator: &Operator, right: &Va
     GT => format!("`{}` cannot be greater than `{}`", display_value(left), display_value(right)),
     NEQ => format!("cannot compare `{}` and `{}`", display_value(left), display_value(right)),
     XOR => format!("cannot perform `xor` on `{}` and `{}`", display_value(left), display_value(right)),
+    BOR => format!("cannot perform `bitwise or` on `{}` and `{}`", display_value(left), display_value(right)),
   }
 }
 

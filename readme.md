@@ -25,7 +25,7 @@ let http = import("http");
 let server = http::server();
 
 server::route("/hello/:name", fn({ params, query }) = {
-  let greeting = query::get("greeting")::fill("");
+  let greeting = query::get("greeting")::unwrap_or("");
   fn(request, response) = {
     params::method |> match _ {
       "GET" => {

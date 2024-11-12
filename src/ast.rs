@@ -123,6 +123,7 @@ pub enum Expr {
   Member(MemberExpr),
   If(IfExpr),
   Return(ReturnExpr),
+  Import(ImportExpr),
   Ident(Identifier),
   Literal(Literal),
 }
@@ -144,6 +145,7 @@ impl Expr {
       Expr::Ident(ident) => ident.get_range(),
       Expr::Literal(literal) => literal.get_range(),
       Expr::Object(object) => object.get_range(),
+      Expr::Import(import) => import.get_range(),
     }
   }
 }
@@ -334,6 +336,18 @@ impl ReturnExpr {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportExpr {
+  pub path: StringLiteral,
+  pub range: Range,
+}
+
+impl ImportExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Literal {
   Number(NumberLiteral),
   String(StringLiteral),
@@ -406,6 +420,7 @@ pub enum Operator {
   MUL,   // *
   DIV,   // /
   REM,   // %
+  REQ,   // %=
   RANGE, // ..
   EQ,    // ==
   NEQ,   // !=
@@ -414,13 +429,15 @@ pub enum Operator {
   AND,   // &&
   OR,    // ||
   XOR,   // ^
-  SHL,   // <<
-  SHR,   // >>
-  POW,   // **
-  LE,    // <=
-  GE,    // >=
-  NOT,   // !
-  PIPE,  // |>
+  BOR,   // |
+  // XORQ,  // ^=
+  SHL,  // <<
+  SHR,  // >>
+  POW,  // **
+  LE,   // <=
+  GE,   // >=
+  NOT,  // !
+  PIPE, // |>
 }
 
 impl Operator {
@@ -438,7 +455,12 @@ impl Operator {
       TokenType::Greater => Some(Self::GT),
       TokenType::And => Some(Self::AND),
       TokenType::Or => Some(Self::OR),
-      TokenType::DoubleDot => Some(Self::RANGE),
+      TokenType::DotDot => Some(Self::RANGE),
+      TokenType::Rem => Some(Self::REM),
+      TokenType::RemEq => Some(Self::REQ),
+      TokenType::Bar => Some(Self::BOR),
+      TokenType::Pow => Some(Self::POW),
+      // TokenType::PowEq => Some(Self::POWQ),
       // TokenType::Dot => Some(Self::DOT),
       // TokenType::Extract => Some(Self::EXTRACT),
       TokenType::Pipe => Some(Self::PIPE),

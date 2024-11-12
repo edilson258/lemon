@@ -6,6 +6,3 @@ let user = {
   },
   year: 2022,
 };
-
-
-user::print_name(10);

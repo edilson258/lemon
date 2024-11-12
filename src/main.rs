@@ -9,7 +9,7 @@ mod range;
 mod report;
 mod source;
 mod tokens;
-use evaluator::{eval::Evaluator, formatting::display_value};
+use evaluator::{ctx::Ctx, eval::Evaluator};
 use lexer::Lexer;
 use parser::Parser;
 use source::Source;
@@ -27,14 +27,16 @@ fn check(source: Source) {
   println!("{:#?}", ast);
 }
 
-fn _eval(source: Source) {
+pub(crate) fn eval(source: Source) {
+  let path = source.path.clone();
   let lexer = Lexer::new(source);
   let mut parser = Parser::new(lexer);
   let ast = parser.parse_program();
-  let mut eval = Evaluator::new();
-  match eval.eval(&ast) {
-    Ok(value) => println!("Result: {}", display_value(&value)),
-    Err(diag) => diag.report(parser.get_source()),
+  let mut eval = Evaluator::new(path);
+  let mut ctx = Ctx::new(None);
+  match eval.eval(&ast, &mut ctx) {
+    Err(diag) => diag.report(),
+    _ => {}
   };
 }
 
@@ -61,7 +63,7 @@ fn main() {
     Some(("eval", matches)) => {
       let file = matches.get_one::<String>("file").unwrap();
       let source = loader(file);
-      _eval(source);
+      eval(source);
     }
     _ => {
       panic!("unknown command");

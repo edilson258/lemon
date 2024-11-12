@@ -1,0 +1,12 @@
+
+let io = import("core::io");
+let fmt = import("core::fmt");
+
+
+fn println(x) = {
+  io::write_stdout(fmt::format("{}\n", x));
+};
+
+fn print(x) = {
+  io::write_stdout(x);
+};
