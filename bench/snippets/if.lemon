@@ -1,0 +1,21 @@
+let io = import("std::io");
+
+fn fibonacci(num) = if (num < 2) {
+  num
+} else {
+  fibonacci(num - 1) + fibonacci(num - 2)
+};
+
+
+
+/--
+match num {
+  0 => 0,
+  1 => 1,
+  _ => fibonacci(num - 1) + fibonacci(num - 2),
+}
+
+--/
+
+
+fibonacci(10) |> io::println;
