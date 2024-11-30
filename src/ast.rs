@@ -116,6 +116,11 @@ pub enum Expr {
   Binary(BinaryExpr),
   Object(ObjectExpr),
   Array(ArrayExpr),
+  For(ForExpr),
+  While(WhileExpr),
+  Loop(LoopExpr),
+  Break(BreakExpr),
+  Skip(SkipExpr),
   Pipe(PipeExpr),
   Unary(UnaryExpr),
   Call(CallExpr),
@@ -148,6 +153,11 @@ impl Expr {
       Expr::Object(object) => object.get_range(),
       Expr::Array(array) => array.get_range(),
       Expr::Import(import) => import.get_range(),
+      Expr::For(for_expr) => for_expr.get_range(),
+      Expr::While(while_expr) => while_expr.get_range(),
+      Expr::Loop(loop_expr) => loop_expr.get_range(),
+      Expr::Break(break_expr) => break_expr.get_range(),
+      Expr::Skip(skip_expr) => skip_expr.get_range(),
     }
   }
 }
@@ -290,8 +300,8 @@ impl MemberExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IfExpr {
   pub condition: Box<Expr>,
-  pub consequent: Vec<Stmts>,
-  pub alternate: Option<Vec<Stmts>>,
+  pub consequent: Box<Stmts>,
+  pub alternate: Option<Box<Stmts>>,
   pub range: Range,
 }
 
@@ -335,6 +345,69 @@ impl ArrayExpr {
   pub fn new(fields: Vec<Expr>, range: Range) -> Self {
     Self { fields, range }
   }
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ForExpr {
+  pub value: Identifier,
+  pub pos: Option<Identifier>,
+  pub expr: Box<Expr>,
+  pub body: Box<Stmts>,
+  pub range: Range,
+}
+
+impl ForExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WhileExpr {
+  pub expr: Box<Expr>,
+  pub body: Box<Stmts>,
+  pub range: Range,
+}
+
+impl WhileExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LoopExpr {
+  pub body: Box<Stmts>,
+  pub range: Range,
+}
+
+impl LoopExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BreakExpr {
+  pub value: Option<Box<Expr>>,
+  pub range: Range,
+}
+
+impl BreakExpr {
+  pub fn get_range(&self) -> &Range {
+    &self.range
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SkipExpr {
+  pub range: Range,
+}
+
+impl SkipExpr {
   pub fn get_range(&self) -> &Range {
     &self.range
   }
