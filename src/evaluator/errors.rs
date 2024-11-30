@@ -38,6 +38,11 @@ pub fn format_missing_field() -> String {
 pub fn format_missing_fn_in_module(name: &str, module: &str) -> String {
   format!("not found `{}`, in `{}`", name, module)
 }
+
+pub fn format_missing_method(name: &str) -> String {
+  format!("not found property `{}`", name)
+}
+
 // not found `exit`, in module `process`
 pub fn format_function_arity_mismatch(expected: usize, found: usize) -> String {
   match expected {
