@@ -8,7 +8,14 @@ pub enum TokenType {
   Fn,     // fn
   Let,    // let
   If,     // if
+  For,    // for
+  In,     // in
+  While,  // while
+  Loop,   // loop
+  Break,  // break
+  Skip,   // skip
   Else,   // else
+  ElseIf, // else if
   Ret,    // return
   Null,   // null
   Match,  // match
@@ -103,6 +110,12 @@ impl Token {
       "false" => Self::new(TokenType::Bool, Some("false".to_owned()), range),
       "true" => Self::new(TokenType::Bool, Some("true".to_owned()), range),
       "import" => Self::new(TokenType::Import, None, range),
+      "for" => Self::new(TokenType::For, None, range),
+      "in" => Self::new(TokenType::In, None, range),
+      "while" => Self::new(TokenType::While, None, range),
+      "loop" => Self::new(TokenType::Loop, None, range),
+      "break" => Self::new(TokenType::Break, None, range),
+      "skip" => Self::new(TokenType::Skip, None, range),
       _ => Self::new(TokenType::Identifier, Some(text.to_string()), range),
     }
   }
