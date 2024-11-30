@@ -1,13 +1,21 @@
 let io = import("std::io");
 let fmt = import("core::fmt");
+let array = import("std::array");
 
 let nums = [1, 2, 3, 4, 5];
 
 io::println(nums);
+
+
+array::push(nums, 6);
+
+
+io::println(nums);
+
 /--
 
-for num in numbers {
-  let text = fmt::format("num: {}", num);
+for at, num in nums {
+  let text = fmt::format("at: {}, num: {}", at, num);
   io::println(text);
 }
 
