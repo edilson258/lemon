@@ -7,11 +7,13 @@ use super::value::{ObjectValue, Value};
 pub struct Ctx {
   pub hash: HashMap<String, Value>,
   pub parent: Option<Box<Ctx>>,
+  pub this: Option<Box<Value>>,
 }
 
 impl Ctx {
   pub fn new(parent: Option<Box<Ctx>>) -> Self {
-    Self { hash: HashMap::new(), parent }
+    let this = None;
+    Self { hash: HashMap::new(), parent, this }
   }
   pub fn get(&self, key: &str) -> Option<&Value> {
     if let Some(value) = self.hash.get(key) {
@@ -57,5 +59,15 @@ impl Ctx {
       ctx.set(key.to_owned(), value.to_owned());
     }
     ctx
+  }
+
+  pub fn set_self(&mut self, value: Value) {
+    self.this = Some(Box::new(value));
+  }
+  pub fn get_self_ctx(&mut self) -> Option<&mut Value> {
+    match &mut self.this {
+      Some(value) => Some(value),
+      None => None,
+    }
   }
 }
