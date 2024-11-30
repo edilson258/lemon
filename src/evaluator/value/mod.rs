@@ -9,11 +9,18 @@ mod stream;
 pub use buffer::BufferValue;
 pub use bytes::BytesValue;
 pub use collection::{ArrayValue, ObjectValue};
+pub use function::MethodFnValue;
 pub use function::{FnValue, NativeFnValue};
 pub use primitive::{BoolValue, NullValue, NumValue, StringValue};
 // pub use stream::StreamValue;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
+
+use crate::{diag::Diag, range::Range};
+
+pub type MethodFn = fn(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag>;
+
+use super::errors;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -25,6 +32,7 @@ pub enum Value {
   Array(ArrayValue),
   Object(ObjectValue),
   NativeFn(NativeFnValue),
+  MethodFn(MethodFnValue),
   Buffer(BufferValue),
   Bytes(BytesValue),
   // Stream(StreamValue),
@@ -78,6 +86,73 @@ impl Value {
       _ => false,
     }
   }
+
+  // as_*
+  pub fn as_num(&self, range: &Range, path: &PathBuf) -> Result<&NumValue, Diag> {
+    match self {
+      Value::Num(num) => Ok(num),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("number", self), range.clone(), path.clone())),
+    }
+  }
+  pub fn as_string(&self, range: &Range, path: &PathBuf) -> Result<&StringValue, Diag> {
+    match self {
+      Value::String(string) => Ok(string),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("string", self), range.clone(), path.clone())),
+    }
+  }
+  pub fn as_bool(&self, range: &Range, path: &PathBuf) -> Result<&BoolValue, Diag> {
+    match self {
+      Value::Bool(bool) => Ok(bool),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("boolean", self), range.clone(), path.clone())),
+    }
+  }
+  pub fn as_array(&mut self, range: &Range, path: &PathBuf) -> Result<&mut ArrayValue, Diag> {
+    match self {
+      Value::Array(array) => Ok(array),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("array", self), range.clone(), path.clone())),
+    }
+  }
+  pub fn as_array_mut(&mut self, range: &Range, path: &PathBuf) -> Result<&mut ArrayValue, Diag> {
+    match self {
+      Value::Array(array) => Ok(array),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("array", self), range.clone(), path.clone())),
+    }
+  }
+
+  pub fn as_object(&self, range: &Range, path: &PathBuf) -> Result<&ObjectValue, Diag> {
+    match self {
+      Value::Object(object) => Ok(object),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("object", self), range.clone(), path.clone())),
+    }
+  }
+
+  pub fn as_object_mut(&mut self, range: &Range, path: &PathBuf) -> Result<&mut ObjectValue, Diag> {
+    match self {
+      Value::Object(object) => Ok(object),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("object", self), range.clone(), path.clone())),
+    }
+  }
+
+  pub fn as_buffer(&self, range: &Range, path: &PathBuf) -> Result<&BufferValue, Diag> {
+    match self {
+      Value::Buffer(buffer) => Ok(buffer),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("buffer", self), range.clone(), path.clone())),
+    }
+  }
+
+  pub fn as_bytes(&self, range: &Range, path: &PathBuf) -> Result<&BytesValue, Diag> {
+    match self {
+      Value::Bytes(bytes) => Ok(bytes),
+      _ => Err(Diag::create_err(errors::format_mismatched_types("bytes", self), range.clone(), path.clone())),
+    }
+  }
+
+  // pub fn as_stream(&self, range: &Range, path: &PathBuf) -> Result<&StreamValue, Diag> {
+  //   match self {
+  //     Value::Stream(stream) => Ok(stream),
+  //     _ => Err(Diag::create_err(errors::format_mismatched_types("stream", self), range.clone(), path.clone())),
+  //   }
+  // }
 }
 
 pub mod value_factory {
