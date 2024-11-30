@@ -19,7 +19,8 @@ pub struct Evaluator {
   path: PathBuf,
   pipe_back: Option<Value>,
   loader: Loader,
-  import_stack: Vec<String>, // Rastreia módulos sendo importados
+  breaked: bool,
+  skiped: bool,
 }
 
 type EvalResult = Result<Value, Diag>;
@@ -31,8 +32,9 @@ impl Evaluator {
     let loader = Loader::new(cwd);
     let pipe_back = None;
     let native_registry = NativeRegistry::new();
-    let import_stack = Vec::new();
-    Self { call_stack, pipe_back, loader, path, native_registry, import_stack }
+    let breaked = false;
+    let skiped = false;
+    Self { call_stack, pipe_back, loader, path, native_registry, breaked, skiped }
   }
 
   pub fn eval(&mut self, program: &ast::Program, ctx: &mut Ctx) -> Result<(), Diag> {
@@ -91,8 +93,13 @@ impl Evaluator {
       ast::Expr::Idx(index) => self.eval_idx_expr(index, ctx),
       ast::Expr::Member(member) => self.eval_member_expr(member, ctx),
       ast::Expr::Import(import) => self.eval_import(import, ctx),
-      // ast::Expr::If(if_expr) => self.eval_if_expr(if_expr, ctx),
-      // ast::Expr::Return(return_expr) => self.eval_return_expr(return_expr, ctx),
+      ast::Expr::For(for_expr) => self.eval_for_expr(for_expr, ctx),
+      // ast::Expr::While(while_expr) => self.eval_while_expr(while_expr, ctx),
+      // ast::Expr::Loop(loop_expr) => self.eval_loop_expr(loop_expr, ctx),
+      ast::Expr::Break(break_expr) => self.eval_break_expr(break_expr, ctx),
+      ast::Expr::Skip(skip_expr) => self.eval_skip_expr(skip_expr, ctx),
+      ast::Expr::If(if_expr) => self.eval_if_expr(if_expr, ctx),
+      ast::Expr::Return(return_expr) => self.eval_return_expr(return_expr, ctx),
       ast::Expr::Ident(ident) => self.eval_ident(ident, ctx),
       ast::Expr::Object(object) => self.eval_object_expr(object, ctx),
       ast::Expr::Array(array) => self.eval_array_expr(array, ctx),
@@ -205,6 +212,7 @@ impl Evaluator {
     if let Some(pipe_back) = self.pipe_back.take() {
       args.push(pipe_back);
     }
+
     match callee {
       Value::Fn(fn_value) => {
         args.extend(call.args.iter().map(|arg| self.eval_expr(arg, ctx)).collect::<Result<Vec<Value>, Diag>>()?);
@@ -265,9 +273,8 @@ impl Evaluator {
     let object = self.eval_expr(&member.object, ctx)?;
     match object {
       Value::Object(object) => {
-        let _ctx = ctx.create_ctx_object(object.value.clone());
-        let mut new_ctx = Ctx::new(Some(Box::new(_ctx)));
-        return self.eval_expr(&member.property, &mut new_ctx);
+        ctx.set_self(Value::Object(object));
+        return self.eval_expr(&member.property, ctx);
       }
       _ => {
         return self.create_diag(errors::format_missing_field(), &member.property.get_range());
@@ -297,8 +304,97 @@ impl Evaluator {
     }
   }
 
+  // for <pat> in <expr> = { <stmts> } or for <idx>, <value> in <expr> = { <stmts> }
+  fn eval_for_expr(&mut self, for_expr: &ast::ForExpr, ctx: &mut Ctx) -> EvalResult {
+    let mut expr_value = self.eval_expr(&for_expr.expr, ctx)?;
+    let value = expr_value.as_array(&for_expr.expr.get_range(), &self.path)?;
+    let value_text = for_expr.value.text.clone();
+    let pos_text = for_expr.pos.as_ref().map(|p| p.text.as_str());
+    let mut for_ctx = Ctx::new(Some(Box::new(ctx.clone())));
+    for (index, value) in value.value.iter().enumerate() {
+      self.set_value_in_ctx(pos_text, value_factory::create_num(index as f64), &mut for_ctx);
+      self.set_value_in_ctx(Some(&value_text), value.to_owned(), &mut for_ctx);
+      self.skiped = false;
+      match &*for_expr.body {
+        ast::Stmts::Block(block_stmt) => {
+          for stmt in &block_stmt.stmts {
+            let result = self.eval_stmt(stmt, &mut for_ctx)?;
+            if self.breaked {
+              self.breaked = false;
+              return Ok(result);
+            }
+            if self.skiped {
+              self.skiped = false;
+              break;
+            }
+          }
+          value_factory::create_null()
+        }
+        _ => self.eval_stmt(&for_expr.body, &mut for_ctx)?,
+      };
+    }
+    Ok(value_factory::create_null())
+  }
+
+  // fn eval_while_expr(&mut self, while_expr: &ast::WhileExpr, ctx: &mut Ctx) -> EvalResult {
+  //   let expr = self.eval_expr(&while_expr.expr, ctx)?;
+  //   let mut ctx = ctx.create_ctx_object(expr.clone());
+  //   while self.eval_expr(&while_expr.expr, &mut ctx)?.is_true() {
+  //     self.eval_stmt(&while_expr.body, &mut ctx)?;
+  //   }
+  //   Ok(value_factory::create_null())
+  // }
+
+  // fn eval_loop_expr(&mut self, loop_expr: &ast::LoopExpr, ctx: &mut Ctx) -> EvalResult {
+  //   self.eval_stmt(&loop_expr.body, ctx)?;
+  //   Ok(value_factory::create_null())
+  // }
+  //
+  fn eval_if_expr(&mut self, if_expr: &ast::IfExpr, ctx: &mut Ctx) -> EvalResult {
+    let condition = self.eval_expr(&if_expr.condition, ctx)?;
+    let bool_condition = condition.as_bool(&if_expr.condition.get_range(), &self.path)?;
+    if bool_condition.get() {
+      return self.eval_stmt(&if_expr.consequent, ctx);
+    }
+    return if let Some(alternate) = &if_expr.alternate {
+      self.eval_stmt(alternate, ctx)
+    } else {
+      Ok(value_factory::create_null())
+    };
+  }
+
+  fn eval_break_expr(&mut self, break_expr: &ast::BreakExpr, ctx: &mut Ctx) -> EvalResult {
+    self.breaked = true;
+    if let Some(value) = break_expr.value.as_ref() {
+      return self.eval_expr(value, ctx);
+    }
+    Ok(value_factory::create_null())
+  }
+
+  fn eval_skip_expr(&mut self, skip_expr: &ast::SkipExpr, ctx: &mut Ctx) -> EvalResult {
+    self.skiped = true;
+    Ok(value_factory::create_null())
+  }
+
   fn eval_ident(&mut self, ident: &ast::Identifier, ctx: &mut Ctx) -> EvalResult {
     let text = ident.text.as_str();
+
+    if let Some(this) = ctx.get_self_ctx() {
+      if this.is_object() {
+        let this = this.as_object(&ident.get_range(), &self.path)?;
+        if let Some(value) = this.get(text) {
+          return Ok(value.clone());
+        }
+      }
+
+      if this.is_array() {
+        let this = this.as_array(&ident.get_range(), &self.path)?;
+        if let Some(value) = this.method(text) {
+          return Ok(Value::MethodFn(value.clone()));
+        }
+      }
+    }
+
     if let Some(value) = ctx.get(&ident.text) {
       return Ok(value.clone());
     }
@@ -311,6 +407,7 @@ impl Evaluator {
   }
 
   fn eval_return_expr(&mut self, return_expr: &ast::ReturnExpr, ctx: &mut Ctx) -> EvalResult {
+    self.breaked = true;
     if let Some(expr) = &return_expr.value {
       self.eval_expr(expr, ctx)?;
     }
@@ -375,6 +472,7 @@ impl Evaluator {
     Err(Diag::create_err(message, range.clone(), self.path.clone()))
   }
 
+  // helpers
   fn check_ident(&self, expr: &ast::Expr, expect: &str) -> bool {
     match expr {
       ast::Expr::Ident(ident) => ident.text == expect,
@@ -382,8 +480,28 @@ impl Evaluator {
     }
   }
 
+  fn is_ident(&self, expr: &ast::Expr) -> bool {
+    match expr {
+      ast::Expr::Ident(_) => true,
+      _ => false,
+    }
+  }
+
+  fn get_ident_text(&self, expr: &ast::Expr) -> Option<String> {
+    match expr {
+      ast::Expr::Ident(ident) => Some(ident.text.to_owned()),
+      _ => None,
+    }
+  }
+
   pub fn get_path(&self) -> &PathBuf {
     &self.path
+  }
+
+  pub fn set_value_in_ctx(&mut self, key: Option<&str>, value: Value, ctx: &mut Ctx) {
+    if let Some(key) = key {
+      ctx.set(key.to_owned(), value);
+    }
   }
 
   pub fn run_eval(&mut self, source: Source) -> Result<ObjectValue, Diag> {
