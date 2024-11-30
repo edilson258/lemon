@@ -67,3 +67,22 @@ impl NativeFnValue {
     (self.native)(args, path, range)
   }
 }
+
+type MethodFn = fn(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct MethodFnValue {
+  native: MethodFn,
+}
+
+impl MethodFnValue {
+  pub fn new(native: MethodFn) -> Self {
+    Self { native }
+  }
+  pub fn get_native(&self) -> &MethodFn {
+    &self.native
+  }
+
+  pub fn apply(&self, value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    (self.native)(value, args, path, range)
+  }
+}
