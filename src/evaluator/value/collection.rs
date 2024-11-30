@@ -1,8 +1,11 @@
-// pub use collection::{ArrayValue, ObjectValue};
+use std::{collections::HashMap, path::PathBuf};
 
-use std::collections::HashMap;
+use crate::{diag::Diag, evaluator::errors, range::Range};
 
-use super::{NativeFnValue, Value};
+use super::{
+  value_factory::{self},
+  MethodFnValue, NativeFnValue, Value,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArrayValue {
@@ -49,7 +52,170 @@ impl ArrayValue {
   pub fn is_eq(&self, value: &ArrayValue) -> bool {
     self.value.len() == value.value.len() && self.value.iter().zip(value.value.iter()).all(|(lt, rt)| lt.is_eq(rt))
   }
+
+  pub fn method_push(this: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 1 {
+      let msg = errors::format_function_arity_mismatch(1, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = this.as_array_mut(range, path)?;
+    array.push(args[0].clone());
+    Ok(value_factory::create_null())
+  }
+
+  pub fn method_pop(this: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 0 {
+      let msg = errors::format_function_arity_mismatch(0, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = this.as_array_mut(range, path)?;
+    let value = array.pop().unwrap_or(value_factory::create_null());
+    Ok(value)
+  }
+
+  pub fn method_shift(this: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 0 {
+      let msg = errors::format_function_arity_mismatch(0, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = this.as_array_mut(range, path)?;
+    let value = array.pop().unwrap_or(value_factory::create_null());
+    array.set(0, value.clone());
+    Ok(value)
+  }
+
+  pub fn method_unshift(this: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 1 {
+      let msg = errors::format_function_arity_mismatch(1, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = this.as_array_mut(range, path)?;
+    array.set(0, args[0].clone());
+    Ok(value_factory::create_null())
+  }
+
+  pub fn method_splice(this: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 2 {
+      let msg = errors::format_function_arity_mismatch(2, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = this.as_array_mut(range, path)?;
+    let start = args[0].as_num(range, path)?.get() as usize;
+    let delete_count = args[1].as_num(range, path)?.get() as usize;
+    let mut values = Vec::with_capacity(delete_count);
+    for _ in 0..delete_count {
+      values.push(array.pop().unwrap_or(value_factory::create_null()));
+    }
+    array.value.splice(start..start, values);
+    Ok(value_factory::create_null())
+  }
+
+  pub fn method_reverse(this: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 0 {
+      let msg = errors::format_function_arity_mismatch(0, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = this.as_array_mut(range, path)?;
+    array.value.reverse();
+    Ok(value_factory::create_null())
+  }
+
+  pub fn method(&self, name: &str) -> Option<MethodFnValue> {
+    match name {
+      "push" => Some(MethodFnValue::new(Self::method_push)),
+      "pop" => Some(MethodFnValue::new(Self::method_pop)),
+      "shift" => Some(MethodFnValue::new(Self::method_shift)),
+      "unshift" => Some(MethodFnValue::new(Self::method_unshift)),
+      "splice" => Some(MethodFnValue::new(Self::method_splice)),
+      "reverse" => Some(MethodFnValue::new(Self::method_reverse)),
+      _ => None,
+    }
+  }
 }
+
+// ---- array methods -----
+
+pub mod array_methods {
+  use super::*;
+  pub fn array_push(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 1 {
+      let msg = errors::format_function_arity_mismatch(1, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = value.as_array_mut(range, path)?;
+    array.push(args[0].clone());
+    Ok(value_factory::create_null())
+  }
+
+  pub fn array_pop(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 0 {
+      let msg = errors::format_function_arity_mismatch(0, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = value.as_array_mut(range, path)?;
+    let value = array.pop().unwrap_or(value_factory::create_null());
+    Ok(value)
+  }
+
+  pub fn array_shift(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 0 {
+      let msg = errors::format_function_arity_mismatch(0, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = value.as_array_mut(range, path)?;
+    let value = array.pop().unwrap_or(value_factory::create_null());
+    array.set(0, value.clone());
+    Ok(value)
+  }
+
+  pub fn array_unshift(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 1 {
+      let msg = errors::format_function_arity_mismatch(1, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = value.as_array_mut(range, path)?;
+    array.set(0, args[0].clone());
+    Ok(value_factory::create_null())
+  }
+
+  pub fn array_splice(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 2 {
+      let msg = errors::format_function_arity_mismatch(2, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = value.as_array_mut(range, path)?;
+    let start = args[0].as_num(range, path)?.get() as usize;
+    let delete_count = args[1].as_num(range, path)?.get() as usize;
+    let mut values = Vec::with_capacity(delete_count);
+    for _ in 0..delete_count {
+      values.push(array.pop().unwrap_or(value_factory::create_null()));
+    }
+    array.value.splice(start..start, values);
+    Ok(value_factory::create_null())
+  }
+
+  pub fn array_reverse(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+    if args.len() != 0 {
+      let msg = errors::format_function_arity_mismatch(0, args.len());
+      return Err(Diag::create_err(msg, range.clone(), path.clone()));
+    }
+    let array = value.as_array_mut(range, path)?;
+    array.value.reverse();
+    Ok(value_factory::create_null())
+  }
+}
+
+// pub fn array_sort(value: &mut Value, args: Vec<Value>, path: &PathBuf, range: &Range) -> Result<Value, Diag> {
+//   if args.len() != 0 {
+//     let msg = errors::format_function_arity_mismatch(0, args.len());
+//     return Err(Diag::create_err(msg, range.clone(), path.clone()));
+//   }
+//   let array = value.as_array_mut(range, path)?;
+//   array.value.sort();
+//   Ok(value_factory::create_null())
+// }
+
+// ----- ObjectValue -----
 
 impl ObjectValue {
   pub fn new() -> Self {
