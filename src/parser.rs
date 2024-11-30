@@ -173,7 +173,13 @@ impl Parser {
       TokenType::Match => ast::Expr::Match(self.parse_match_expr()),
       TokenType::LBrace => ast::Expr::Object(self.parse_object_expr()),
       TokenType::LBracket => ast::Expr::Array(self.parse_array_expr()),
+      TokenType::For => ast::Expr::For(self.parse_for_expr()),
+      TokenType::While => ast::Expr::While(self.parse_while_expr()),
+      TokenType::Loop => ast::Expr::Loop(self.parse_loop_expr()),
+      TokenType::Break => ast::Expr::Break(self.parse_break_expr()),
+      TokenType::Skip => ast::Expr::Skip(self.parse_skip_expr()),
       TokenType::LParen => ast::Expr::Group(self.parse_group_expr()),
+      TokenType::If => ast::Expr::If(self.parse_if_expr()),
       _ => {
         let literal = self.parse_literal();
         ast::Expr::Literal(literal)
@@ -190,6 +196,20 @@ impl Parser {
       };
     }
     expr
+  }
+
+  // if <expr> { <stmts> } else if { <stmts> } or if <expr> { <stmts> } or if <expr> <expr> else <expr>
+  fn parse_if_expr(&mut self) -> ast::IfExpr {
+    let mut range = self.take_or_expect(TokenType::If); //
+    let condition = Box::new(self.parse_expr(MIN_PDE));
+    let consequent = Box::new(self.parse_stmt());
+    let mut alternate = None;
+    if self.match_token(TokenType::Else) {
+      self.take_or_expect(TokenType::Else); // take the `else`
+      alternate = Some(Box::new(self.parse_stmt()));
+      range.merge(alternate.as_ref().unwrap().get_range());
+    }
+    ast::IfExpr { condition, consequent, alternate, range }
   }
 
   // (<expr>)
@@ -229,6 +249,10 @@ impl Parser {
         break;
       }
       self.take_or_expect(TokenType::Comma); // take the `,`
+
+      if self.match_token(TokenType::RBrace) {
+        break;
+      }
     }
     arms
   }
@@ -288,6 +312,56 @@ impl Parser {
     ast::ArrayExpr { range, fields }
   }
 
+  // for <pat> in <expr> = { <stmts> } or for <idx>, <value> in <expr> = { <stmts> }
+  fn parse_for_expr(&mut self) -> ast::ForExpr {
+    let mut range = self.take_or_expect(TokenType::For); // take the `for`
+    let value = self.parse_ident();
+    let mut pos = None;
+    if self.match_token(TokenType::Comma) {
+      self.take_or_expect(TokenType::Comma); // take the `,`
+      pos = Some(self.parse_ident());
+    }
+    self.take_or_expect(TokenType::In); // take the `in`
+    let expr = self.parse_expr(MIN_PDE);
+    let body = self.parse_stmt();
+    range.merge(body.get_range());
+
+    if let Some(value_pos) = pos {
+      ast::ForExpr { value: value_pos, pos: Some(value), expr: Box::new(expr), body: Box::new(body), range }
+    } else {
+      ast::ForExpr { value, pos, expr: Box::new(expr), body: Box::new(body), range }
+    }
+  }
+
+  // while <expr> = { <stmts> }
+  fn parse_while_expr(&mut self) -> ast::WhileExpr {
+    let mut range = self.take_or_expect(TokenType::While); // take the `while`
+    let expr = self.parse_expr(MIN_PDE);
+    let body = self.parse_stmt();
+    range.merge(body.get_range());
+    ast::WhileExpr { expr: Box::new(expr), body: Box::new(body), range }
+  }
+
+  // loop { <stmts> }
+  fn parse_loop_expr(&mut self) -> ast::LoopExpr {
+    let mut range = self.take_or_expect(TokenType::Loop); // take the `loop`
+    let body = self.parse_stmt();
+    range.merge(body.get_range());
+    ast::LoopExpr { body: Box::new(body), range }
+  }
+
+  // break <expr>
+  fn parse_break_expr(&mut self) -> ast::BreakExpr {
+    let range = self.take_or_expect(TokenType::Break); // take the `break`
+    let value = None;
+    ast::BreakExpr { value, range }
+  }
+
+  // skip
+  fn parse_skip_expr(&mut self) -> ast::SkipExpr {
+    let range = self.take_or_expect(TokenType::Skip); // take the `skip`
+    ast::SkipExpr { range }
+  }
   // fn(<pats>) = { <stmts> }
   fn parse_fn_expr(&mut self, fn_range: Option<Range>) -> ast::FnExpr {
     let mut range = fn_range.unwrap_or_else(|| self.take_or_expect(TokenType::Fn)); // take the `fn`
