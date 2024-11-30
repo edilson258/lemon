@@ -6,7 +6,7 @@ use crate::tokens::TokenType;
 use super::value::{
   ArrayValue, BoolValue, BufferValue, BytesValue, FnValue, NullValue, NumValue, ObjectValue, StringValue,
 };
-use super::value::{NativeFnValue, Value};
+use super::value::{MethodFnValue, NativeFnValue, Value};
 
 struct Formatting<F: Fn(&mut fmt::Formatter) -> fmt::Result>(pub F);
 
@@ -27,6 +27,7 @@ pub fn display_value<'a>(v: &'a Value) -> impl fmt::Display + 'a {
     Value::Buffer(BufferValue { value }) => {
       write!(f, "buffer::{:?}", value.iter().map(|b| format!("{:02x}", b)).collect::<Vec<String>>().join(""))
     }
+    Value::MethodFn(MethodFnValue { .. }) => write!(f, "method_fn"),
     Value::Bytes(BytesValue { value, position }) => {
       write!(
         f,
@@ -81,6 +82,7 @@ impl fmt::Display for TokenType {
       TokenType::Let => write!(f, "let"),
       TokenType::If => write!(f, "if"),
       TokenType::Else => write!(f, "else"),
+      TokenType::ElseIf => write!(f, "elseif"),
       TokenType::Ret => write!(f, "return"),
       TokenType::Null => write!(f, "null"),
       TokenType::Match => write!(f, "match"),
@@ -132,6 +134,12 @@ impl fmt::Display for TokenType {
       TokenType::SkipBlock => write!(f, "skip block"),
       TokenType::EOF => write!(f, "eof"),
       TokenType::Dot => write!(f, "."),
+      TokenType::For => write!(f, "for"),
+      TokenType::In => write!(f, "in"),
+      TokenType::While => write!(f, "while"),
+      TokenType::Loop => write!(f, "loop"),
+      TokenType::Break => write!(f, "break"),
+      TokenType::Skip => write!(f, "skip"),
     }
   }
 }
