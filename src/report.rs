@@ -1,36 +1,36 @@
 #![allow(dead_code)]
 
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use crate::diag::{Diag, Severity};
 use dunh::{high_err_ctx, high_info_ctx, high_warn_ctx};
 
-const LONES_CTX: usize = 2;
+const CTX_LOC: usize = 2; // -- context lines
 
 // ---
 //
 
-pub fn report_err(diag: &Diag) {
-  report(diag)
+pub fn report_err(diag: &Diag, path: &PathBuf) {
+  report(diag, path)
 }
 
-pub fn report_warn(diag: &Diag) {
-  report(diag)
+pub fn report_warn(diag: &Diag, path: &PathBuf) {
+  report(diag, path)
 }
 
-pub fn report_info(diag: &Diag) {
-  report(diag)
+pub fn report_info(diag: &Diag, path: &PathBuf) {
+  report(diag, path)
 }
 
-pub fn report_wrap(diag: &Diag) -> ! {
-  report(diag);
+pub fn report_wrap(diag: &Diag, path: &PathBuf) {
+  report(diag, path);
   std::process::exit(1);
 }
 
 // -- utils --
 //
 
-fn report(diag: &Diag) {
+fn report(diag: &Diag, path: &PathBuf) {
   println!(""); // -- new line
 
   let slug = match diag.severity {
@@ -40,16 +40,21 @@ fn report(diag: &Diag) {
   };
   println!("{} {}", slug, text_white(&diag.message)); // -- message
 
-  println!("{}", text_gray(&diag.path.display().to_string())); // -- filename
+  println!("{}", text_gray(&path.display().to_string())); // -- filename
 
-  let raw = fs::read_to_string(&diag.path).unwrap();
+  let raw = fs::read_to_string(&path).unwrap();
   let code = match diag.severity {
-    Severity::Err => high_err_ctx(diag.range.start, diag.range.end, &raw, LONES_CTX),
-    Severity::Warn => high_warn_ctx(diag.range.start, diag.range.end, &raw, LONES_CTX),
-    Severity::Info => high_info_ctx(diag.range.start, diag.range.end, &raw, LONES_CTX),
+    Severity::Err => high_err_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),
+    Severity::Warn => high_warn_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),
+    Severity::Info => high_info_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),
   };
 
   println!("{}", code);
+}
+
+pub fn throw_error(text: impl Into<String>) -> ! {
+  println!("{} {}", text_red("ERROR >>>"), text_white(text.into().as_str()));
+  std::process::exit(1);
 }
 
 pub fn text_red(text: &str) -> String {
