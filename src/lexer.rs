@@ -1,289 +1,273 @@
-#![allow(dead_code)]
+use core::fmt;
 
-use crate::diag::Diag;
-use crate::range::Range;
-use crate::report::report_wrap;
-use crate::source::Source;
-use crate::tokens::{Token, TokenType};
+use logos::Logos;
 
-pub struct Lexer {
-  cursor: usize,
-  pos_cursor: usize,
-  source: Source,
-  cached: Option<Token>,
+#[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[logos(skip r"[ \t\n\f]+")]
+#[repr(u8)]
+pub enum Token {
+  // Keywords
+  #[token("fn")]
+  Fn,
+  #[token("let")]
+  Let,
+  #[token("if")]
+  If,
+  #[token("for")]
+  For,
+  #[token("in")]
+  In,
+  #[token("while")]
+  While,
+  #[token("loop")]
+  Loop,
+  #[token("break")]
+  Break,
+  #[token("skip")]
+  Skip,
+  #[token("else")]
+  Else,
+  #[regex(r"else\s+if", priority = 2)]
+  ElseIf,
+  #[token("return")]
+  Ret,
+  #[token("null")]
+  Null,
+  #[token("match")]
+  Match,
+  #[token("import")]
+  Import,
+
+  // Operators
+  #[token("+")]
+  Plus,
+  #[token("-")]
+  Minus,
+  #[token("*")]
+  Star,
+  #[token("/")]
+  Slash,
+  #[token("=")]
+  Assign,
+  #[token("^")]
+  Pow,
+  #[token("^=")]
+  PowEq,
+  #[token("%")]
+  Rem,
+  #[token("%=")]
+  RemEq,
+  #[token("+=")]
+  PlusEq,
+  #[token("-=")]
+  MinusEq,
+  #[token("*=")]
+  StarEq,
+  #[token("/=")]
+  SlashEq,
+  #[token("==")]
+  Eq,
+  #[token("!=")]
+  NotEq,
+  #[token("<")]
+  Less,
+  #[token(">")]
+  Greater,
+  #[token("<=")]
+  LessEq,
+  #[token(">=")]
+  GreaterEq,
+  #[token("?=")]
+  Extract,
+  #[token("->")]
+  Arrow,
+  #[token("&&")]
+  And,
+  #[token("||")]
+  Or,
+  #[token(".")]
+  Dot,
+  #[token("..")]
+  DotDot,
+  #[token("!")]
+  Bang,
+  #[token("?")]
+  Quest,
+  #[token(":")]
+  Colon,
+  #[token("::")]
+  ColonColon,
+  #[token("|>")]
+  Pipe,
+  #[token("|")]
+  Bar,
+  #[token("@")]
+  At,
+
+  // Delimiters
+  #[token("(")]
+  LParen,
+  #[token(")")]
+  RParen,
+  #[token("{")]
+  LBrace,
+  #[token("}")]
+  RBrace,
+  #[token("[")]
+  LBracket,
+  #[token("]")]
+  RBracket,
+  #[token(";")]
+  Semi,
+  #[token(",")]
+  Comma,
+  // Identifiers
+  #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", priority = 1)]
+  Ident,
+  // Literals
+  #[regex(r#""([^"\\]|\\.)*""#)]
+  String,
+  // char
+  #[regex(r#"'([^'\\]|\\.)*'"#)]
+  Char,
+  #[regex(r"0x[0-9A-Fa-f](_?[0-9A-Fa-f])*")]
+  Hex,
+  #[regex(r"0b[01]+(_[01]+)*")]
+  Bin,
+  #[regex(r"[0-9]+(_[0-9]+)*(\.[0-9]+(_[0-9]+)*)?([eE][+-]?[0-9]+)?")]
+  Decimal,
+  #[token("true")]
+  True,
+  #[token("false")]
+  False,
+
+  // types
+  //
+  //
+  //
+  //
+  //
+  #[token("usize")]
+  UsizeType,
+  #[token("isize")]
+  IsizeType,
+  #[token("bool")]
+  BoolType,
+  #[token("i8")]
+  I8Type,
+  #[token("u8")]
+  U8Type,
+  #[token("i16")]
+  I16Type,
+  #[token("u16")]
+  U16Type,
+  #[token("i32")]
+  I32Type,
+  #[token("u32")]
+  U32Type,
+  #[token("i64")]
+  I64Type,
+  #[token("u64")]
+  U64Type,
+  #[token("f32")]
+  F32Type,
+  #[token("f64")]
+  F64Type,
+  #[token("char")]
+  CharType,
+  #[token("string")]
+  StringType,
+  // Comments
+  #[regex(r"//[^\n]*", logos::skip)]
+  SkipLine,
+  #[regex(r"/\*([^*]|\*+[^*/])*\*+/", logos::skip)]
+  SkipBlock,
 }
 
-impl Lexer {
-  pub fn new(source: Source) -> Self {
-    Self { cursor: 0, pos_cursor: 0, source, cached: None }
-  }
-  pub fn peek_token(&mut self) -> Token {
-    if self.cached.is_none() {
-      self.cached = Some(self.read_next_token());
-    }
-    self.cached.clone().unwrap()
-  }
-
-  pub fn next_token(&mut self) -> Token {
-    if let Some(token) = self.cached.take() {
-      return token;
-    }
-    self.read_next_token()
-  }
-
-  fn read_next_token(&mut self) -> Token {
-    self.skip_whitespace();
-    if self.is_end() {
-      return Token::new_eof(self.create_range());
-    }
-    match self.peek() {
-      'a'..='z' | 'A'..='Z' | '_' | '$' => self.read_identifier(),
-      '0'..='9' => self.read_number(),
-      '"' => self.read_string(),
-      '\'' => self.single_quote(),
-      '-' => self.read_check_ahead("-=", TokenType::MinusEq, TokenType::Minus),
-      '+' => self.read_check_ahead("+=", TokenType::PlusEq, TokenType::Plus),
-      '*' => self.read_check_ahead("*=", TokenType::StarEq, TokenType::Star),
-      '%' => self.read_check_ahead("%=", TokenType::RemEq, TokenType::Rem),
-      '^' => self.read_check_ahead("^=", TokenType::PowEq, TokenType::Pow),
-      '.' => self.read_check_ahead("..", TokenType::DotDot, TokenType::Dot),
-      '!' => self.read_check_ahead("!=", TokenType::NotEq, TokenType::Bang),
-      '<' => self.read_check_ahead("<=", TokenType::LessEq, TokenType::Less),
-      '>' => self.read_check_ahead(">=", TokenType::GreaterEq, TokenType::Greater),
-      ':' => self.read_check_ahead("::", TokenType::ColonColon, TokenType::Colon),
-      '(' => self.read_simple_token(TokenType::LParen, "("),
-      ')' => self.read_simple_token(TokenType::RParen, ")"),
-      '{' => self.read_simple_token(TokenType::LBrace, "{"),
-      '}' => self.read_simple_token(TokenType::RBrace, "}"),
-      '[' => self.read_simple_token(TokenType::LBracket, "["),
-      ']' => self.read_simple_token(TokenType::RBracket, "]"),
-      ';' => self.read_simple_token(TokenType::Semi, ";"),
-      ',' => self.read_simple_token(TokenType::Comma, ","),
-      '|' => match self.peek_many(2).as_str() {
-        "|>" => self.read_simple_token(TokenType::Pipe, "|>"),
-        "||" => self.read_simple_token(TokenType::Or, "||"),
-        _ => self.read_simple_token(TokenType::Bar, "|"),
-      },
-      '/' => match self.peek_many(2).as_str() {
-        "/-" => self.read_commets(),
-        _ => self.read_check_ahead("/=", TokenType::SlashEq, TokenType::Slash),
-      },
-      '=' => match self.peek_many(2).as_str() {
-        "=>" => self.read_check_ahead("=>", TokenType::Arrow, TokenType::Assign),
-        _ => self.read_check_ahead("==", TokenType::Eq, TokenType::Assign),
-      },
-      _ => self.handle_unknown_token(self.peek().to_string().as_str()),
-    }
-  }
-
-  fn handle_unknown_token(&mut self, text: &str) -> ! {
-    self.advance();
-    let msg = format!("unknown token `{}`.", text);
-    let diag = self.create_diag(&msg);
-    report_wrap(&diag);
-  }
-
-  fn read_number(&mut self) -> Token {
-    let number = self.read_while(match_number);
-    Token::new_number(number, self.create_range())
-  }
-
-  fn read_commets(&mut self) -> Token {
-    match self.peek_many(3).as_str() {
-      "/--" => self.read_skip_block(),
-      _ => self.read_skip_line(),
-    }
-  }
-
-  fn read_skip_block(&mut self) -> Token {
-    self.consume_expect("/--");
-    let start = self.cursor;
-    while !self.is_end() && !self.starts_with("--/") {
-      self.advance();
-    }
-    self.consume_expect("--/");
-    let text = self.source.raw[start..self.cursor].to_string();
-    let range = self.create_range();
-    return Token::new(TokenType::SkipBlock, Some(text), range);
-  }
-
-  fn read_skip_line(&mut self) -> Token {
-    self.consume_expect("/-");
-    let text = self.read_while(|ch| ch != '\n');
-    let range = self.create_range();
-    return Token::new(TokenType::SkipLine, Some(text), range);
-  }
-
-  fn read_string(&mut self) -> Token {
-    self.consume_expect("\"");
-    let text = self.read_escaped_string('"');
-    self.consume_expect_with_error("\"", "unterminated string.");
-    Token::new_string(text, self.create_range())
-  }
-
-  fn single_quote(&mut self) -> Token {
-    self.consume_expect("'");
-    let text = self.read_escaped_string('\'');
-    self.consume_expect_with_error("'", "unterminated string.");
-    Token::new_string(text, self.create_range())
-  }
-
-  fn read_escaped_string(&mut self, delimiter: char) -> String {
-    let mut text = String::new();
-    while !self.is_end() && self.peek() != '\n' {
-      let peeked = self.peek();
-      if peeked == delimiter {
-        break;
-      }
-      if peeked == '\\' {
-        self.advance();
-        match self.peek() {
-          'n' => text.push('\n'),
-          't' => text.push('\t'),
-          '\\' => text.push('\\'),
-          '\'' => text.push('\''),
-          '"' => text.push('"'),
-          _ => {
-            text.push('\\');
-            text.push(self.peek());
-          }
-        }
-      } else {
-        text.push(peeked);
-      }
-      self.advance();
-    }
-    text
-  }
-  fn read_identifier(&mut self) -> Token {
-    let text = self.read_while(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch == '$' || ch.is_ascii_digit());
-    Token::new_identifier(text.as_str(), self.create_range())
-  }
-
-  fn read_simple_token(&mut self, kind: TokenType, text: &str) -> Token {
-    self.consume_expect(text);
-    Token::new(kind, None, self.create_range())
-  }
-
-  fn read_check_ahead(&mut self, text: &str, match_type: TokenType, no_match_type: TokenType) -> Token {
-    if self.starts_with(text) {
-      self.consume_expect(text);
-      Token::new(match_type, None, self.create_range())
-    } else {
-      self.advance();
-      Token::new(no_match_type, None, self.create_range())
+// display
+impl fmt::Display for Token {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Token::Fn => write!(f, "fn"),
+      Token::Let => write!(f, "let"),
+      Token::If => write!(f, "if"),
+      Token::For => write!(f, "for"),
+      Token::In => write!(f, "in"),
+      Token::While => write!(f, "while"),
+      Token::Loop => write!(f, "loop"),
+      Token::Break => write!(f, "break"),
+      Token::Skip => write!(f, "skip"),
+      Token::Else => write!(f, "else"),
+      Token::ElseIf => write!(f, "else if"),
+      Token::Ret => write!(f, "return"),
+      Token::Null => write!(f, "null"),
+      Token::Match => write!(f, "match"),
+      Token::Import => write!(f, "import"),
+      Token::Plus => write!(f, "+"),
+      Token::Minus => write!(f, "-"),
+      Token::Star => write!(f, "*"),
+      Token::Slash => write!(f, "/"),
+      Token::Assign => write!(f, "="),
+      Token::Pow => write!(f, "^"),
+      Token::PowEq => write!(f, "^="),
+      Token::Rem => write!(f, "%"),
+      Token::RemEq => write!(f, "%="),
+      Token::PlusEq => write!(f, "+="),
+      Token::MinusEq => write!(f, "-="),
+      Token::StarEq => write!(f, "*="),
+      Token::SlashEq => write!(f, "/="),
+      Token::Eq => write!(f, "=="),
+      Token::NotEq => write!(f, "!="),
+      Token::Less => write!(f, "<"),
+      Token::Greater => write!(f, ">"),
+      Token::LessEq => write!(f, "<="),
+      Token::GreaterEq => write!(f, ">="),
+      Token::Extract => write!(f, "?="),
+      Token::Arrow => write!(f, "=>"),
+      Token::And => write!(f, "&&"),
+      Token::Or => write!(f, "||"),
+      Token::Dot => write!(f, "."),
+      Token::DotDot => write!(f, ".."),
+      Token::Bang => write!(f, "!"),
+      Token::Quest => write!(f, "?"),
+      Token::Colon => write!(f, ":"),
+      Token::ColonColon => write!(f, "::"),
+      Token::Pipe => write!(f, "|>"),
+      Token::Bar => write!(f, "|"),
+      Token::At => write!(f, "@"),
+      Token::LParen => write!(f, "("),
+      Token::RParen => write!(f, ")"),
+      Token::LBrace => write!(f, "{{"),
+      Token::RBrace => write!(f, "}}"),
+      Token::LBracket => write!(f, "["),
+      Token::RBracket => write!(f, "]"),
+      Token::Semi => write!(f, ";"),
+      Token::Comma => write!(f, ","),
+      Token::Ident => write!(f, "ident"),
+      Token::String => write!(f, "string"),
+      Token::Char => write!(f, "char"),
+      Token::Hex => write!(f, "hex"),
+      Token::Bin => write!(f, "bin"),
+      Token::Decimal => write!(f, "decimal"),
+      Token::True => write!(f, "true"),
+      Token::False => write!(f, "false"),
+      Token::SkipLine => write!(f, "skip line"),
+      Token::SkipBlock => write!(f, "skip block"),
+      Token::UsizeType => write!(f, "usize"),
+      Token::IsizeType => write!(f, "isize"),
+      Token::BoolType => write!(f, "bool"),
+      Token::I8Type => write!(f, "i8"),
+      Token::U8Type => write!(f, "u8"),
+      Token::I16Type => write!(f, "i16"),
+      Token::U16Type => write!(f, "u16"),
+      Token::I32Type => write!(f, "i32"),
+      Token::U32Type => write!(f, "u32"),
+      Token::I64Type => write!(f, "i64"),
+      Token::U64Type => write!(f, "u64"),
+      Token::F32Type => write!(f, "f32"),
+      Token::F64Type => write!(f, "f64"),
+      Token::CharType => write!(f, "char"),
+      Token::StringType => write!(f, "string"),
     }
   }
-
-  fn read_while(&mut self, mut predicate: impl FnMut(char) -> bool) -> String {
-    let start = self.cursor;
-    while !self.is_end() && predicate(self.peek()) {
-      self.advance();
-    }
-    self.source.raw[start..self.cursor].to_owned()
-  }
-
-  pub fn is_end(&self) -> bool {
-    self.cursor >= self.source.len()
-  }
-
-  pub fn peek(&self) -> char {
-    self.source.raw[self.cursor..].chars().next().unwrap_or('\0')
-  }
-
-  pub fn peek_many(&self, count: usize) -> String {
-    self.source.raw[self.cursor..].chars().take(count).collect()
-  }
-
-  pub fn advance(&mut self) {
-    if let Some(c) = self.source.raw[self.cursor..].chars().next() {
-      self.cursor += c.len_utf8();
-    }
-  }
-
-  fn create_range(&mut self) -> Range {
-    let start = self.pos_cursor;
-    let end = self.cursor;
-    self.pos_cursor = self.cursor;
-    Range { start, end }
-  }
-
-  fn consume_expect(&mut self, text: &str) {
-    if self.starts_with(text) {
-      self.advance_by(text.len());
-    } else {
-      self.report_mismatch(text);
-    }
-  }
-
-  fn consume_expect_with_error(&mut self, text: &str, message: &str) {
-    if self.starts_with(text) {
-      self.advance_by(text.len());
-    } else {
-      let diag = self.create_diag(message);
-      report_wrap(&diag);
-    }
-  }
-
-  fn advance_by(&mut self, count: usize) {
-    for _ in 0..count {
-      self.advance();
-    }
-  }
-
-  fn starts_with(&self, s: &str) -> bool {
-    self.source.raw[self.cursor..].starts_with(s)
-  }
-
-  fn skip_whitespace(&mut self) {
-    while !self.is_end() && self.peek().is_whitespace() {
-      self.advance();
-      self.pos_cursor = self.cursor;
-    }
-  }
-
-  fn report_mismatch(&mut self, expected: &str) -> ! {
-    let found = self.peek_many(expected.len());
-    let text_error = format!("expected `{}`, found `{}`.", expected, found);
-    let diag = self.create_diag(&text_error);
-    report_wrap(&diag);
-  }
-
-  pub fn take_source(&self) -> &Source {
-    &self.source
-  }
-
-  pub fn create_diag(&mut self, message: &str) -> Diag {
-    let range = self.create_range();
-    Diag::create_err(message.to_string(), range, self.source.path.clone())
-  }
-}
-
-fn match_number(character: char) -> bool {
-  "1234567890.".contains(character)
-}
-
-fn unescape_string(input: &str) -> String {
-  let mut result = String::with_capacity(input.len());
-  let mut chars = input.chars();
-
-  while let Some(ch) = chars.next() {
-    if ch == '\\' {
-      match chars.next() {
-        Some('n') => result.push('\n'),
-        Some('t') => result.push('\t'),
-        Some('"') => result.push('"'),
-        Some('\\') => result.push('\\'),
-        Some(other) => {
-          result.push('\\');
-          result.push(other);
-        }
-        None => break,
-      }
-    } else {
-      result.push(ch);
-    }
-  }
-
-  result
 }
