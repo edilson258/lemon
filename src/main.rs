@@ -1,43 +1,54 @@
 mod ast;
 mod cli;
 mod diag;
-mod evaluator;
+// mod evaluator;
 mod lexer;
-mod loader;
+// mod loader;
+mod checker;
 mod parser;
 mod range;
 mod report;
+mod runtime;
 mod source;
-mod tokens;
-use evaluator::{ctx::Ctx, eval::Evaluator};
-use lexer::Lexer;
-use parser::Parser;
-use source::Source;
+use std::path::Path;
 
+use checker::{context::Context, Checker};
+use diag::DiagGroup;
+// use evaluator::{ctx::Ctx, eval::Evaluator};
+use lexer::Token;
+use logos::Logos;
+use parser::Parser;
+use report::throw_error;
+// use parser::Parser;
+use source::Source;
 fn loader(path_name: &str) -> Source {
-  let raw = std::fs::read_to_string(path_name).unwrap();
-  let filename = path_name.to_string();
-  Source::new(raw.as_str(), filename.as_str())
+  let raw = std::fs::read_to_string(path_name).unwrap_or_else(|err| match err.kind() {
+    std::io::ErrorKind::NotFound => throw_error(format!("not found '{}'.", path_name)),
+    _ => throw_error(format!("reading file `{}`, reason '{}'.", path_name, err.to_string())),
+  });
+  Source::new(raw, Path::new(path_name).to_owned())
 }
 
 fn check(source: Source) {
-  let lexer = Lexer::new(source);
-  let mut parser = Parser::new(lexer);
-  let ast = parser.parse_program();
-  println!("{:#?}", ast);
-}
-
-pub(crate) fn eval(source: Source) {
-  let path = source.path.clone();
-  let lexer = Lexer::new(source);
-  let mut parser = Parser::new(lexer);
-  let ast = parser.parse_program();
-  let mut eval = Evaluator::new(path);
-  let mut ctx = Ctx::new(None);
-  match eval.eval(&ast, &mut ctx) {
-    Err(diag) => diag.report(),
-    _ => {}
+  let mut lexer = Token::lexer(&source.raw());
+  let mut parser = Parser::new(&mut lexer);
+  let ast = match parser.parse_program() {
+    Ok(ast) => ast,
+    Err(diag) => diag.report_wrap(source.path()),
   };
+
+  let mut diag_group = DiagGroup::new(&source);
+  let ctx = Context::new();
+  let mut checker = Checker::new(&mut diag_group, ctx);
+  let tyy = match checker.check_program(&ast) {
+    Ok(tyy) => tyy,
+    Err(diag) => diag.report_wrap(source.path()),
+  };
+  if let Some(tyy) = tyy {
+    println!("ok: {}", tyy);
+  } else {
+    println!("ok.");
+  }
 }
 
 fn main() {
@@ -60,23 +71,20 @@ fn main() {
     //   let file = matches.get_one::<String>("file").unwrap();
     //   let source = loader(file);
     // }
-    Some(("eval", matches)) => {
-      let file = matches.get_one::<String>("file").unwrap();
-      let source = loader(file);
-      eval(source);
-    }
     _ => {
       panic!("unknown command");
     }
   }
 }
+
 // fn main() {
-//   let mut lexer = Lexer::new(source);
-//   while !lexer.is_end() {
-//     let token = lexer.next_token();
-//     println!("{:?}", token);
-//     if token.kind == TokenType::EOF {
-//       break;
-//     }
+//   let input = r#"
+//     let x = 10; // Isto é um comentário
+//     let y = x + 20; // Outro comentário
+//     "#;
+
+//   let mut lexer = Token::lexer(input);
+//   while let Some(token) = lexer.next() {
+//     println!("{:?}: {:?}", token, lexer.slice());
 //   }
 // }
