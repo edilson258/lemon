@@ -14,12 +14,10 @@ use std::path::Path;
 
 use checker::{context::Context, Checker};
 use diag::DiagGroup;
-// use evaluator::{ctx::Ctx, eval::Evaluator};
 use lexer::Token;
 use logos::Logos;
 use parser::Parser;
 use report::throw_error;
-// use parser::Parser;
 use source::Source;
 fn loader(path_name: &str) -> Source {
   let raw = std::fs::read_to_string(path_name).unwrap_or_else(|err| match err.kind() {
@@ -36,7 +34,7 @@ fn check(source: Source) {
     Ok(ast) => ast,
     Err(diag) => diag.report_wrap(source.path()),
   };
-
+  // println!("{:?}", ast);
   let mut diag_group = DiagGroup::new(&source);
   let ctx = Context::new();
   let mut checker = Checker::new(&mut diag_group, ctx);
@@ -59,6 +57,7 @@ fn main() {
       let source = loader(file);
       check(source);
     }
+
     // Some(("compile", matches)) => {
     //   let file = matches.get_one::<String>("file").unwrap();
     //   let source = loader(file);
