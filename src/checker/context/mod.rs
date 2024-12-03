@@ -19,6 +19,19 @@ pub struct Value {
   pub kind: Type,
 }
 
+impl Value {
+  pub fn new(name: String, kind: Type) -> Self {
+    Self { name, kind }
+  }
+
+  pub fn get_name(&self) -> &str {
+    &self.name
+  }
+  pub fn get_kind(&self) -> Type {
+    self.kind.clone()
+  }
+}
+
 impl Context {
   pub fn new() -> Self {
     Self { types: HashMap::new(), scopes: vec![Scope::new()] }
