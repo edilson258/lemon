@@ -1,8 +1,6 @@
-  let decimal_short: usize = 123;
-  let decimal_long = 1234567890;
-  let decimal_grouped = 1_234_567;
-  let float_short = 3.14;
-  let float_long = 3.1415926535;
+  let decimal_long:u8  = 1234567890;
+  let decimal_grouped: u32 = 1_234_567;
+  let float_short: f32 = 3.14;
   let float_grouped = 3.141_592_653;
 
   let bin_short = 0b1011;
