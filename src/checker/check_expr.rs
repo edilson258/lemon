@@ -1,4 +1,4 @@
-use crate::{ast, range::TraitRange};
+use crate::ast::{self, Operator};
 
 use super::{diags::errs::TypeErr, types::Type, Checker, CheckerResult};
 
@@ -25,68 +25,57 @@ impl<'a> Checker<'a> {
   }
 
   pub fn check_ident(&mut self, ident: &ast::Ident) -> CheckerResult<Type> {
-    todo!()
+    if let Some(value) = self.ctx.get_value(&ident.text) {
+      return Ok(Some(value.get_kind()));
+    }
+    let range = ident.range.clone();
+    let diag = TypeErr::NotFound(&ident.text, range);
+    return Err(diag.into());
   }
-
   pub fn check_unary(&mut self, unary: &ast::UnaryExpr) -> CheckerResult<Type> {
     todo!()
   }
-
   pub fn check_binary(&mut self, binary: &ast::BinaryExpr) -> CheckerResult<Type> {
-    let lt_type = match self.check_expr(&binary.left)? {
-      Some(left) => left,
-      None => return Ok(None),
-    };
-
-    let rt_type = match self.check_expr(&binary.right)? {
-      Some(right) => right,
-      None => return Ok(None),
-    };
-
-    if !lt_type.supports_operator(&binary.operator) {
-      let diag = TypeErr::UnsupportedOperator(
-        lt_type.to_string(),
-        rt_type.to_string(),
-        binary.operator.clone(),
-        binary.range(),
-      );
+    let left_type = self.check_expr(&binary.left)?.unwrap();
+    let right_type = self.check_expr(&binary.right)?.unwrap();
+    let operator = &binary.operator;
+    let range = binary.range.clone();
+    if !self.operator_supported(&left_type, &right_type, operator) {
+      let diag = TypeErr::NotSupported(&left_type, &right_type, &operator, range);
       return Err(diag.into());
     }
 
-    if !rt_type.supports_operator(&binary.operator) {
-      let diag = TypeErr::UnsupportedOperator(
-        lt_type.to_string(),
-        rt_type.to_string(),
-        binary.operator.clone(),
-        binary.range(),
-      );
-      return Err(diag.into());
-    }
-
-    return Ok(Some(rt_type));
+    Ok(Some(self.resulting_type(left_type, right_type)))
   }
 
-  // check group expression
+  fn operator_supported(&self, left: &Type, right: &Type, operator: &Operator) -> bool {
+    left.can_operated(operator) && right.can_operated(operator) && left.same_set(right)
+  }
+
+  fn resulting_type(&self, left: Type, right: Type) -> Type {
+    match (left, right) {
+      (Type::Float(l), Type::Float(r)) => Type::Float(l.higher_bits(&r)),
+      (Type::Numb(l), Type::Numb(r)) => Type::Numb(l.higher_bits(&r)),
+      (_, r) => r,
+    }
+  }
+
   pub fn check_group(&mut self, group: &ast::GroupExpr) -> CheckerResult<Type> {
     todo!()
   }
 
-  /// check call expression
   pub fn check_call(&mut self, call: &ast::CallExpr) -> CheckerResult<Type> {
     todo!()
   }
 
-  /// check if expression
   pub fn check_if(&mut self, if_expr: &ast::IfExpr) -> CheckerResult<Type> {
     todo!()
   }
 
-  /// check break expression
   pub fn check_break(&mut self, break_expr: &ast::BaseExpr) -> CheckerResult<Type> {
     todo!()
   }
 
-  /// check return expression
   pub fn check_ret(&mut self, ret: &ast::RetExpr) -> CheckerResult<Type> {
     todo!()
   }
