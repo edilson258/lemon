@@ -4,6 +4,7 @@ use crate::{ast, diag};
 use types::Type;
 
 mod check_expr;
+mod check_fn;
 mod check_literal;
 mod check_stmt;
 mod check_type;
@@ -24,11 +25,12 @@ impl<'a> Checker<'a> {
   }
 
   pub fn check_program(&mut self, ast: &ast::Program) -> CheckerResult<Type> {
-    let mut rt = None;
-    for stmt in &ast.stmts {
-      rt = self.check_stmt(stmt)?;
-    }
-    Ok(rt)
+    ast.stmts.split_last().map_or(Ok(None), |(last, rest)| {
+      for stmt in rest {
+        self.check_stmt(stmt)?;
+      }
+      self.check_stmt(last)
+    })
   }
   pub fn check_binding(&mut self, binding: &ast::Binding) -> CheckerResult<Type> {
     if let Some(ty) = &binding.ty {
