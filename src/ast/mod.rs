@@ -20,6 +20,22 @@ pub enum Stmt {
   Block(BlockStmt),
 }
 
+impl Stmt {
+  pub fn last_stmt_range(&self) -> Option<Range> {
+    match self {
+      Stmt::Block(block_stmt) => block_stmt.last_stmt_range(),
+      _ => None,
+    }
+  }
+
+  pub fn is_block(&self) -> bool {
+    match self {
+      Stmt::Block(_) => true,
+      _ => false,
+    }
+  }
+}
+
 impl TraitRange for Stmt {
   fn range(&self) -> Range {
     match self {
@@ -61,6 +77,12 @@ pub struct FnStmt {
   pub range: Range, // fn range
 }
 
+impl FnStmt {
+  pub fn text(&self) -> &str {
+    return &self.name.text;
+  }
+}
+
 impl TraitRange for FnStmt {
   fn range(&self) -> Range {
     // fn ... body
@@ -71,14 +93,22 @@ impl TraitRange for FnStmt {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlockStmt {
   pub stmts: Vec<Stmt>,
+  range: Range,
+}
+
+impl BlockStmt {
+  pub fn new(stmts: Vec<Stmt>, range: Range) -> Self {
+    Self { stmts, range }
+  }
+
+  pub fn last_stmt_range(&self) -> Option<Range> {
+    self.stmts.last().map(|stmt| stmt.range())
+  }
 }
 
 impl TraitRange for BlockStmt {
   fn range(&self) -> Range {
-    match (self.stmts.first(), self.stmts.last()) {
-      (Some(first), Some(last)) => first.range().merged_with(&last.range()),
-      _ => todo!("empty block"),
-    }
+    return self.range.clone();
   }
 }
 
@@ -98,6 +128,12 @@ impl TraitRange for Ident {
 pub struct Binding {
   pub ident: Ident,
   pub ty: Option<ast_type::AstType>,
+}
+
+impl Binding {
+  pub fn text(&self) -> &str {
+    return &self.ident.text;
+  }
 }
 
 impl TraitRange for Binding {
@@ -359,6 +395,22 @@ impl NumLiteral {
   pub fn range(&self) -> Range {
     self.range.clone()
   }
+
+  pub fn as_dot(&self) -> bool {
+    self.as_dot
+  }
+
+  pub fn as_hex(&self) -> bool {
+    self.base == BASE_HEX
+  }
+
+  pub fn as_bin(&self) -> bool {
+    self.base == BASE_BIN
+  }
+
+  pub fn as_decimal(&self) -> bool {
+    self.base == BASE_DECIMAL
+  }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -465,7 +517,12 @@ impl Operator {
 
   pub fn pde(&self) -> u8 {
     match self {
-      Operator::LT | Operator::LE | Operator::GT | Operator::GE | Operator::EQ | Operator::NOTEQ => CMP_PDE,
+      Operator::LT
+      | Operator::LE
+      | Operator::GT
+      | Operator::GE
+      | Operator::EQ
+      | Operator::NOTEQ => CMP_PDE,
       Operator::ADD | Operator::SUB => ADD_PDE,
       Operator::MUL | Operator::DIV | Operator::MOD => MUL_PDE,
       Operator::POW => MAX_PDE,
