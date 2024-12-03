@@ -30,17 +30,19 @@ impl<'l> Parser<'l> {
     let mut stmts = vec![];
     while !self.is_end() {
       stmts.push(self.parse_stmt()?);
-      self.match_take(Token::Semi)?;
     }
     Ok(ast::Program { stmts })
   }
 
   fn parse_stmt(&mut self) -> PResult<'l, ast::Stmt> {
-    match self.token {
+    let stmt = match self.token {
       Some(Token::Let) => self.parse_let().map(ast::Stmt::Let),
       Some(Token::Fn) => self.parse_fn().map(ast::Stmt::Fn),
+      Some(Token::LBrace) => self.parse_block().map(ast::Stmt::Block),
       _ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
-    }
+    };
+    self.match_take(Token::Semi)?;
+    stmt
   }
 
   fn parse_let(&mut self) -> PResult<'l, ast::LetStmt> {
@@ -74,6 +76,17 @@ impl<'l> Parser<'l> {
     self.expect(Token::Assign)?; // take '='
     let body = Box::new(self.parse_stmt()?);
     Ok(ast::FnStmt { name, params, ret_type, body, range })
+  }
+
+  fn parse_block(&mut self) -> PResult<'l, ast::BlockStmt> {
+    let mut range = self.expect(Token::LBrace)?.clone();
+    let mut stmts = vec![];
+    while !self.match_token(Token::RBrace) {
+      let stmt = self.parse_stmt()?;
+      stmts.push(stmt);
+    }
+    range.merge(&self.expect(Token::RBrace)?);
+    Ok(ast::BlockStmt::new(stmts, range))
   }
 
   fn parse_expr(&mut self, pde: u8) -> PResult<'l, ast::Expr> {
@@ -117,7 +130,8 @@ impl<'l> Parser<'l> {
     let text = self.take_text_and_next()?;
     let (base, cleaned_text) = self.detect_numb_base(&text);
     let as_dot = text.contains('.');
-    let num = ast::NumLiteral { base, as_dot, text: cleaned_text, range };
+    let text = self.normalize_number(&cleaned_text);
+    let num = ast::NumLiteral { base, as_dot, text, range };
     Ok(ast::Literal::Num(num))
   }
 
@@ -164,6 +178,11 @@ impl<'l> Parser<'l> {
 
   // helpers
   //
+
+  fn normalize_number(&self, text: &str) -> String {
+    text.replace('_', "")
+  }
+
   fn is_end(&self) -> bool {
     self.token.is_none()
   }
@@ -198,15 +217,16 @@ impl<'l> Parser<'l> {
     }
   }
 
-  fn expect(&mut self, token: Token) -> PResult<'l, &Range> {
+  fn expect(&mut self, token: Token) -> PResult<'l, Range> {
     if !self.match_token(token) {
       // todo: add error message
       let peeked = self.token.map(|t| t.to_string()).unwrap_or_else(|| "unkown".to_string());
       let diag = Diag::error(format!("expected {} but got {}", token, peeked), self.range.clone());
       return Err(diag);
     }
+    let range = self.range.clone();
     self.next()?;
-    Ok(&self.range)
+    Ok(range)
   }
 
   fn match_token(&mut self, token: Token) -> bool {
