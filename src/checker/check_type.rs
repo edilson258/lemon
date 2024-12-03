@@ -24,7 +24,7 @@ impl<'a> Checker<'a> {
   }
 
   pub fn check_numb_type(&mut self, ast_type: &ast_type::NumbType) -> CheckerResult<Type> {
-    let bits = if ast_type.bits > 8 { Some(ast_type.bits) } else { None };
+    let bits = if ast_type.bits >= 8 { Some(ast_type.bits) } else { None };
     let numb = NumbValue { bits, signed: ast_type.signed };
     return Ok(Some(Type::Numb(numb)));
   }
