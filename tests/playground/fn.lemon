@@ -1,4 +1,4 @@
-fn math(lt: u8, rt: u8) = {
+fn math(lt: u8, rt: u8): u8 = {
   let x = lt + rt;
   x
 }
@@ -6,4 +6,16 @@ fn math(lt: u8, rt: u8) = {
 
 fn add(a: u8, b: u8): u16 = {
   a + b // Aqui `u8` pode ser promovido para `u16`
+}
+
+
+let callback: fn(u8) = fn(x: u8): u64 = {
+  10
+}
+
+
+
+fn main(callback: fn(u8) -> u64, num: u8): u64 = {
+  let x: u64 = num;
+  x
 }
