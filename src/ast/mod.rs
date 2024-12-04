@@ -192,7 +192,8 @@ impl Expr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnExpr {
   pub params: Vec<Binding>,
-  pub name: Option<Ident>,
+  // pub name: Option<Ident>,
+  pub ret_type: Option<ast_type::AstType>,
   pub body: Box<Stmt>,
   pub range: Range, // fn range
 }
@@ -358,6 +359,7 @@ impl TraitRange for ImportExpr {
 pub enum Literal {
   Num(NumLiteral),
   String(StringLiteral),
+  Char(CharLiteral),
   Bool(BoolLiteral),
   Null(BaseExpr),
 }
@@ -369,6 +371,7 @@ impl TraitRange for Literal {
       Literal::String(string) => string.range(),
       Literal::Bool(bool) => bool.range(),
       Literal::Null(null) => null.range(),
+      Literal::Char(char) => char.range(),
     }
   }
 }
@@ -420,6 +423,18 @@ pub struct StringLiteral {
 }
 
 impl TraitRange for StringLiteral {
+  fn range(&self) -> Range {
+    self.range.clone()
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CharLiteral {
+  pub range: Range,
+  pub value: char,
+}
+
+impl TraitRange for CharLiteral {
   fn range(&self) -> Range {
     self.range.clone()
   }
