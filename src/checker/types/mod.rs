@@ -68,7 +68,6 @@ impl Type {
       (Type::Numb(lt), Type::Numb(rt)) => lt.same_set(rt),
       (Type::Float(_), Type::Float(_)) => true,
       (Type::Bool, Type::Bool) | (Type::Char, Type::Char) | (Type::String, Type::String) => true,
-      (Type::Fn(lt), Type::Fn(rt)) => lt.same_set(rt),
       _ => false,
     }
   }
