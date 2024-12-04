@@ -52,6 +52,7 @@ fn check(source: Source) {
 fn main() {
   let matches = cli::command_line();
   match matches.subcommand() {
+    // let a;
     Some(("check", matches)) => {
       let file = matches.get_one::<String>("file").expect("file is required");
       let source = loader(file);
