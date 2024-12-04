@@ -5,7 +5,7 @@ use std::{fs, path::PathBuf};
 use crate::diag::{Diag, Severity};
 use dunh::{high_err_ctx, high_info_ctx, high_warn_ctx};
 
-const CTX_LOC: usize = 2; // -- context lines
+const CTX_LOC: usize = 1; // -- context lines
 
 // ---
 //
@@ -34,13 +34,15 @@ fn report(diag: &Diag, path: &PathBuf) {
   println!(""); // -- new line
 
   let slug = match diag.severity {
-    Severity::Err => text_red("ERROR >>>"),
-    Severity::Warn => text_yellow("WARNING >>>"),
-    Severity::Info => text_gray("INFO >>>"),
+    // Severity::Err => text_red("ERROR >>>"),
+    // Severity::Warn => text_yellow("WARNING >>>"),
+    // Severity::Info => text_gray("INFO >>>"),
+    Severity::Err => text_red("error"),
+    Severity::Warn => text_yellow("warning"),
+    Severity::Info => text_green("info"),
   };
-  println!("{} {}", slug, text_white(&diag.message)); // -- message
-
-  println!("{}", text_gray(&path.display().to_string())); // -- filename
+  println!("{}: {}", slug, diag.message); // -- message
+  println!("---> {}", text_gray(&path.display().to_string())); // -- filename
 
   let raw = fs::read_to_string(&path).unwrap();
   let code = match diag.severity {
@@ -48,12 +50,13 @@ fn report(diag: &Diag, path: &PathBuf) {
     Severity::Warn => high_warn_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),
     Severity::Info => high_info_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),
   };
-
   println!("{}", code);
+  // println!("note: run with `lemon --debug` for more info");
 }
 
 pub fn throw_error(text: impl Into<String>) -> ! {
-  println!("{} {}", text_red("ERROR >>>"), text_white(text.into().as_str()));
+  println!("{} {}", text_red("error: "), text_white(text.into().as_str()));
+  // println!("{} {}", text_red("ERROR >>>"), text_white(text.into().as_str()));
   std::process::exit(1);
 }
 
@@ -82,7 +85,7 @@ pub fn text_cyan(text: &str) -> String {
 }
 
 pub fn text_white(text: &str) -> String {
-  format!("\x1b[97m{}\x1b[0m", text)
+  format!("\x1b[2m\x1b[37m{}\x1b[0m", text) // "Dim" + Branco
 }
 
 pub fn text_gray(text: &str) -> String {
