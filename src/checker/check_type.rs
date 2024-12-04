@@ -1,7 +1,7 @@
 use crate::ast::ast_type;
 
 use super::{
-  types::{FloatValue, NumbValue, Type},
+  types::{FloatValue, FnValue, NumbValue, Type},
   Checker, CheckerResult,
 };
 
@@ -42,7 +42,20 @@ impl<'a> Checker<'a> {
   }
 
   pub fn check_fn_type(&mut self, ast_type: &ast_type::FnType) -> CheckerResult<Type> {
-    todo!()
+    let mut params = Vec::with_capacity(ast_type.params.len());
+
+    for param in ast_type.params.iter() {
+      params.push(self.check_type(param)?.unwrap()); // we expect the type to be checked
+    }
+
+    let ret_type = match ast_type.ret_type {
+      Some(ref ty) => Some(Box::new(self.check_type(ty)?.unwrap())), // we expect the type to be checked
+      None => None,
+    };
+
+    let fn_type = FnValue::new(params, ret_type);
+
+    return Ok(Some(Type::Fn(fn_type)));
   }
 
   pub fn check_ident_type(&mut self, ast_type: &ast_type::IdentType) -> CheckerResult<Type> {
