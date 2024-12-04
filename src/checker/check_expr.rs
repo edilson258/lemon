@@ -17,7 +17,7 @@ impl<'a> Checker<'a> {
       ast::Expr::Assign(assign) => self.check_assign(assign),
       ast::Expr::While(while_expr) => self.check_while(while_expr),
       ast::Expr::For(for_expr) => self.check_for(for_expr),
-      ast::Expr::Fn(fn_expr) => self.check_fn(fn_expr),
+      ast::Expr::Fn(fn_expr) => self.check_fn_expr(fn_expr),
       ast::Expr::Skip(base_expr) => self.check_skip(base_expr),
       ast::Expr::Pipe(pipe_expr) => self.check_pipe(pipe_expr),
       ast::Expr::Import(import_expr) => self.check_import(import_expr),
@@ -89,10 +89,6 @@ impl<'a> Checker<'a> {
   }
 
   fn check_for(&mut self, for_expr: &ast::ForExpr) -> CheckerResult<Type> {
-    todo!()
-  }
-
-  pub fn check_fn(&mut self, fn_expr: &ast::FnExpr) -> CheckerResult<Type> {
     todo!()
   }
 
