@@ -10,7 +10,9 @@ impl<'l> Parser<'l> {
       Some(Token::StringType) => self.parse_string_type().map(ast_type::AstType::String),
       Some(Token::Ident) => self.parse_ident_type().map(ast_type::AstType::Ident),
       Some(Token::Fn) => self.parse_fn_type().map(ast_type::AstType::Fn),
-      Some(Token::F32Type) | Some(Token::F64Type) => self.parse_float_type().map(ast_type::AstType::Float),
+      Some(Token::F32Type) | Some(Token::F64Type) => {
+        self.parse_float_type().map(ast_type::AstType::Float)
+      }
       Some(Token::I8Type)
       | Some(Token::U8Type)
       | Some(Token::I16Type)
@@ -127,7 +129,7 @@ impl<'l> Parser<'l> {
     }
     self.expect(Token::RParen)?;
     let mut ret_type = None;
-    if !self.match_token(Token::Arrow) {
+    if self.match_token(Token::Arrow) {
       self.expect(Token::Arrow)?;
       ret_type = Some(Box::new(self.parse_type()?));
     }
