@@ -36,16 +36,16 @@ impl<'l> Parser<'l> {
 
   fn parse_stmt(&mut self) -> PResult<'l, ast::Stmt> {
     let stmt = match self.token {
-      Some(Token::Let) => self.parse_let().map(ast::Stmt::Let),
-      Some(Token::Fn) => self.parse_fn().map(ast::Stmt::Fn),
-      Some(Token::LBrace) => self.parse_block().map(ast::Stmt::Block),
+      Some(Token::Let) => self.parse_let_stmt().map(ast::Stmt::Let),
+      Some(Token::Fn) => self.parse_fn_stmt().map(ast::Stmt::Fn),
+      Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
       _ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
     };
     self.match_take(Token::Semi)?;
     stmt
   }
 
-  fn parse_let(&mut self) -> PResult<'l, ast::LetStmt> {
+  fn parse_let_stmt(&mut self) -> PResult<'l, ast::LetStmt> {
     let range = self.expect(Token::Let)?.clone();
     let name = self.parse_binding()?;
     self.expect(Token::Assign)?; // =
@@ -53,7 +53,7 @@ impl<'l> Parser<'l> {
     Ok(ast::LetStmt { name, expr, range })
   }
 
-  fn parse_fn(&mut self) -> PResult<'l, ast::FnStmt> {
+  fn parse_fn_stmt(&mut self) -> PResult<'l, ast::FnStmt> {
     let range = self.expect(Token::Fn)?.clone();
     let name = self.parse_ident()?;
     self.expect(Token::LParen)?;
@@ -78,7 +78,7 @@ impl<'l> Parser<'l> {
     Ok(ast::FnStmt { name, params, ret_type, body, range })
   }
 
-  fn parse_block(&mut self) -> PResult<'l, ast::BlockStmt> {
+  fn parse_block_stmt(&mut self) -> PResult<'l, ast::BlockStmt> {
     let mut range = self.expect(Token::LBrace)?.clone();
     let mut stmts = vec![];
     while !self.match_token(Token::RBrace) {
@@ -117,11 +117,33 @@ impl<'l> Parser<'l> {
   fn parse_primary(&mut self) -> PResult<'l, ast::Expr> {
     match self.token {
       Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident),
+      Some(Token::Char) => self.parse_char().map(ast::Expr::Literal),
+      Some(Token::String) => self.parse_string().map(ast::Expr::Literal),
       Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
         self.parse_numb().map(ast::Expr::Literal)
       }
+      Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn),
       _ => Err(self.unexpected()),
     }
+  }
+
+  fn parse_char(&mut self) -> PResult<'l, ast::Literal> {
+    self.ensure_char()?;
+    let range = self.take_range();
+    let text = self.take_text_and_next()?;
+    let value = text.chars().nth(1).unwrap(); // skipe '
+    let char = ast::CharLiteral { value, range };
+    Ok(ast::Literal::Char(char))
+  }
+
+  fn parse_string(&mut self) -> PResult<'l, ast::Literal> {
+    if !self.match_token(Token::String) {
+      self.expect(Token::String)?;
+    }
+    let range = self.take_range();
+    let text = self.take_text_and_next()?;
+    let string = ast::StringLiteral { text, range };
+    Ok(ast::Literal::String(string))
   }
 
   fn parse_numb(&mut self) -> PResult<'l, ast::Literal> {
@@ -135,9 +157,49 @@ impl<'l> Parser<'l> {
     Ok(ast::Literal::Num(num))
   }
 
+  fn parse_fn_expr(&mut self) -> PResult<'l, ast::FnExpr> {
+    let range = self.expect(Token::Fn)?.clone();
+    let mut params = vec![];
+    self.expect(Token::LParen)?; // take '('
+    while !self.match_token(Token::RParen) {
+      params.push(self.parse_binding()?);
+      if !self.match_token(Token::RParen) {
+        self.expect(Token::Comma)?;
+      }
+    }
+    self.expect(Token::RParen)?; // take ')'
+
+    let ret_type = match self.token {
+      Some(Token::Colon) => {
+        self.expect(Token::Colon)?;
+        Some(self.parse_type()?)
+      }
+      _ => None,
+    };
+
+    self.expect(Token::Assign)?; // take '='
+
+    let body = Box::new(self.parse_stmt()?);
+
+    Ok(ast::FnExpr { params, body, range, ret_type })
+  }
+
   fn ensure_numb(&mut self) -> PResult<'l, ()> {
     if !matches!(self.token, Some(Token::Decimal | Token::Hex | Token::Bin)) {
       self.expect(Token::Decimal)?;
+    }
+    Ok(())
+  }
+
+  fn ensure_char(&mut self) -> PResult<'l, ()> {
+    if !matches!(self.token, Some(Token::Char)) {
+      self.expect(Token::Char)?;
+    }
+
+    // include "'"
+    if self.take_text().len() > 3 {
+      let diag = Diag::error("expected char literal", self.range.clone());
+      return Err(diag);
     }
     Ok(())
   }
@@ -151,9 +213,6 @@ impl<'l> Parser<'l> {
       return (BASE_BIN, text.trim_start_matches("0b").to_string());
     }
 
-    // if text.starts_with("0o") {
-    //   return (BASE_OCT, text.trim_start_matches("0o").to_string());
-    // }
     return (BASE_DECIMAL, text.to_string());
   }
 
