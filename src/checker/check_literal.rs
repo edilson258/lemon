@@ -13,6 +13,7 @@ impl<'a> Checker<'a> {
       ast::Literal::String(string) => self.check_string_literal(string),
       ast::Literal::Bool(bool) => self.check_bool_literal(bool),
       ast::Literal::Null(null) => self.check_null_literal(null),
+      ast::Literal::Char(char) => self.check_char_literal(char),
     }
   }
 
@@ -60,11 +61,15 @@ impl<'a> Checker<'a> {
   }
 
   pub fn check_string_literal(&mut self, string: &ast::StringLiteral) -> CheckerResult<Type> {
-    todo!()
+    Ok(Some(Type::String))
   }
 
   pub fn check_bool_literal(&mut self, bool: &ast::BoolLiteral) -> CheckerResult<Type> {
-    todo!()
+    Ok(Some(Type::Bool))
+  }
+
+  pub fn check_char_literal(&mut self, char: &ast::CharLiteral) -> CheckerResult<Type> {
+    Ok(Some(Type::Char))
   }
 
   pub fn check_null_literal(&mut self, null: &ast::BaseExpr) -> CheckerResult<Type> {
