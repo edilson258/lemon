@@ -1,0 +1,15 @@
+fn compute(a: u32, b: u32): u32 = {
+  let mut sum = a + b;
+  if sum > 100 {
+    let diff = sum - 50;
+    return diff;
+  }
+  sum
+}
+
+fn main(): u32 = {
+  let x = 42;
+  let y = 58;
+  let result = compute(x, y);
+  result
+}
