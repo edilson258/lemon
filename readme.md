@@ -148,3 +148,9 @@ l0: own 50 -> r0 # compute constant values at compile time
 
 
 ```
+
+- compiler
+
+1. llvm
+2. wasm
+3. lemon runtime (dev mode)
