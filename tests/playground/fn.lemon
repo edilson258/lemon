@@ -1,21 +1,62 @@
 fn math(lt: u8, rt: u8): u8 = {
-  let x = lt + rt;
+  let x: u8 = lt + rt;
+
+  let y: u8 = x * x;
+
+  let z: u8= y / y;
   x
 }
 
-
-fn add(a: u8, b: u8): u16 = {
-  a + b // Aqui `u8` pode ser promovido para `u16`
+fn add(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs + rhs;
+  x
 }
 
-
-let callback: fn(u8) = fn(x: u8): u64 = {
-  10
+fn sub(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs - rhs;
+  x
 }
 
+fn div(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs / rhs;
+  x
+}
+
+fn mul(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs * rhs;
+  x
+}
+
+fn mod(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs % rhs;
+  x
+}
+
+fn cmp_gt(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs > rhs;
+  x
+}
+
+fn cmp_eq(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs == rhs;
+  x
+}
+
+fn cmp_lt(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs < rhs;
+  x
+}
+
+/*
+fn cmp_le(lhs: u8, rhs: u8): u8 = {
+  let x: u8 = lhs <= rhs;
+  x
+}
+*/
 
 
-fn main(callback: fn(u8) -> u64, num: u8): u64 = {
-  let x: u64 = num;
+
+fn main(): u16 = {
+  let x: u16 = 1000;
   x
 }

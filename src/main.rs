@@ -50,51 +50,25 @@ fn check(source: Source) {
   }
 }
 
-fn compile(_source: Source) {
-  let ir = ir::IR {
-    fns: vec![
-      ir::FnIr {
-        name: "compute".to_string(),
-        params: vec![
-          ir::Bind { reg: "a".to_string(), ty: "u32".to_string() },
-          ir::Bind { reg: "b".to_string(), ty: "u32".to_string() },
-        ],
-        ret_ty: Some("u32".to_string()),
-        body: vec![
-          ir::Instr::ADD { lhs: "a".to_string(), rhs: "b".to_string(), dest: "sum".to_string() },
-          ir::Instr::CMPGT {
-            lhs: "sum".to_string(),
-            rhs: "100".to_string(),
-            dest: "cond".to_string(),
-          },
-          ir::Instr::JMPIF { cond: "cond".to_string(), l1: "l1".to_string(), l0: "l0".to_string() },
-          ir::Instr::GOTO { to: "l0".to_string() },
-          ir::Instr::SUB {
-            lhs: "sum".to_string(),
-            rhs: "50".to_string(),
-            dest: "diff".to_string(),
-          },
-          ir::Instr::RET { tag: "diff".to_string() },
-          ir::Instr::RET { tag: "sum".to_string() },
-        ],
-      },
-      ir::FnIr {
-        name: "main".to_string(),
-        params: vec![],
-        ret_ty: Some("u32".to_string()),
-        body: vec![
-          ir::Instr::OWN { tag: "42".to_string(), dest: "x".to_string() },
-          ir::Instr::OWN { tag: "58".to_string(), dest: "y".to_string() },
-          ir::Instr::CALL {
-            name: "compute".to_string(),
-            args: vec!["x".to_string(), "y".to_string()],
-            dest: "result".to_string(),
-          },
-          ir::Instr::RET { tag: "result".to_string() },
-        ],
-      },
-    ],
+fn compile(source: Source) {
+  println!("parsing...");
+  let mut lexer = Token::lexer(&source.raw());
+  let mut parser = Parser::new(&mut lexer);
+  let ast = match parser.parse_program() {
+    Ok(ast) => ast,
+    Err(diag) => diag.report_wrap(source.path()),
   };
+  println!("checking...");
+  let mut diag_group = DiagGroup::new(&source);
+  let ctx = Context::new();
+  let mut checker = Checker::new(&mut diag_group, ctx);
+  let _ = match checker.check_program(&ast) {
+    Ok(tyy) => tyy,
+    Err(diag) => diag.report_wrap(source.path()),
+  };
+  println!("emmit ir...");
+  let mut builder = ir::Builder::new();
+  let ir = builder.build(ast);
   println!("{}", ir);
 }
 
