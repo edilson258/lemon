@@ -1,4 +1,4 @@
-use crate::ast::{self, Operator};
+use crate::ast::{self};
 
 use super::{diags::errs::TypeErr, types::Type, Checker, CheckerResult};
 
@@ -8,10 +8,10 @@ impl<'a> Checker<'a> {
       ast::Expr::Literal(lit) => self.check_literal(lit),
       ast::Expr::Ident(ident) => self.check_ident(ident),
       ast::Expr::Unary(unary) => self.check_unary(unary),
-      ast::Expr::Binary(binary) => self.check_binary(binary),
+      ast::Expr::Binary(binary) => self.check_binary_expr(binary),
       ast::Expr::Group(group) => self.check_group(group),
       ast::Expr::Call(call) => self.check_call(call),
-      ast::Expr::If(if_expr) => self.check_if(if_expr),
+      ast::Expr::If(if_expr) => self.check_if_expr(if_expr),
       ast::Expr::Break(break_expr) => self.check_break(break_expr),
       ast::Expr::Ret(ret) => self.check_ret(ret),
       ast::Expr::Assign(assign) => self.check_assign(assign),
@@ -35,40 +35,12 @@ impl<'a> Checker<'a> {
   pub fn check_unary(&mut self, unary: &ast::UnaryExpr) -> CheckerResult<Type> {
     todo!()
   }
-  pub fn check_binary(&mut self, binary: &ast::BinaryExpr) -> CheckerResult<Type> {
-    let left_type = self.check_expr(&binary.left)?.unwrap();
-    let right_type = self.check_expr(&binary.right)?.unwrap();
-    let operator = &binary.operator;
-    let range = binary.range.clone();
-    if !self.operator_supported(&left_type, &right_type, operator) {
-      let diag = TypeErr::NotSupported(&left_type, &right_type, &operator, range);
-      return Err(diag.into());
-    }
-
-    Ok(Some(self.resulting_type(left_type, right_type)))
-  }
-
-  fn operator_supported(&self, left: &Type, right: &Type, operator: &Operator) -> bool {
-    left.can_operated(operator) && right.can_operated(operator) && left.same_set(right)
-  }
-
-  fn resulting_type(&self, left: Type, right: Type) -> Type {
-    match (left, right) {
-      (Type::Float(l), Type::Float(r)) => Type::Float(l.higher_bits(&r)),
-      (Type::Numb(l), Type::Numb(r)) => Type::Numb(l.higher_bits(&r)),
-      (_, r) => r,
-    }
-  }
 
   pub fn check_group(&mut self, group: &ast::GroupExpr) -> CheckerResult<Type> {
     todo!()
   }
 
   pub fn check_call(&mut self, call: &ast::CallExpr) -> CheckerResult<Type> {
-    todo!()
-  }
-
-  pub fn check_if(&mut self, if_expr: &ast::IfExpr) -> CheckerResult<Type> {
     todo!()
   }
 

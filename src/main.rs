@@ -72,8 +72,16 @@ fn compile(source: Source) {
   println!("{}", ir);
 }
 
+fn lex(source: Source) {
+  let mut lexer = Token::lexer(&source.raw());
+  while let Some(token) = lexer.next() {
+    println!("{:?}: {:?}", token, lexer.slice());
+  }
+}
+
 fn main() {
   let matches = cli::command_line();
+
   match matches.subcommand() {
     // let a;
     Some(("check", matches)) => {
@@ -87,6 +95,12 @@ fn main() {
       let source = loader(file);
       compile(source);
     }
+    Some(("lex", matches)) => {
+      let file = matches.get_one::<String>("file").unwrap();
+      let source = loader(file);
+      lex(source);
+    }
+
     // Some(("run", matches)) => {
     //   let file = matches.get_one::<String>("file").unwrap();
     //   let source = loader(file);

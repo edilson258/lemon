@@ -23,6 +23,7 @@ type PResult<'l, T> = Result<T, Diag>;
 impl<'l> Parser<'l> {
   pub fn new(lex: &'l mut Lexer<'l, Token>) -> Self {
     let range = Range::from_span(lex.span());
+    // todo: remove unwrap
     let token = lex.next().map(|t| t.unwrap());
     Self { lex, token, range }
   }
@@ -86,6 +87,7 @@ impl<'l> Parser<'l> {
       stmts.push(stmt);
     }
     range.merge(&self.expect(Token::RBrace)?);
+
     Ok(ast::BlockStmt::new(stmts, range))
   }
 
@@ -119,10 +121,11 @@ impl<'l> Parser<'l> {
       Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident),
       Some(Token::Char) => self.parse_char().map(ast::Expr::Literal),
       Some(Token::String) => self.parse_string().map(ast::Expr::Literal),
+      Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn),
+      Some(Token::If) => self.parse_if_expr().map(ast::Expr::If),
       Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
         self.parse_numb().map(ast::Expr::Literal)
       }
-      Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn),
       _ => Err(self.unexpected()),
     }
   }
@@ -182,6 +185,20 @@ impl<'l> Parser<'l> {
     let body = Box::new(self.parse_stmt()?);
 
     Ok(ast::FnExpr { params, body, range, ret_type })
+  }
+
+  fn parse_if_expr(&mut self) -> PResult<'l, ast::IfExpr> {
+    let range = self.expect(Token::If)?.clone();
+    self.expect(Token::LParen)?; // take '('
+    let cond = Box::new(self.parse_expr(MIN_PDE)?);
+    self.expect(Token::RParen)?; // take ')'
+    let then = Box::new(self.parse_stmt()?);
+    let mut otherwise = None;
+    if self.match_token(Token::Else) {
+      self.expect(Token::Else)?;
+      otherwise = Some(Box::new(self.parse_stmt()?));
+    }
+    Ok(ast::IfExpr { cond, then, otherwise, range })
   }
 
   fn ensure_numb(&mut self) -> PResult<'l, ()> {

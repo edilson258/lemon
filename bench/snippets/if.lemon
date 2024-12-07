@@ -1,21 +1,19 @@
-let io = import("std::io");
 
-fn fibonacci(num) = if (num < 2) {
-  num
-} else {
-  fibonacci(num - 1) + fibonacci(num - 2)
-};
+/*
+fn test(left: u32, right: u32): u32 = {
+  let x = if (left == 10) {
 
-
-
-/--
-match num {
-  0 => 0,
-  1 => 1,
-  _ => fibonacci(num - 1) + fibonacci(num - 2),
+  } else {
+    ''
+  };
+  x
 }
 
---/
+*/
 
-
-fibonacci(10) |> io::println;
+fn test2(left: u32, right: u32): u32 = {
+  if (left == 10) {
+    left
+  };
+  if (left < right) { left } else { right }
+}

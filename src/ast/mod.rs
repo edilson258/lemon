@@ -284,7 +284,7 @@ impl TraitRange for CallExpr {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IfExpr {
-  pub test: Box<Expr>,
+  pub cond: Box<Expr>,
   pub then: Box<Stmt>,
   pub otherwise: Option<Box<Stmt>>,
   pub range: Range, // if range

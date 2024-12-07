@@ -11,6 +11,7 @@ pub fn command_line() -> clap::ArgMatches {
     .subcommand(
       Command::new("compile").about("compile lemon.").arg(Arg::new("file").required(true)),
     )
+    .subcommand(Command::new("lex").about("lex lemon.").arg(Arg::new("file").required(true)))
     .get_matches();
   return matches;
 }

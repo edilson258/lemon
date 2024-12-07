@@ -27,8 +27,6 @@ pub enum Token {
   Skip,
   #[token("else")]
   Else,
-  #[regex(r"else\s+if", priority = 2)]
-  ElseIf,
   #[token("return")]
   Ret,
   #[token("null")]
@@ -199,7 +197,6 @@ impl fmt::Display for Token {
       Token::Break => write!(f, "break"),
       Token::Skip => write!(f, "skip"),
       Token::Else => write!(f, "else"),
-      Token::ElseIf => write!(f, "else if"),
       Token::Ret => write!(f, "return"),
       Token::Null => write!(f, "null"),
       Token::Match => write!(f, "match"),
