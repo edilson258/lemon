@@ -177,10 +177,11 @@ pub enum Token {
   CharType,
   #[token("string")]
   StringType,
-  // Comments
+  // Comments //
   #[regex(r"//[^\n]*", logos::skip)]
   SkipLine,
-  #[regex(r"/\*([^*]|\*+[^*/])*\*+/", logos::skip)]
+  // block comment /*...*/
+  #[regex(r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/", logos::skip)]
   SkipBlock,
 }
 
