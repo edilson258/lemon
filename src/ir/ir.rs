@@ -67,6 +67,10 @@ impl BlockIr {
   pub fn add_instr(&mut self, instr: Instr) {
     self.instrs.push(instr);
   }
+
+  pub fn label(&self) -> String {
+    format!("l{}", self.id)
+  }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
