@@ -34,7 +34,7 @@ impl std::fmt::Display for FnIr {
     }
     writeln!(f)?;
     for instr in self.body.iter() {
-      write!(f, " {}", instr)?;
+      write!(f, "{}", instr)?;
     }
     Ok(())
   }
@@ -46,7 +46,7 @@ impl std::fmt::Display for BlockIr {
       if index == 0 {
         writeln!(f, "l{}: {}", self.id, instr)?;
       } else {
-        writeln!(f, "     {}", instr)?;
+        writeln!(f, "    {}", instr)?;
       }
     }
     Ok(())
