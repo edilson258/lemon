@@ -1,11 +1,9 @@
 mod ast;
+mod checker;
 mod cli;
 mod diag;
-// mod evaluator;
-mod lexer;
-// mod loader;
-mod checker;
 mod ir;
+mod lexer;
 mod parser;
 mod range;
 mod report;
@@ -19,6 +17,7 @@ use lexer::Token;
 use logos::Logos;
 use parser::Parser;
 use report::throw_error;
+
 use source::Source;
 fn loader(path_name: &str) -> Source {
   let raw = std::fs::read_to_string(path_name).unwrap_or_else(|err| match err.kind() {
@@ -51,7 +50,6 @@ fn check(source: Source) {
 }
 
 fn compile(source: Source) {
-  println!("parsing...");
   let mut lexer = Token::lexer(source.raw());
   let mut parser = Parser::new(&mut lexer);
   let ast = match parser.parse_program() {

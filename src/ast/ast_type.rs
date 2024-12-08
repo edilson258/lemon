@@ -1,6 +1,8 @@
 use crate::range::{Range, TraitRange};
 use serde::{Deserialize, Serialize};
 
+use super::visitor::Visitor;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AstType {
   Numb(NumbType),
@@ -10,6 +12,20 @@ pub enum AstType {
   Char(BaseType),
   Ident(IdentType),
   Fn(FnType),
+}
+
+impl AstType {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    match self {
+      AstType::Numb(num) => visitor.visit_numb_type(num),
+      AstType::Float(float) => visitor.visit_float_type(float),
+      AstType::Bool(bool) => visitor.visit_base_type(bool),
+      AstType::String(string) => visitor.visit_base_type(string),
+      AstType::Char(char) => visitor.visit_base_type(char),
+      AstType::Ident(ident) => visitor.visit_ident_type(ident),
+      AstType::Fn(fn_type) => visitor.visit_fn_type(fn_type),
+    }
+  }
 }
 
 impl TraitRange for AstType {
@@ -34,6 +50,10 @@ pub struct BaseType {
 impl BaseType {
   pub fn range(&self) -> Range {
     self.range.clone()
+  }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_base_type(self)
   }
 }
 
@@ -60,6 +80,10 @@ impl NumbType {
       _ => panic!("error: unsupported number type"),
     }
   }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_numb_type(self)
+  }
 }
 
 impl TraitRange for NumbType {
@@ -82,6 +106,10 @@ impl FloatType {
       _ => panic!("error: unsupported float type"),
     }
   }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_float_type(self)
+  }
 }
 
 impl TraitRange for FloatType {
@@ -96,6 +124,12 @@ pub struct IdentType {
   pub text: String,
 }
 
+impl IdentType {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_ident_type(self)
+  }
+}
+
 impl TraitRange for IdentType {
   fn range(&self) -> Range {
     self.range.clone()
@@ -108,6 +142,12 @@ pub struct FnType {
   pub params: Vec<AstType>,
   pub ret_type: Option<Box<AstType>>,
   pub range: Range, // fn range
+}
+
+impl FnType {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_fn_type(self)
+  }
 }
 
 impl TraitRange for FnType {

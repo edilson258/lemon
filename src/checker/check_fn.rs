@@ -1,108 +1,95 @@
 use crate::{
-  ast,
+  ast::{self, ast_type},
+  diag::Diag,
   range::{Range, TraitRange},
 };
 
 use super::{
   diags::errs::TypeErr,
   types::{FnValue, Type},
-  Checker, CheckerResult,
+  CheckResult, Checker,
 };
 
-impl<'a> Checker<'a> {
-  pub fn check_fn_stmt(&mut self, fn_stmt: &ast::FnStmt) -> CheckerResult<Type> {
-    let mut params_type = Vec::with_capacity(fn_stmt.params.len());
+impl<'ckr> Checker<'ckr> {
+  pub fn check_fn_stmt(&mut self, fn_stmt: &'ckr ast::FnStmt) -> CheckResult<Type> {
+    let params_type = self.extract_params(&fn_stmt.params)?;
+    let ret_type = self.extract_ret_type(&fn_stmt.ret_type)?;
 
-    for binding in &fn_stmt.params {
-      let kind = self.check_binding(binding)?.unwrap();
-      params_type.push((binding.text(), kind));
-    }
+    let params = params_type.iter().map(|p| p.1.to_owned()).collect();
 
-    let ret_type = match &fn_stmt.ret_type {
-      Some(ret) => Some(Box::new(self.check_type(ret)?.unwrap())), // we can unwrap here because we
-      None => None,
-    };
+    let fn_type = FnValue::new(params, ret_type.clone().map(Box::new));
 
-    let params = params_type.iter().map(|(_, ty)| ty.to_owned()).collect();
+    self.ctx.add_value(fn_stmt.text(), Type::Fn(fn_type));
 
-    let fn_type = FnValue::new(params, ret_type.clone());
-
-    self.ctx.add_value(fn_stmt.text().to_owned(), Type::Fn(fn_type));
-
-    self.ctx.enter_scope();
-
-    // fn scope
-    for (name, ty) in params_type {
-      self.ctx.add_value(name.to_owned(), ty);
-    }
-
-    let body_range = fn_stmt.body.last_stmt_range().unwrap_or_else(|| fn_stmt.body.range());
-
-    let body_type = self.check_stmt(&fn_stmt.body)?;
-
-    self.check_fn_ret_type(ret_type, body_type, body_range)?;
-
-    self.ctx.exit_scope();
-    Ok(None)
+    self.with_new_scope(|checker| {
+      checker.register_params(&params_type);
+      checker.check_fn_body(&fn_stmt.body, &ret_type)
+    })
   }
 
-  pub fn check_fn_expr(&mut self, fn_expr: &ast::FnExpr) -> CheckerResult<Type> {
-    let mut params_type = Vec::with_capacity(fn_expr.params.len());
+  pub fn check_fn_expr(&mut self, fn_expr: &'ckr ast::FnExpr) -> CheckResult<Type> {
+    let params_type = self.extract_params(&fn_expr.params)?;
+    let ret_type = self.extract_ret_type(&fn_expr.ret_type)?;
 
-    for binding in &fn_expr.params {
-      let kind = self.check_binding(binding)?.unwrap();
-      params_type.push((binding.text(), kind));
-    }
-
-    let ret_type = match &fn_expr.ret_type {
-      Some(ret) => Some(Box::new(self.check_type(ret)?.unwrap())), // we can unwrap here because we
-      None => None,
-    };
-
-    let params = params_type.iter().map(|(_, ty)| ty.to_owned()).collect();
-
-    let fn_type = FnValue::new(params, ret_type.clone());
-
-    self.ctx.enter_scope();
-    // fn scope
-    for (name, ty) in params_type {
-      self.ctx.add_value(name.to_owned(), ty);
-    }
-    let body_type = self.check_stmt(&fn_expr.body)?;
-
-    let body_range = fn_expr.body.last_stmt_range().unwrap_or_else(|| fn_expr.body.range());
-
-    self.check_fn_ret_type(ret_type, body_type, body_range)?;
-
-    self.ctx.exit_scope();
-    Ok(Some(Type::Fn(fn_type)))
+    self.with_new_scope(|checker| {
+      checker.register_params(&params_type);
+      checker.check_fn_body(&fn_expr.body, &ret_type)?;
+      let params = params_type.iter().map(|p| p.1.to_owned()).collect();
+      let fn_type = FnValue::new(params, ret_type.map(Box::new));
+      Ok(Some(Type::Fn(fn_type)))
+    })
   }
 
-  pub fn check_fn_ret_type(
+  fn extract_params(
     &mut self,
-    ret_type: Option<Box<Type>>,
-    body_type: Option<Type>,
-    range: Range,
-  ) -> CheckerResult<()> {
-    // todo: we need to exit the scope here?
-    match (ret_type, body_type) {
-      (Some(ret), Some(body)) if !body.fits_in(&ret) => {
-        let diag = TypeErr::Mismatched(&ret, &body, range);
-        self.ctx.exit_scope(); //  ensure that for every fn, we exit the scope
-        return Err(diag.into());
-      }
-      (Some(ret), None) => {
-        let diag = TypeErr::ExpectedValue(&ret, range);
-        self.ctx.exit_scope(); //  ensure that for every fn, we exit the scope
-        return Err(diag.into());
-      }
-      (None, Some(body)) => {
-        let diag = TypeErr::NoExpectedValue(&body, range);
-        self.ctx.exit_scope(); //  ensure that for every fn, we exit the scope
-        return Err(diag.into());
-      }
-      _ => {}
+    binds: &'ckr [ast::Binding],
+  ) -> Result<Vec<(&'ckr str, Type)>, Diag> {
+    let mut params_type = Vec::with_capacity(binds.len());
+    for binding in binds {
+      let kind = self.check_binding(binding)?.unwrap();
+      params_type.push((binding.text(), kind));
     }
+    Ok(params_type)
+  }
+
+  fn extract_ret_type(&mut self, ret_type: &Option<ast_type::AstType>) -> CheckResult<Type> {
+    match ret_type {
+      Some(ty) => Ok(self.check_type(ty)?),
+      None => Ok(None),
+    }
+  }
+
+  fn with_new_scope<F>(&mut self, execute: F) -> CheckResult<Type>
+  where
+    F: FnOnce(&mut Self) -> CheckResult<Type>,
+  {
+    self.ctx.enter_scope();
+    let result = execute(self);
+    self.ctx.exit_scope();
+    result
+  }
+
+  fn register_params(&mut self, params: &[(&'ckr str, Type)]) {
+    params.iter().for_each(|(name, ty)| {
+      self.ctx.add_value(name, ty.clone());
+    })
+  }
+
+  fn check_fn_body(&mut self, body: &'ckr ast::Stmt, ret_type: &Option<Type>) -> CheckResult<Type> {
+    let body_type = self.check_stmt(body)?;
+    let body_range = body.last_stmt_range().unwrap_or_else(|| body.range());
+    self.check_ret_type(ret_type, body_type, body_range)?;
     Ok(None)
+  }
+
+
+  #[rustfmt::skip]
+  fn check_ret_type(&mut self, ret_ty: &Option<Type>, body_ty: Option<Type>, range: Range) -> Result<(), Diag> {
+    match (ret_ty, body_ty) {
+      (Some(ret), Some(body)) => Ok(self.check_assing_bind(ret, &body, range)?),
+      (Some(ret), None) => Err(TypeErr::expected_value(ret, range)),
+      (None, Some(body)) => Err(TypeErr::no_expected_value(&body, range)),
+      _ => Ok(()),
+    }
   }
 }

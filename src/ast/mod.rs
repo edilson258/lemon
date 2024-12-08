@@ -4,11 +4,18 @@ use crate::{
   range::{Range, TraitRange},
 };
 use serde::{Deserialize, Serialize};
+use visitor::Visitor;
 pub mod ast_type;
+pub mod visitor;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Program {
   pub stmts: Vec<Stmt>,
+}
+impl Program {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_program(self)
+  }
 }
 
 // ------- statements -------
@@ -30,6 +37,15 @@ impl Stmt {
 
   pub fn is_block(&self) -> bool {
     matches!(self, Stmt::Block(_))
+  }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    match self {
+      Stmt::Let(let_stmt) => visitor.visit_let_stmt(let_stmt),
+      Stmt::Fn(function_stmt) => visitor.visit_fn_stmt(function_stmt),
+      Stmt::Block(block_stmt) => visitor.visit_block_stmt(block_stmt),
+      Stmt::Expr(expr) => visitor.visit_expr(expr),
+    }
   }
 }
 
@@ -56,6 +72,10 @@ impl LetStmt {
   pub fn get_name(&self) -> &str {
     &self.name.ident.text
   }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_let_stmt(self)
+  }
 }
 
 impl TraitRange for LetStmt {
@@ -77,6 +97,10 @@ pub struct FnStmt {
 impl FnStmt {
   pub fn text(&self) -> &str {
     &self.name.text
+  }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_fn_stmt(self)
   }
 }
 
@@ -101,6 +125,10 @@ impl BlockStmt {
   pub fn last_stmt_range(&self) -> Option<Range> {
     self.stmts.last().map(|stmt| stmt.range())
   }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_block_stmt(self)
+  }
 }
 
 impl TraitRange for BlockStmt {
@@ -113,6 +141,12 @@ impl TraitRange for BlockStmt {
 pub struct Ident {
   pub range: Range,
   pub text: String,
+}
+
+impl Ident {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_ident(self)
+  }
 }
 
 impl TraitRange for Ident {
@@ -130,6 +164,10 @@ pub struct Binding {
 impl Binding {
   pub fn text(&self) -> &str {
     &self.ident.text
+  }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_binding(self)
   }
 }
 
@@ -185,6 +223,27 @@ impl Expr {
       Expr::Skip(skip) => skip.range(),
     }
   }
+
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    match self {
+      Expr::Fn(fn_expr) => visitor.visit_fn_expr(fn_expr),
+      Expr::Group(group) => visitor.visit_group_expr(group),
+      Expr::Binary(binary) => visitor.visit_binary_expr(binary),
+      Expr::Pipe(pipe) => visitor.visit_pipe_expr(pipe),
+      Expr::Unary(unary) => visitor.visit_unary_expr(unary),
+      Expr::Call(call) => visitor.visit_call_expr(call),
+      Expr::If(if_expr) => visitor.visit_if_expr(if_expr),
+      Expr::Ret(ret_expr) => visitor.visit_ret_expr(ret_expr),
+      Expr::Ident(ident) => visitor.visit_ident(ident),
+      Expr::Assign(assign) => visitor.visit_assign_expr(assign),
+      Expr::Literal(literal) => visitor.visit_literal(literal),
+      Expr::Import(import) => visitor.visit_import_expr(import),
+      Expr::For(for_expr) => visitor.visit_for_expr(for_expr),
+      Expr::While(while_expr) => visitor.visit_while_expr(while_expr),
+      Expr::Break(break_) => visitor.visit_base_expr(break_),
+      Expr::Skip(skip) => visitor.visit_base_expr(skip),
+    }
+  }
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnExpr {
@@ -193,6 +252,12 @@ pub struct FnExpr {
   pub ret_type: Option<ast_type::AstType>,
   pub body: Box<Stmt>,
   pub range: Range, // fn range
+}
+
+impl FnExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_fn_expr(self)
+  }
 }
 
 impl TraitRange for FnExpr {
@@ -220,6 +285,12 @@ pub struct GroupExpr {
   pub range: Range, // group range (  )
 }
 
+impl GroupExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_group_expr(self)
+  }
+}
+
 impl TraitRange for GroupExpr {
   fn range(&self) -> Range {
     self.range.clone()
@@ -231,6 +302,12 @@ pub struct PipeExpr {
   pub left: Box<Expr>,
   pub right: Box<Expr>,
   pub range: Range, // pipe range
+}
+
+impl PipeExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_pipe_expr(self)
+  }
 }
 
 impl TraitRange for PipeExpr {
@@ -247,6 +324,12 @@ pub struct BinaryExpr {
   pub range: Range, //  operator range
 }
 
+impl BinaryExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_binary_expr(self)
+  }
+}
+
 impl TraitRange for BinaryExpr {
   fn range(&self) -> Range {
     self.left.range().merged_with(&self.range).merged_with(&self.right.range())
@@ -258,6 +341,12 @@ pub struct UnaryExpr {
   pub operand: Box<Expr>,
   pub operator: Operator,
   pub range: Range,
+}
+
+impl UnaryExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_unary_expr(self)
+  }
 }
 
 impl TraitRange for UnaryExpr {
@@ -273,6 +362,12 @@ pub struct CallExpr {
   pub range: Range, // fn(args...)
 }
 
+impl CallExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_call_expr(self)
+  }
+}
+
 impl TraitRange for CallExpr {
   fn range(&self) -> Range {
     self.range.clone()
@@ -285,6 +380,12 @@ pub struct IfExpr {
   pub then: Box<Stmt>,
   pub otherwise: Option<Box<Stmt>>,
   pub range: Range, // if range
+}
+
+impl IfExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_if_expr(self)
+  }
 }
 
 impl TraitRange for IfExpr {
@@ -306,6 +407,12 @@ pub struct ForExpr {
   pub range: Range, // for range
 }
 
+impl ForExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_for_expr(self)
+  }
+}
+
 impl TraitRange for ForExpr {
   fn range(&self) -> Range {
     self.range.merged_with(&self.body.range())
@@ -317,6 +424,12 @@ pub struct WhileExpr {
   pub test: Box<Expr>,
   pub body: Box<Stmt>,
   pub range: Range, // while range
+}
+
+impl WhileExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_while_expr(self)
+  }
 }
 
 impl TraitRange for WhileExpr {
@@ -346,6 +459,12 @@ pub struct ImportExpr {
   pub range: Range,
 }
 
+impl ImportExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_import_expr(self)
+  }
+}
+
 impl TraitRange for ImportExpr {
   fn range(&self) -> Range {
     self.range.clone()
@@ -359,6 +478,18 @@ pub enum Literal {
   Char(CharLiteral),
   Bool(BoolLiteral),
   Null(BaseExpr),
+}
+
+impl Literal {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    match self {
+      Literal::Num(num) => visitor.visit_num_literal(num),
+      Literal::String(string) => visitor.visit_string_literal(string),
+      Literal::Bool(bool) => visitor.visit_bool_literal(bool),
+      Literal::Char(char) => visitor.visit_char_literal(char),
+      Literal::Null(null) => visitor.visit_base_expr(null),
+    }
+  }
 }
 
 impl TraitRange for Literal {
@@ -379,6 +510,12 @@ pub struct NumLiteral {
   pub text: String,
   pub base: u8,     // hex 0x = 16, bin 0b  = 2, decimal = 10
   pub as_dot: bool, // float
+}
+
+impl NumLiteral {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_num_literal(self)
+  }
 }
 
 pub const BASE_DECIMAL: u8 = 10;
@@ -425,6 +562,12 @@ impl TraitRange for StringLiteral {
   }
 }
 
+impl StringLiteral {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_string_literal(self)
+  }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CharLiteral {
   pub range: Range,
@@ -434,6 +577,12 @@ pub struct CharLiteral {
 impl TraitRange for CharLiteral {
   fn range(&self) -> Range {
     self.range.clone()
+  }
+}
+
+impl CharLiteral {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_char_literal(self)
   }
 }
 
@@ -452,6 +601,12 @@ impl TraitRange for BoolLiteral {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BaseExpr {
   pub range: Range,
+}
+
+impl BaseExpr {
+  pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
+    visitor.visit_base_expr(self)
+  }
 }
 
 impl TraitRange for BaseExpr {

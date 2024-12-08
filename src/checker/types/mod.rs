@@ -1,7 +1,8 @@
 use crate::ast::Operator;
 use core::fmt;
+pub mod show;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Type {
   Numb(NumbValue),
   Float(FloatValue),
@@ -57,8 +58,9 @@ impl Type {
       (Type::Numb(_), Operator::MOD)
       |
       // number, float, bool, char, string allow `==`, `!=`, `<`, `>`, `<=`, `>=`
-      (Type::Numb(_) | Type::Float(_) | Type::Bool | Type::Char | Type::String,
-      Operator::EQ | Operator::NOT | Operator::LT | Operator::GT)
+      (Type::Numb(_) | Type::Float(_) | Type::Bool   | Type::Char   | Type::String,
+      Operator::EQ   | Operator::NOT  | Operator::LT | Operator::GT | Operator::LE
+      | Operator::GE | Operator::NOTEQ)
 
       // bool only allow `&&`, `||`
       | (Type::Bool, Operator::AND | Operator::OR)
@@ -85,7 +87,7 @@ impl Type {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct FnValue {
   pub params: Vec<Type>,
   pub ret_type: Option<Box<Type>>,
@@ -108,7 +110,7 @@ impl FnValue {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct NumbValue {
   pub bits: Option<u8>,
   pub signed: bool,
@@ -147,7 +149,7 @@ impl NumbValue {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct FloatValue {
   pub bits: u8,
 }
@@ -161,46 +163,43 @@ impl FloatValue {
   }
 }
 
-// FnValue
-impl fmt::Display for FnValue {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let params = self.params.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
-    if let Some(ret) = &self.ret_type {
-      write!(f, "fn({}) -> {}", params, ret)
-    } else {
-      write!(f, "fn({})", params)
+// impl  eq (==)  for Type
+//
+
+impl PartialEq for Type {
+  fn eq(&self, other: &Self) -> bool {
+    match (self, other) {
+      (Type::Numb(lt), Type::Numb(rt)) => lt.eq(rt),
+      (Type::Float(lt), Type::Float(rt)) => lt.eq(rt),
+      (Type::Bool, Type::Bool) | (Type::Char, Type::Char) | (Type::String, Type::String) => true,
+      _ => false,
     }
   }
 }
 
-// NumbValue
-impl fmt::Display for NumbValue {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(
-      f,
-      "{}{}",
-      if self.signed { "i" } else { "u" },
-      self.bits.map_or_else(|| "size".to_string(), |b| b.to_string())
-    )
-  }
-}
-
-impl fmt::Display for FloatValue {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "f{}", self.bits)
-  }
-}
-
-impl fmt::Display for Type {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-      Type::Numb(num) => write!(f, "{}", num),
-      Type::Float(floa) => write!(f, "{}", floa),
-      Type::Bool => write!(f, "bool"),
-      Type::Char => write!(f, "char"),
-      Type::String => write!(f, "string"),
-      Type::Fn(fn_type) => write!(f, "{}", fn_type),
-      // _ => write!(f, "<unknown>"),
+impl PartialEq for FnValue {
+  fn eq(&self, other: &Self) -> bool {
+    if self.has_ret() != other.has_ret() {
+      return false;
     }
+    self.params.iter().zip(other.params.iter()).all(|(l, r)| l.eq(r))
+  }
+}
+
+impl PartialEq for NumbValue {
+  fn eq(&self, other: &Self) -> bool {
+    if self.bits.is_none() && other.bits.is_none() {
+      return self.signed == other.signed;
+    }
+    if self.bits.is_none() || other.bits.is_none() {
+      return false;
+    }
+    self.bits.unwrap() == other.bits.unwrap()
+  }
+}
+
+impl PartialEq for FloatValue {
+  fn eq(&self, other: &Self) -> bool {
+    self.bits == other.bits
   }
 }

@@ -3,41 +3,42 @@ use std::collections::HashMap;
 use super::types::Type;
 
 #[derive(Debug)]
-pub struct Context {
-  pub types: HashMap<String, Type>,
-  pub scopes: Vec<Scope>,
+pub struct Context<'ctx> {
+  pub types: HashMap<&'ctx str, Type>,
+  pub scopes: Vec<Scope<'ctx>>,
 }
 
 #[derive(Debug)]
-pub struct Scope {
-  pub values: HashMap<String, Value>,
+pub struct Scope<'ctx> {
+  pub values: HashMap<&'ctx str, Value<'ctx>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Value {
-  pub name: String,
-  pub kind: Type,
+pub struct Value<'ctx> {
+  pub name: &'ctx str,
+  pub ty: Type,
 }
 
-impl Value {
-  pub fn new(name: String, kind: Type) -> Self {
-    Self { name, kind }
+impl<'ctx> Value<'ctx> {
+  pub fn new(name: &'ctx str, ty: Type) -> Self {
+    Self { name, ty }
   }
 
   pub fn get_name(&self) -> &str {
-    &self.name
+    self.name
   }
-  pub fn get_kind(&self) -> Type {
-    self.kind.clone()
+
+  pub fn get_type(&self) -> Type {
+    self.ty.clone()
   }
 }
 
-impl Context {
+impl<'ctx> Context<'ctx> {
   pub fn new() -> Self {
     Self { types: HashMap::new(), scopes: vec![Scope::new()] }
   }
 
-  pub fn add_type(&mut self, name: String, kind: Type) {
+  pub fn add_type(&mut self, name: &'ctx str, kind: Type) {
     self.types.entry(name).or_insert(kind);
   }
 
@@ -45,21 +46,13 @@ impl Context {
     self.types.get(name)
   }
 
-  pub fn add_value(&mut self, name: String, kind: Type) -> bool {
-    if let Some(scope) = self.scopes.last_mut() {
-      scope.add_value(name, kind)
-    } else {
-      false
-    }
+  pub fn add_value(&mut self, name: &'ctx str, kind: Type) {
+    let scope = self.scopes.last_mut().unwrap(); // we always have at least one scope
+    scope.add_value(name, kind);
   }
 
   pub fn get_value(&self, name: &str) -> Option<&Value> {
-    for scope in self.scopes.iter().rev() {
-      if let Some(var) = scope.get_value(name) {
-        return Some(var);
-      }
-    }
-    None
+    self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
   }
 
   pub fn enter_scope(&mut self) {
@@ -71,18 +64,13 @@ impl Context {
   }
 }
 
-impl Scope {
+impl<'ctx> Scope<'ctx> {
   pub fn new() -> Self {
     Self { values: HashMap::new() }
   }
-
-  pub fn add_value(&mut self, name: String, kind: Type) -> bool {
-    if self.values.contains_key(&name) {
-      false
-    } else {
-      self.values.insert(name.clone(), Value { name, kind });
-      true
-    }
+  pub fn add_value(&mut self, name: &'ctx str, ty: Type) {
+    let value = Value::new(name, ty);
+    self.values.entry(name).or_insert(value);
   }
 
   pub fn get_value(&self, name: &str) -> Option<&Value> {

@@ -1,9 +1,9 @@
 use crate::ast::{self};
 
-use super::{diags::errs::TypeErr, types::Type, Checker, CheckerResult};
+use super::{diags::errs::TypeErr, types::Type, CheckResult, Checker};
 
-impl<'a> Checker<'a> {
-  pub fn check_expr(&mut self, expr: &ast::Expr) -> CheckerResult<Type> {
+impl<'ckr> Checker<'ckr> {
+  pub fn check_expr(&mut self, expr: &'ckr ast::Expr) -> CheckResult<Type> {
     match expr {
       ast::Expr::Literal(lit) => self.check_literal(lit),
       ast::Expr::Ident(ident) => self.check_ident(ident),
@@ -24,55 +24,55 @@ impl<'a> Checker<'a> {
     }
   }
 
-  pub fn check_ident(&mut self, ident: &ast::Ident) -> CheckerResult<Type> {
+  pub fn check_ident(&mut self, ident: &'ckr ast::Ident) -> CheckResult<Type> {
     if let Some(value) = self.ctx.get_value(&ident.text) {
-      return Ok(Some(value.get_kind()));
+      return Ok(Some(value.get_type()));
     }
     let range = ident.range.clone();
-    let diag = TypeErr::NotFound(&ident.text, range);
-    Err(diag.into())
+    Err(TypeErr::not_found(&ident.text, range))
   }
-  pub fn check_unary(&mut self, unary: &ast::UnaryExpr) -> CheckerResult<Type> {
+
+  pub fn check_unary(&mut self, unary: &'ckr ast::UnaryExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_group(&mut self, group: &ast::GroupExpr) -> CheckerResult<Type> {
+  pub fn check_group(&mut self, group: &'ckr ast::GroupExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_call(&mut self, call: &ast::CallExpr) -> CheckerResult<Type> {
+  pub fn check_call(&mut self, call: &'ckr ast::CallExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_break(&mut self, break_expr: &ast::BaseExpr) -> CheckerResult<Type> {
+  pub fn check_break(&mut self, break_expr: &'ckr ast::BaseExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_ret(&mut self, ret: &ast::RetExpr) -> CheckerResult<Type> {
+  pub fn check_ret(&mut self, ret: &'ckr ast::RetExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_assign(&mut self, assign: &ast::AssignExpr) -> CheckerResult<Type> {
+  pub fn check_assign(&mut self, assign: &'ckr ast::AssignExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_while(&mut self, while_expr: &ast::WhileExpr) -> CheckerResult<Type> {
+  pub fn check_while(&mut self, while_expr: &'ckr ast::WhileExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  fn check_for(&mut self, for_expr: &ast::ForExpr) -> CheckerResult<Type> {
+  fn check_for(&mut self, for_expr: &'ckr ast::ForExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_skip(&mut self, base_expr: &ast::BaseExpr) -> CheckerResult<Type> {
+  pub fn check_skip(&mut self, base_expr: &'ckr ast::BaseExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  fn check_pipe(&mut self, pipe_expr: &ast::PipeExpr) -> CheckerResult<Type> {
+  fn check_pipe(&mut self, pipe_expr: &'ckr ast::PipeExpr) -> CheckResult<Type> {
     todo!()
   }
 
-  pub fn check_import(&mut self, import_expr: &ast::ImportExpr) -> CheckerResult<Type> {
+  pub fn check_import(&mut self, import_expr: &'ckr ast::ImportExpr) -> CheckResult<Type> {
     todo!()
   }
 }

@@ -32,27 +32,45 @@ fn mod(lhs: u8, rhs: u8): u8 = {
   x
 }
 
-fn cmp_gt(lhs: u8, rhs: u8): u8 = {
-  let x: u8 = lhs > rhs;
+fn cmp_gt(lhs: u8, rhs: u8): bool = {
+  let x: bool = lhs > rhs;
   x
 }
 
-fn cmp_eq(lhs: u8, rhs: u8): u8 = {
-  let x: u8 = lhs == rhs;
+fn cmp_eq(lhs: u8, rhs: u8): bool = {
+ lhs == rhs
+}
+
+fn cmp_lt(lhs: u8, rhs: u8): bool = {
+ lhs < rhs
+}
+
+
+
+fn cmp_le(lhs: u8, rhs: u8): bool = {
+  let x: bool = lhs <= rhs;
   x
 }
 
-fn cmp_lt(lhs: u8, rhs: u8): u8 = {
-  let x: u8 = lhs < rhs;
+fn cmp_ge(lhs: u8, rhs: u8): bool = {
+  let x: bool = lhs >= rhs;
   x
 }
 
-/*
-fn cmp_le(lhs: u8, rhs: u8): u8 = {
-  let x: u8 = lhs <= rhs;
+fn cmp_ne(lhs: u8, rhs: u8): bool = {
+  let x: bool = lhs != rhs;
   x
 }
-*/
+
+fn cmp_eq(lhs: u8, rhs: u8): bool = {
+ lhs == rhs
+}
+
+fn cmp_lt(lhs: u8, rhs: u8): bool = {
+ lhs < rhs
+}
+
+
 
 
 

@@ -2,46 +2,28 @@ use crate::ast::ast_type;
 
 use super::{
   types::{FloatValue, FnValue, NumbValue, Type},
-  Checker, CheckerResult,
+  CheckResult, Checker,
 };
 
-impl<'a> Checker<'a> {
-  pub fn check_type(&mut self, ast_type: &ast_type::AstType) -> CheckerResult<Type> {
+impl<'ckr> Checker<'ckr> {
+  pub fn check_type(&mut self, ast_type: &ast_type::AstType) -> CheckResult<Type> {
     match ast_type {
-      ast_type::AstType::Bool(bool) => self.check_bool_type(bool),
-      ast_type::AstType::Char(char) => self.check_char_type(char),
-      ast_type::AstType::Float(float) => self.check_float_type(float),
+      ast_type::AstType::Bool(bool) => Ok(Some(Type::Bool)),
+      ast_type::AstType::Char(char) => Ok(Some(Type::Char)),
+      ast_type::AstType::String(string) => Ok(Some(Type::String)),
+      ast_type::AstType::Float(float) => Ok(Some(Type::Float(FloatValue { bits: float.bits }))),
       ast_type::AstType::Numb(numb) => self.check_numb_type(numb),
-      ast_type::AstType::String(string) => self.check_string_type(string),
       ast_type::AstType::Fn(fn_type) => self.check_fn_type(fn_type),
       ast_type::AstType::Ident(ident) => self.check_ident_type(ident),
     }
   }
 
-  pub fn check_float_type(&mut self, ast_type: &ast_type::FloatType) -> CheckerResult<Type> {
-    let float = FloatValue { bits: ast_type.bits };
-    Ok(Some(Type::Float(float)))
-  }
-
-  pub fn check_numb_type(&mut self, ast_type: &ast_type::NumbType) -> CheckerResult<Type> {
+  pub fn check_numb_type(&mut self, ast_type: &ast_type::NumbType) -> CheckResult<Type> {
     let bits = if ast_type.bits >= 8 { Some(ast_type.bits) } else { None };
     let numb = NumbValue { bits, signed: ast_type.signed };
     Ok(Some(Type::Numb(numb)))
   }
-
-  fn check_bool_type(&mut self, ast_type: &ast_type::BaseType) -> CheckerResult<Type> {
-    Ok(Some(Type::Bool))
-  }
-
-  fn check_char_type(&mut self, ast_type: &ast_type::BaseType) -> CheckerResult<Type> {
-    Ok(Some(Type::Char))
-  }
-
-  pub fn check_string_type(&mut self, ast_type: &ast_type::BaseType) -> CheckerResult<Type> {
-    Ok(Some(Type::String))
-  }
-
-  pub fn check_fn_type(&mut self, ast_type: &ast_type::FnType) -> CheckerResult<Type> {
+  pub fn check_fn_type(&mut self, ast_type: &ast_type::FnType) -> CheckResult<Type> {
     let mut params = Vec::with_capacity(ast_type.params.len());
 
     for param in ast_type.params.iter() {
@@ -58,7 +40,7 @@ impl<'a> Checker<'a> {
     Ok(Some(Type::Fn(fn_type)))
   }
 
-  pub fn check_ident_type(&mut self, ast_type: &ast_type::IdentType) -> CheckerResult<Type> {
+  pub fn check_ident_type(&mut self, ast_type: &ast_type::IdentType) -> CheckResult<Type> {
     todo!()
   }
 }

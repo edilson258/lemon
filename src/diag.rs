@@ -59,13 +59,13 @@ impl Diag {
   }
 }
 
-pub struct DiagGroup<'a> {
+pub struct DiagGroup<'ckr> {
   pub diags: Vec<Diag>,
-  pub source: &'a Source,
+  pub source: &'ckr Source,
 }
 
-impl<'a> DiagGroup<'a> {
-  pub fn new(source: &'a Source) -> Self {
+impl<'ckr> DiagGroup<'ckr> {
+  pub fn new(source: &'ckr Source) -> Self {
     Self { diags: Vec::new(), source }
   }
   pub fn add(&mut self, diag: Diag) {

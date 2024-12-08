@@ -34,7 +34,7 @@ impl std::fmt::Display for FnIr {
     }
     writeln!(f)?;
     for instr in self.body.iter() {
-      writeln!(f, " {}", instr)?;
+      write!(f, " {}", instr)?;
     }
     Ok(())
   }
