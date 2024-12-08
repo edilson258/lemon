@@ -51,24 +51,24 @@ impl<'a> Checker<'a> {
       let kind = self.check_type(ty)?;
       return Ok(kind);
     }
-    return Ok(None);
+    Ok(None)
   }
 
   pub fn operator_supported(&self, left: &Type, right: &Type, operator: &Operator) -> bool {
     left.can_operated(operator) && right.can_operated(operator) && left.same_set(right)
   }
 
-  pub fn range_of_last_stmt_or_block(&self, stmt: &Box<ast::Stmt>) -> Range {
-    match stmt.as_ref().last_stmt_range() {
+  pub fn range_of_last_stmt_or_block(&self, stmt: &ast::Stmt) -> Range {
+    match stmt.last_stmt_range() {
       Some(range) => range,
-      None => stmt.as_ref().range(),
+      None => stmt.range(),
     }
   }
 
   pub fn resulting_type(&self, left: &Type, right: &Type) -> Type {
     match (left, right) {
-      (Type::Float(l), Type::Float(r)) => Type::Float(l.higher_bits(&r)),
-      (Type::Numb(l), Type::Numb(r)) => Type::Numb(l.higher_bits(&r)),
+      (Type::Float(l), Type::Float(r)) => Type::Float(l.higher_bits(r)),
+      (Type::Numb(l), Type::Numb(r)) => Type::Numb(l.higher_bits(r)),
       (_, r) => r.clone(),
     }
   }

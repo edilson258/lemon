@@ -3,7 +3,7 @@ use super::{Bind, BlockIr, FnIr, Instr, IR};
 // IR
 impl std::fmt::Display for IR {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    for (_name, fn_ir) in &self.fns {
+    for (_name, fn_ir) in self.fns.iter() {
       writeln!(f, "{}", fn_ir)?;
     }
     Ok(())

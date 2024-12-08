@@ -1,10 +1,15 @@
 #![allow(dead_code)]
+
 use std::collections::HashMap;
+#[allow(clippy::upper_case_acronyms)]
 pub type TYPE = String;
+#[allow(clippy::upper_case_acronyms)]
 pub type REG = String;
+#[allow(clippy::upper_case_acronyms)]
 pub type LABEL = String;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Instr {
   // add lhs, rhs -> dest
   ADD { lhs: REG, rhs: REG, dest: REG },

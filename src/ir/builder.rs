@@ -69,17 +69,15 @@ impl Builder {
       binds.push(self.build_binding(param));
     }
 
-    let ret_type = match &fn_stmt.ret_type {
-      Some(ty) => Some(self.build_type(ty)),
-      None => None,
-    };
+    let ret_type = fn_stmt.ret_type.as_ref().map(|ty| self.build_type(ty));
 
     let mut fn_ir = ir::FnIr::new(fn_stmt.text().to_owned(), binds, ret_type);
     let ir_block = self.build_stmt(fn_stmt.body.as_ref());
     for block in ir_block {
       fn_ir.add_block(block);
     }
-    return fn_ir;
+
+    fn_ir
   }
 
   fn build_binding(&mut self, binding: &ast::Binding) -> ir::Bind {
@@ -106,7 +104,7 @@ impl Builder {
       _ => unimplemented!(),
     }
     ir_blocks.push(ir_block);
-    return ir_blocks;
+    ir_blocks
   }
 
   fn build_block(&mut self, block: &ast::BlockStmt) -> Vec<ir::BlockIr> {
@@ -114,7 +112,7 @@ impl Builder {
     for stmt in block.stmts.iter() {
       ir_block.append(&mut self.build_stmt(stmt));
     }
-    return ir_block;
+    ir_block
   }
 
   fn build_let_stmt(&mut self, let_stmt: &ast::LetStmt, ir_block: &mut ir::BlockIr) {
@@ -172,16 +170,18 @@ impl Builder {
   }
 
   fn build_if_expr(&mut self, if_expr: &ast::IfExpr, ir_block: &mut ir::BlockIr) -> ir::REG {
-    let cond = self.build_expr(&if_expr.cond, ir_block);
-    let ir_block1 = self.build_stmt(&if_expr.then);
+    let _cond = self.build_expr(&if_expr.cond, ir_block);
+    let _ir_block1 = self.build_stmt(&if_expr.then);
     if let Some(otherwise) = &if_expr.otherwise {
-      let ir_block2 = self.build_stmt(otherwise);
-      ir_block.add_instr(ir::Instr::JMPIF { cond, l1: ir_block1.label(), l0: ir_block2.label() });
-      ir_block2.label()
+      let _ir_block2 = self.build_stmt(otherwise);
+      // ir_block.add_instr(ir::Instr::JMPIF { cond, l1: ir_block1.label(), l0: ir_block2.label() });
+      // ir_block2.label()
     } else {
-      ir_block.add_instr(ir::Instr::JMPIF { cond, l1: ir_block1.label(), l0: ir_block.label() });
-      ir_block1.label()
+      // ir_block.add_instr(ir::Instr::JMPIF { cond, l1: ir_block1.label(), l0: ir_block.label() });
+      // ir_block1.label()
     }
+
+    "test".to_owned()
   }
 
   fn build_literal_expr(&mut self, literal: &ast::Literal, ir_block: &mut ir::BlockIr) -> ir::REG {
@@ -207,7 +207,7 @@ impl Builder {
   }
 
   fn build_type(&mut self, ast_type: &ast_type::AstType) -> String {
-    let ty = match ast_type {
+    match ast_type {
       ast_type::AstType::Numb(numb) => numb.display(),
       ast_type::AstType::Float(float) => float.display(),
       ast_type::AstType::Bool(_) => "bool".to_owned(),
@@ -215,8 +215,7 @@ impl Builder {
       ast_type::AstType::Char(_) => "char".to_owned(),
       ast_type::AstType::Fn(fn_type) => self.build_fn_type(fn_type),
       _ => unimplemented!(),
-    };
-    ty
+    }
   }
 
   fn build_fn_type(&mut self, fn_type: &ast_type::FnType) -> String {

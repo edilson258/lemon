@@ -103,6 +103,6 @@ impl<'a> Checker<'a> {
       }
       _ => {}
     }
-    return Ok(None);
+    Ok(None)
   }
 }

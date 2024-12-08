@@ -30,7 +30,7 @@ impl<'a> Checker<'a> {
     }
     let range = ident.range.clone();
     let diag = TypeErr::NotFound(&ident.text, range);
-    return Err(diag.into());
+    Err(diag.into())
   }
   pub fn check_unary(&mut self, unary: &ast::UnaryExpr) -> CheckerResult<Type> {
     todo!()

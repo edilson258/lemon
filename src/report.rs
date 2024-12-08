@@ -31,7 +31,7 @@ pub fn report_wrap(diag: &Diag, path: &PathBuf) {
 //
 
 fn report(diag: &Diag, path: &PathBuf) {
-  println!(""); // -- new line
+  println!(); // -- new line
 
   let slug = match diag.severity {
     // Severity::Err => text_red("ERROR >>>"),
@@ -44,7 +44,7 @@ fn report(diag: &Diag, path: &PathBuf) {
   println!("{}: {}", slug, diag.message); // -- message
   println!("---> {}", text_gray(&path.display().to_string())); // -- filename
 
-  let raw = fs::read_to_string(&path).unwrap();
+  let raw = fs::read_to_string(path).unwrap();
   let code = match diag.severity {
     Severity::Err => high_err_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),
     Severity::Warn => high_warn_ctx(diag.range.start, diag.range.end, &raw, CTX_LOC),

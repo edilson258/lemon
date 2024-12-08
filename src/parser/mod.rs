@@ -106,7 +106,7 @@ impl<'l> Parser<'l> {
   }
 
   fn match_operator(&mut self, pde: u8) -> Option<(ast::Operator, Range)> {
-    if let Some(operator) = self.token.as_ref().and_then(|t| ast::Operator::from_token(t)) {
+    if let Some(operator) = self.token.as_ref().and_then(ast::Operator::from_token) {
       if operator.pde() >= pde {
         let range = self.range.to_owned();
         self.next().ok();
@@ -230,7 +230,7 @@ impl<'l> Parser<'l> {
       return (BASE_BIN, text.trim_start_matches("0b").to_string());
     }
 
-    return (BASE_DECIMAL, text.to_string());
+    (BASE_DECIMAL, text.to_string())
   }
 
   fn parse_binding(&mut self) -> PResult<'l, ast::Binding> {

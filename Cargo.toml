@@ -6,6 +6,7 @@ description = "An experimental, general-purpose functional programming language.
 authors = ["Yazalde Filimone <yazaldefilimon@gmail.com>"]
 repository = "https://github.com/yazaldefilimone/lemon"
 license = "Apache-2.0"
+exclude = ["benches/**"]
 
 [dependencies]
 clap = { version = "4.5.9", features = ["derive"] }

@@ -23,9 +23,9 @@ impl<'a> Checker<'a> {
       let float = FloatValue { bits };
       return Ok(Some(Type::Float(float)));
     }
-    let bits = self.check_num_bits(&num)?.unwrap();
+    let bits = self.check_num_bits(num)?.unwrap();
     let numb = NumbValue { bits: Some(bits), signed: false };
-    return Ok(Some(Type::Numb(numb)));
+    Ok(Some(Type::Numb(numb)))
   }
 
   pub fn check_num_bits(&mut self, num: &ast::NumLiteral) -> CheckerResult<u8> {
@@ -57,7 +57,7 @@ impl<'a> Checker<'a> {
       _ => {}
     }
     let diag = TypeErr::Unsupported(num.range());
-    return Err(diag.into());
+    Err(diag.into())
   }
 
   pub fn check_string_literal(&mut self, string: &ast::StringLiteral) -> CheckerResult<Type> {

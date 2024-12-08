@@ -37,13 +37,8 @@ impl Context {
     Self { types: HashMap::new(), scopes: vec![Scope::new()] }
   }
 
-  pub fn add_type(&mut self, name: String, kind: Type) -> bool {
-    if self.types.contains_key(&name) {
-      false
-    } else {
-      self.types.insert(name, kind);
-      true
-    }
+  pub fn add_type(&mut self, name: String, kind: Type) {
+    self.types.entry(name).or_insert(kind);
   }
 
   pub fn get_type(&self, name: &str) -> Option<&Type> {

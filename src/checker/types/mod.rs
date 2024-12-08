@@ -46,21 +46,23 @@ impl Type {
     matches!(self, Type::String)
   }
 
-
   #[rustfmt::skip]
   pub fn can_operated(&self, operator: &Operator) -> bool {
-    match (self, operator) {
+    matches!((self, operator),
+      // number, float allow `+`, `-`, `*`, `/`
       (Type::Numb(_) | Type::Float(_),
-      Operator::ADD | Operator::SUB | Operator::MUL | Operator::DIV) => true,
-
-      (Type::Numb(_), Operator::MOD) => true,
-
+      Operator::ADD | Operator::SUB | Operator::MUL | Operator::DIV)
+      |
+      // number only allow `%`
+      (Type::Numb(_), Operator::MOD)
+      |
+      // number, float, bool, char, string allow `==`, `!=`, `<`, `>`, `<=`, `>=`
       (Type::Numb(_) | Type::Float(_) | Type::Bool | Type::Char | Type::String,
-      Operator::EQ | Operator::NOT | Operator::LT | Operator::GT) => true,
+      Operator::EQ | Operator::NOT | Operator::LT | Operator::GT)
 
-      (Type::Bool, Operator::AND | Operator::OR) => true,
-      _ => false,
-    }
+      // bool only allow `&&`, `||`
+      | (Type::Bool, Operator::AND | Operator::OR)
+      )
   }
 
   pub fn same_set(&self, target: &Type) -> bool {
@@ -164,7 +166,7 @@ impl fmt::Display for FnValue {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let params = self.params.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
     if let Some(ret) = &self.ret_type {
-      write!(f, "fn({}) -> {}", params, ret.to_string())
+      write!(f, "fn({}) -> {}", params, ret)
     } else {
       write!(f, "fn({})", params)
     }

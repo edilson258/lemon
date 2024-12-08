@@ -9,7 +9,7 @@ impl<'a> Checker<'a> {
     let operator = &binary.operator;
     let range = binary.range.clone();
     if !self.operator_supported(&left_type, &right_type, operator) {
-      let diag = TypeErr::NotSupported(&left_type, &right_type, &operator, range);
+      let diag = TypeErr::NotSupported(&left_type, &right_type, operator, range);
       return Err(diag.into());
     }
     let result = self.resulting_type(&left_type, &right_type);

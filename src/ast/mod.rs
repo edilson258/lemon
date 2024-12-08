@@ -29,10 +29,7 @@ impl Stmt {
   }
 
   pub fn is_block(&self) -> bool {
-    match self {
-      Stmt::Block(_) => true,
-      _ => false,
-    }
+    matches!(self, Stmt::Block(_))
   }
 }
 
@@ -79,7 +76,7 @@ pub struct FnStmt {
 
 impl FnStmt {
   pub fn text(&self) -> &str {
-    return &self.name.text;
+    &self.name.text
   }
 }
 
@@ -108,7 +105,7 @@ impl BlockStmt {
 
 impl TraitRange for BlockStmt {
   fn range(&self) -> Range {
-    return self.range.clone();
+    self.range.clone()
   }
 }
 
@@ -132,7 +129,7 @@ pub struct Binding {
 
 impl Binding {
   pub fn text(&self) -> &str {
-    return &self.ident.text;
+    &self.ident.text
   }
 }
 
@@ -465,6 +462,7 @@ impl TraitRange for BaseExpr {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[repr(u8)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Operator {
   ADD,   // +
   SUB,   // -

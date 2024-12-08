@@ -23,13 +23,13 @@ use source::Source;
 fn loader(path_name: &str) -> Source {
   let raw = std::fs::read_to_string(path_name).unwrap_or_else(|err| match err.kind() {
     std::io::ErrorKind::NotFound => throw_error(format!("not found '{}'.", path_name)),
-    _ => throw_error(format!("reading file `{}`, reason '{}'.", path_name, err.to_string())),
+    _ => throw_error(format!("reading file `{}`, reason '{}'.", path_name, err)),
   });
   Source::new(raw, Path::new(path_name).to_owned())
 }
 
 fn check(source: Source) {
-  let mut lexer = Token::lexer(&source.raw());
+  let mut lexer = Token::lexer(source.raw());
   let mut parser = Parser::new(&mut lexer);
   let ast = match parser.parse_program() {
     Ok(ast) => ast,
@@ -52,7 +52,7 @@ fn check(source: Source) {
 
 fn compile(source: Source) {
   println!("parsing...");
-  let mut lexer = Token::lexer(&source.raw());
+  let mut lexer = Token::lexer(source.raw());
   let mut parser = Parser::new(&mut lexer);
   let ast = match parser.parse_program() {
     Ok(ast) => ast,
@@ -73,7 +73,7 @@ fn compile(source: Source) {
 }
 
 fn lex(source: Source) {
-  let mut lexer = Token::lexer(&source.raw());
+  let mut lexer = Token::lexer(source.raw());
   while let Some(token) = lexer.next() {
     println!("{:?}: {:?}", token, lexer.slice());
   }
