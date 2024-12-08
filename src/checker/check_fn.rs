@@ -1,7 +1,7 @@
 use crate::{
   ast::{self, ast_type},
   diag::Diag,
-  range::{Range, TraitRange},
+  range::Range,
 };
 
 use super::{
@@ -77,8 +77,8 @@ impl<'ckr> Checker<'ckr> {
 
   fn check_fn_body(&mut self, body: &'ckr ast::Stmt, ret_type: &Option<Type>) -> CheckResult<Type> {
     let body_type = self.check_stmt(body)?;
-    let body_range = body.last_stmt_range().unwrap_or_else(|| body.range());
-    self.check_ret_type(ret_type, body_type, body_range)?;
+    let range = self.final_or_block_range(body);
+    self.check_ret_type(ret_type, body_type, range)?;
     Ok(None)
   }
 
@@ -86,7 +86,7 @@ impl<'ckr> Checker<'ckr> {
   #[rustfmt::skip]
   fn check_ret_type(&mut self, ret_ty: &Option<Type>, body_ty: Option<Type>, range: Range) -> Result<(), Diag> {
     match (ret_ty, body_ty) {
-      (Some(ret), Some(body)) => Ok(self.check_assing_bind(ret, &body, range)?),
+      (Some(ret), Some(body)) => Ok(self.assign_compatible(ret, &body, range)?),
       (Some(ret), None) => Err(TypeErr::expected_value(ret, range)),
       (None, Some(body)) => Err(TypeErr::no_expected_value(&body, range)),
       _ => Ok(()),

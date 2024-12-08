@@ -13,18 +13,18 @@ impl<'ckr> Checker<'ckr> {
     };
 
     if then_type.is_none() {
-      let otherwise_range = self.range_of_last_stmt_or_block(if_expr.otherwise.as_ref().unwrap());
+      let otherwise_range = self.final_or_block_range(if_expr.otherwise.as_ref().unwrap());
       return Err(TypeErr::no_expected_value(&otherwise_type, otherwise_range));
     }
 
     let then_type = then_type.unwrap();
 
     if then_type != otherwise_type {
-      let otherwise_range = self.range_of_last_stmt_or_block(if_expr.otherwise.as_ref().unwrap());
+      let otherwise_range = self.final_or_block_range(if_expr.otherwise.as_ref().unwrap());
       return Err(TypeErr::mismatched(&then_type, &otherwise_type, otherwise_range));
     }
 
-    let result = self.resulting_type(&then_type, &otherwise_type);
+    let result = self.take_common_type(&cond_type, &then_type);
 
     Ok(Some(result))
   }

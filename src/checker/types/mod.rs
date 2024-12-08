@@ -62,13 +62,17 @@ impl Type {
     }
   }
 
+  #[rustfmt::skip]
   pub fn is_cmp_with(&self, target: &Type) -> bool {
-    match (self, target) {
-      (Type::Numb(lt), Type::Numb(rt)) => lt.is_cmp_with(rt),
-      (Type::Float(_), Type::Float(_)) => true,
-      (Type::Bool, Type::Bool) | (Type::Char, Type::Char) | (Type::String, Type::String) => true,
-      _ => false,
-    }
+    matches!(
+      (self, target),
+      (Type::Float(_), Type::Float(_)) |
+      (Type::Numb(_), Type::Numb(_))   |
+      (Type::Bool, Type::Bool)         |
+      (Type::Char, Type::Char)         |
+      (Type::String, Type::String)     |
+      (Type::Fn(_), Type::Fn(_))
+    )
   }
 
   pub fn fits_into(&self, target: &Type) -> bool {
@@ -125,14 +129,6 @@ impl NumbValue {
 
   pub fn set_signed(&mut self, value: bool) {
     self.signed = value;
-  }
-
-  pub fn is_cmp_with(&self, other: &Self) -> bool {
-    match (self.bits, other.bits) {
-      (Some(b1), Some(b2)) => b1 == b2 && self.signed == other.signed,
-      (None, None) => self.signed == other.signed,
-      _ => false,
-    }
   }
 
   pub fn higher_bits(&self, other: &Self) -> NumbValue {

@@ -17,10 +17,9 @@ impl<'ckr> Checker<'ckr> {
 
     if let Some(binding) = self.check_binding(&let_stmt.name)? {
       let range = let_stmt.expr.range();
-      self.check_assing_bind(&binding, &value_type, range)?;
-      self.ctx.add_value(let_stmt.get_name(), value_type);
-      return Ok(None);
+      self.assign_compatible(&binding, &value_type, range)?;
     }
+
     self.ctx.add_value(let_stmt.get_name(), value_type);
     Ok(None)
   }

@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::{ast, range::TraitRange};
 
 use super::{diags::errs::TypeErr, types::Type, CheckResult, Checker};
 
@@ -7,12 +7,14 @@ impl<'ckr> Checker<'ckr> {
     let left_type = self.check_expr(&binary.left)?.unwrap(); // we throw error in parser
     let right_type = self.check_expr(&binary.right)?.unwrap(); // we throw error in parser
     let operator = &binary.operator;
-    let range = binary.range.clone();
+    let range = binary.range();
     if !self.operator_supported(&left_type, &right_type, operator) {
       let diag = TypeErr::not_supportd(&left_type, &right_type, operator, range);
       return Err(diag);
     }
-    let result = self.resulting_type(&left_type, &right_type);
+
+    let result = self.take_common_type(&left_type, &right_type);
+
     let ty = self.resulting_operator_type(operator, result);
     Ok(Some(ty))
   }

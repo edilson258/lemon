@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+use core::fmt;
+use std::fmt::Display;
+
 use crate::{
   lexer::Token,
   range::{Range, TraitRange},
@@ -683,20 +686,50 @@ impl Operator {
     }
   }
 
+  #[rustfmt::skip]
   pub fn pde(&self) -> u8 {
     match self {
-      Operator::LT
-      | Operator::LE
-      | Operator::GT
-      | Operator::GE
-      | Operator::EQ
-      | Operator::NOTEQ => CMP_PDE,
+      Operator::LT | Operator::LE | Operator::GT |
+      Operator::GE | Operator::EQ | Operator::NOTEQ => CMP_PDE,
       Operator::ADD | Operator::SUB => ADD_PDE,
       Operator::MUL | Operator::DIV | Operator::MOD => MUL_PDE,
       Operator::POW => MAX_PDE,
       Operator::NOT => UNA_PDE,
       Operator::PIPE | Operator::RANGE => MIN_PDE,
       _ => MIN_PDE, // default as minimum
+    }
+  }
+}
+
+impl Display for Operator {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Operator::ADD => write!(f, "+"),
+      Operator::SUB => write!(f, "-"),
+      Operator::MUL => write!(f, "*"),
+      Operator::DIV => write!(f, "/"),
+      Operator::MOD => write!(f, "%"),
+      Operator::RANGE => write!(f, ".."),
+      Operator::EQ => write!(f, "=="),
+      Operator::NOTEQ => write!(f, "!="),
+      Operator::ADDEQ => write!(f, "+="),
+      Operator::SUBEQ => write!(f, "-="),
+      Operator::MULEQ => write!(f, "*="),
+      Operator::DIVEQ => write!(f, "/="),
+      Operator::MODEQ => write!(f, "%="),
+      Operator::LT => write!(f, "<"),
+      Operator::GT => write!(f, ">"),
+      Operator::AND => write!(f, "&&"),
+      Operator::OR => write!(f, "||"),
+      Operator::XOR => write!(f, "^"),
+      Operator::BOR => write!(f, "|"),
+      Operator::SHL => write!(f, "<<"),
+      Operator::SHR => write!(f, ">>"),
+      Operator::POW => write!(f, "**"),
+      Operator::LE => write!(f, "<="),
+      Operator::GE => write!(f, ">="),
+      Operator::NOT => write!(f, "!"),
+      Operator::PIPE => write!(f, "|>"),
     }
   }
 }

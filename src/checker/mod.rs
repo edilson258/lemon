@@ -50,14 +50,11 @@ impl<'ckr> Checker<'ckr> {
     left.is_cmp_with(right)
   }
 
-  pub fn range_of_last_stmt_or_block(&self, stmt: &'ckr ast::Stmt) -> Range {
-    match stmt.last_stmt_range() {
-      Some(range) => range,
-      None => stmt.range(),
-    }
+  pub fn final_or_block_range(&self, stmt: &'ckr ast::Stmt) -> Range {
+    stmt.last_stmt_range().unwrap_or_else(|| stmt.range())
   }
 
-  pub fn resulting_type(&self, left: &Type, right: &Type) -> Type {
+  pub fn take_common_type(&self, left: &Type, right: &Type) -> Type {
     match (left, right) {
       (Type::Float(l), Type::Float(r)) => Type::Float(l.higher_bits(r)),
       (Type::Numb(l), Type::Numb(r)) => Type::Numb(l.higher_bits(r)),
@@ -65,7 +62,7 @@ impl<'ckr> Checker<'ckr> {
     }
   }
 
-  pub fn check_assing_bind(&self, expect: &Type, found: &Type, range: Range) -> Result<(), Diag> {
+  pub fn assign_compatible(&self, expect: &Type, found: &Type, range: Range) -> Result<(), Diag> {
     if !found.eq(expect) {
       return Err(TypeErr::mismatched(found, expect, range));
     }

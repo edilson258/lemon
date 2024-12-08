@@ -87,7 +87,7 @@ impl<'ckr> From<TypeErr<'ckr>> for diag::Diag {
       }
 
       TypeErr::NotSupported { left, right, operator, range } => {
-        let text = format!("not supported: '{}' '{}' '{:?}'", left, right, operator);
+        let text = format!("cannot apply '{}' with '{}' and '{}'", operator, left, right);
         diag::Diag::new(Severity::Err, text, range)
       }
 
