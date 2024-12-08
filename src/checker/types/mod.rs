@@ -20,67 +20,61 @@ impl Type {
     matches!(self, Type::Numb(_))
   }
 
-  pub fn unwrap_numb(&self) -> &NumbValue {
+  pub fn get_numb(&self) -> Result<&NumbValue, &'static str> {
     match self {
-      Type::Numb(v) => v,
-      _ => panic!("Type is not a number type"),
+      Type::Numb(v) => Ok(v),
+      _ => Err("is not a number"),
     }
   }
 
-  pub fn unwrap_float(&self) -> &FloatValue {
+  pub fn get_float(&self) -> Result<&FloatValue, &'static str> {
     match self {
-      Type::Float(v) => v,
-      _ => panic!("Type is not a float type"),
+      Type::Float(v) => Ok(v),
+      _ => Err("is not a float"),
     }
   }
 
   pub fn is_float(&self) -> bool {
     matches!(self, Type::Float(_))
   }
+
   pub fn is_bool(&self) -> bool {
     matches!(self, Type::Bool)
   }
   pub fn is_char(&self) -> bool {
     matches!(self, Type::Char)
   }
+
   pub fn is_string(&self) -> bool {
     matches!(self, Type::String)
   }
 
-  #[rustfmt::skip]
-  pub fn can_operated(&self, operator: &Operator) -> bool {
-    matches!((self, operator),
-      // number, float allow `+`, `-`, `*`, `/`
-      (Type::Numb(_) | Type::Float(_),
-      Operator::ADD | Operator::SUB | Operator::MUL | Operator::DIV)
-      |
-      // number only allow `%`
-      (Type::Numb(_), Operator::MOD)
-      |
-      // number, float, bool, char, string allow `==`, `!=`, `<`, `>`, `<=`, `>=`
-      (Type::Numb(_) | Type::Float(_) | Type::Bool   | Type::Char   | Type::String,
-      Operator::EQ   | Operator::NOT  | Operator::LT | Operator::GT | Operator::LE
-      | Operator::GE | Operator::NOTEQ)
-
-      // bool only allow `&&`, `||`
-      | (Type::Bool, Operator::AND | Operator::OR)
-      )
+  pub fn can_operate_with(&self, operator: &Operator) -> bool {
+    use Operator::*;
+    match self {
+      Type::Numb(_) if matches!(operator, MOD) => true,
+      Type::Numb(_) | Type::Float(_) if matches!(operator, ADD | SUB | MUL | DIV) => true,
+      Type::Bool if matches!(operator, AND | OR) => true,
+      Type::Numb(_) | Type::Float(_) | Type::Bool | Type::Char | Type::String => {
+        matches!(operator, EQ | NOT | LT | GT | LE | GE | NOTEQ)
+      }
+      _ => false,
+    }
   }
 
-  pub fn same_set(&self, target: &Type) -> bool {
+  pub fn is_cmp_with(&self, target: &Type) -> bool {
     match (self, target) {
-      (Type::Numb(lt), Type::Numb(rt)) => lt.same_set(rt),
+      (Type::Numb(lt), Type::Numb(rt)) => lt.is_cmp_with(rt),
       (Type::Float(_), Type::Float(_)) => true,
       (Type::Bool, Type::Bool) | (Type::Char, Type::Char) | (Type::String, Type::String) => true,
       _ => false,
     }
   }
-  pub fn fits_in(&self, target: &Type) -> bool {
+
+  pub fn fits_into(&self, target: &Type) -> bool {
     match (self, target) {
       (Type::Numb(left), Type::Numb(right)) => left.bits.unwrap_or(0) <= right.bits.unwrap_or(0),
-
       (Type::Float(left), Type::Float(right)) => left.bits <= right.bits,
-
       (Type::Float(_), Type::Numb(_)) => false,
       _ => false,
     }
@@ -102,11 +96,11 @@ impl FnValue {
     self.ret_type.is_some()
   }
 
-  pub fn same_set(&self, target: &FnValue) -> bool {
+  pub fn is_cmp_with(&self, target: &FnValue) -> bool {
     if self.has_ret() != target.has_ret() {
       return false;
     }
-    self.params.iter().zip(target.params.iter()).all(|(l, r)| l.same_set(r))
+    self.params.iter().zip(target.params.iter()).all(|(l, r)| l.is_cmp_with(r))
   }
 }
 
@@ -120,32 +114,32 @@ impl NumbValue {
   pub fn is_signed(&self) -> bool {
     self.signed
   }
+
   pub fn is_arch(&self) -> bool {
     self.bits.is_none()
   }
+
   pub fn set_bits(&mut self, bits: Option<u8>) {
     self.bits = bits;
   }
+
   pub fn set_signed(&mut self, value: bool) {
     self.signed = value;
   }
 
-  pub fn same_set(&self, target: &Self) -> bool {
-    if self.bits.is_none() && target.bits.is_none() {
-      return self.signed == target.signed;
+  pub fn is_cmp_with(&self, other: &Self) -> bool {
+    match (self.bits, other.bits) {
+      (Some(b1), Some(b2)) => b1 == b2 && self.signed == other.signed,
+      (None, None) => self.signed == other.signed,
+      _ => false,
     }
-    self.bits.is_some() && target.bits.is_some()
   }
 
-  pub fn higher_bits(&self, target: &Self) -> Self {
-    if self.bits.is_none() && target.bits.is_none() {
-      return self.signed.then(|| self.clone()).unwrap_or(target.clone());
+  pub fn higher_bits(&self, other: &Self) -> NumbValue {
+    match (self.bits, other.bits) {
+      (Some(b1), Some(b2)) => NumbValue { bits: Some(b1.max(b2)), signed: self.signed },
+      _ => self.clone(),
     }
-    if self.bits.is_none() || target.bits.is_none() {
-      return self.clone();
-    }
-    let bits = self.bits.unwrap().max(target.bits.unwrap());
-    NumbValue { bits: Some(bits), signed: self.signed }
   }
 }
 
@@ -155,16 +149,14 @@ pub struct FloatValue {
 }
 
 impl FloatValue {
-  pub fn higher_bits(&self, target: &Self) -> Self {
-    if self.bits >= target.bits {
-      return self.clone();
+  pub fn higher_bits(&self, other: &Self) -> Self {
+    if self.bits >= other.bits {
+      self.clone()
+    } else {
+      other.clone()
     }
-    FloatValue { bits: self.bits }
   }
 }
-
-// impl  eq (==)  for Type
-//
 
 impl PartialEq for Type {
   fn eq(&self, other: &Self) -> bool {

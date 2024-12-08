@@ -40,15 +40,14 @@ impl<'ckr> Checker<'ckr> {
     })
   }
   pub fn check_binding(&mut self, binding: &'ckr ast::Binding) -> CheckResult<Type> {
-    if let Some(ty) = &binding.ty {
-      let kind = self.check_type(ty)?;
-      return Ok(kind);
-    }
-    Ok(None)
+    binding.ty.as_ref().map_or(Ok(None), |ty| self.check_type(ty))
   }
 
   pub fn operator_supported(&self, left: &Type, right: &Type, operator: &Operator) -> bool {
-    left.can_operated(operator) && right.can_operated(operator) && left.same_set(right)
+    if !left.can_operate_with(operator) || !right.can_operate_with(operator) {
+      return false;
+    }
+    left.is_cmp_with(right)
   }
 
   pub fn range_of_last_stmt_or_block(&self, stmt: &'ckr ast::Stmt) -> Range {
@@ -70,8 +69,7 @@ impl<'ckr> Checker<'ckr> {
     if !found.eq(expect) {
       return Err(TypeErr::mismatched(found, expect, range));
     }
-
-    if !found.fits_in(expect) && !found.same_set(expect) {
+    if !found.fits_into(expect) && !found.is_cmp_with(expect) {
       return Err(TypeErr::out_of_range(expect, found, range));
     }
     Ok(())
