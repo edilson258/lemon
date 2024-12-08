@@ -1,0 +1,8 @@
+{
+  "file_types": {
+    "Rust": ["lemon", "ln"]
+  },
+  "lsp.enabled": false,
+  "editor.diagnostics.enabled": false,
+  "editor.formatOnSave": false
+}
