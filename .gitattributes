@@ -1,0 +1,4 @@
+
+*.lemon linguist-language=rust
+*.ln linguist-language=rust
+*.lnr linguist-language=rust
