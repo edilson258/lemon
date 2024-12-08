@@ -75,9 +75,10 @@ impl Builder {
     };
 
     let mut fn_ir = ir::FnIr::new(fn_stmt.text().to_owned(), binds, ret_type);
-
-    fn_ir.add_block(self.build_stmt(fn_stmt.body.as_ref()));
-
+    let ir_block = self.build_stmt(fn_stmt.body.as_ref());
+    for block in ir_block {
+      fn_ir.add_block(block);
+    }
     return fn_ir;
   }
 
@@ -89,7 +90,8 @@ impl Builder {
     todo!()
   }
 
-  fn build_stmt(&mut self, block: &ast::Stmt) -> ir::BlockIr {
+  fn build_stmt(&mut self, block: &ast::Stmt) -> Vec<ir::BlockIr> {
+    let mut ir_blocks = Vec::new();
     let mut ir_block = ir::BlockIr::new(self.ctx.fresh_block_id());
     match block {
       ast::Stmt::Let(let_stmt) => self.build_let_stmt(let_stmt, &mut ir_block),
@@ -98,20 +100,21 @@ impl Builder {
         ir_block.add_instr(ir::Instr::ret(reg));
       }
       ast::Stmt::Block(block) => {
-        for stmt in block.stmts.iter() {
-          match stmt {
-            ast::Stmt::Let(let_stmt) => self.build_let_stmt(let_stmt, &mut ir_block),
-            ast::Stmt::Expr(expr) => {
-              let reg = self.build_expr(expr, &mut ir_block);
-              ir_block.add_instr(ir::Instr::ret(reg));
-            }
-            _ => unimplemented!(),
-          }
-        }
+        let mut blocks = self.build_block(block);
+        ir_blocks.append(&mut blocks);
       }
       _ => unimplemented!(),
     }
-    ir_block
+    ir_blocks.push(ir_block);
+    return ir_blocks;
+  }
+
+  fn build_block(&mut self, block: &ast::BlockStmt) -> Vec<ir::BlockIr> {
+    let mut ir_block = Vec::new();
+    for stmt in block.stmts.iter() {
+      ir_block.append(&mut self.build_stmt(stmt));
+    }
+    return ir_block;
   }
 
   fn build_let_stmt(&mut self, let_stmt: &ast::LetStmt, ir_block: &mut ir::BlockIr) {
@@ -131,6 +134,7 @@ impl Builder {
     match expr {
       ast::Expr::Binary(binary) => self.build_binary_expr(binary, ir_block),
       ast::Expr::Literal(literal) => self.build_literal_expr(literal, ir_block),
+      ast::Expr::If(if_expr) => self.build_if_expr(if_expr, ir_block),
       ast::Expr::Ident(ident) => self.build_ident_expr(ident),
       _ => unimplemented!(),
     }
@@ -165,6 +169,19 @@ impl Builder {
     };
     ir_block.add_instr(instr);
     dest
+  }
+
+  fn build_if_expr(&mut self, if_expr: &ast::IfExpr, ir_block: &mut ir::BlockIr) -> ir::REG {
+    let cond = self.build_expr(&if_expr.cond, ir_block);
+    let ir_block1 = self.build_stmt(&if_expr.then);
+    if let Some(otherwise) = &if_expr.otherwise {
+      let ir_block2 = self.build_stmt(otherwise);
+      ir_block.add_instr(ir::Instr::JMPIF { cond, l1: ir_block1.label(), l0: ir_block2.label() });
+      ir_block2.label()
+    } else {
+      ir_block.add_instr(ir::Instr::JMPIF { cond, l1: ir_block1.label(), l0: ir_block.label() });
+      ir_block1.label()
+    }
   }
 
   fn build_literal_expr(&mut self, literal: &ast::Literal, ir_block: &mut ir::BlockIr) -> ir::REG {
