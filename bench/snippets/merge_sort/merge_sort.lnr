@@ -1,0 +1,65 @@
+fn merge_sort arr: &[i32] -> &[i32]
+l0: len arr -> r0
+    cmp_le r0, 1 -> r1
+    jmp_if r1, l1, l2
+l1: ret arr
+l2: div r0, 2 -> r2
+    slice arr, 0, r2 -> r3
+    slice arr, r2, r0 -> r4
+    call merge_sort r3 -> r5
+    call merge_sort r4 -> r6
+    call merge r5, r6 -> r7
+    free r3
+    free r4
+    free r5
+    free r6
+    ret r7
+
+fn merge left: &[i32], right: &[i32] -> &[i32]
+l0: own [] -> r0      # create a new array
+    len left -> r1    # length of the left array
+    len right -> r2   # length of the right array
+    own 0 -> r3       # index of the left array
+    own 0 -> r4       # index of the right array
+l1: cmp_lt r3, r1 -> r5
+    cmp_lt r4, r2 -> r6
+    and r5, r6 -> r7
+    jmp_if r7, l2, l6
+l2: borrow left, r3 -> r8
+    borrow right, r4 -> r9
+    cmp_le r8, r9 -> r10
+    jmp_if r10, l3, l4
+l3: push r0, r8 -> r0
+    add r3, 1 -> r3
+    free r8
+    free r9
+    jmp l1
+l4: push r0, r9 -> r0
+    add r4, 1 -> r4
+    free r8
+    free r9
+    jmp l1
+l6: cmp_lt r3, r1 -> r11
+    jmp_if r11, l7, l8
+l7: borrow left, r3 -> r12
+    push r0, r12 -> r0
+    add r3, 1 -> r3
+    free r12
+    jmp l6
+l8: cmp_lt r4, r2 -> r13
+    jmp_if r13, l9, l10
+l9: borrow right, r4 -> r14
+    push r0, r14 -> r0
+    add r4, 1 -> r4
+    free r14
+    jmp l8
+l10: free r3
+    free r4
+    ret r0
+
+fn main -> u32
+l0: own [5, 2, 9, 1, 5, 6] -> r0
+    call merge_sort r0 -> r1
+    print r1
+    free r0
+    ret 0
