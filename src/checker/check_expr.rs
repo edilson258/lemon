@@ -1,9 +1,9 @@
 use crate::ast::{self};
 
-use super::{diags::errs::TypeErr, types::Type, CheckResult, Checker};
+use super::{context::scope::Symbol, diags::errs::TypeErr, Checker, CkrResult};
 
 impl<'ckr> Checker<'ckr> {
-  pub fn check_expr(&mut self, expr: &'ckr ast::Expr) -> CheckResult<Type> {
+  pub fn check_expr(&mut self, expr: &'ckr ast::Expr) -> CkrResult {
     match expr {
       ast::Expr::Literal(lit) => self.check_literal(lit),
       ast::Expr::Ident(ident) => self.check_ident(ident),
@@ -24,55 +24,72 @@ impl<'ckr> Checker<'ckr> {
     }
   }
 
-  pub fn check_ident(&mut self, ident: &'ckr ast::Ident) -> CheckResult<Type> {
-    if let Some(value) = self.ctx.get_value(&ident.text) {
-      return Ok(Some(value.get_type()));
+  pub fn check_assign(&mut self, assign: &'ckr ast::AssignExpr) -> CkrResult {
+    // todo: improve this
+    let left_type = self.check_expr(&assign.left)?;
+    let left_type = left_type.unwrap();
+
+    if let Symbol::Value(value) = &left_type {
+      if !value.is_mutable() {
+        let diag = TypeErr::cannot_mutate(&value.name, assign.left.range());
+        return Err(diag);
+      }
+
+      let right_type = self.check_expr(&assign.right)?;
+
+      if right_type.is_none() {
+        return Err(TypeErr::not_found("right", assign.right.range()));
+      }
+      let right_type = right_type.unwrap();
+
+      if value.get_type() != right_type.as_ref_ty() {
+        let range = assign.right.range();
+        let diag = TypeErr::mismatched_type(value.get_type(), right_type.as_ref_ty(), range);
+        return Err(diag);
+      }
+    }
+    Ok(None)
+  }
+
+  pub fn check_ident(&mut self, ident: &'ckr ast::Ident) -> CkrResult {
+    if let Some(value) = self.ctx.get_symbol(&ident.text) {
+      return Ok(Some(value));
     }
     let range = ident.range.clone();
     Err(TypeErr::not_found(&ident.text, range))
   }
 
-  pub fn check_unary(&mut self, unary: &'ckr ast::UnaryExpr) -> CheckResult<Type> {
+  pub fn check_ret(&mut self, ret: &'ckr ast::RetExpr) -> CkrResult {
+    if let Some(value) = &ret.value {
+      return self.check_expr(value);
+    }
+    Ok(None)
+  }
+
+  pub fn check_unary(&mut self, unary: &'ckr ast::UnaryExpr) -> CkrResult {
     todo!()
   }
 
-  pub fn check_group(&mut self, group: &'ckr ast::GroupExpr) -> CheckResult<Type> {
+  pub fn check_group(&mut self, group: &'ckr ast::GroupExpr) -> CkrResult {
     todo!()
   }
 
-  pub fn check_call(&mut self, call: &'ckr ast::CallExpr) -> CheckResult<Type> {
+  pub fn check_break(&mut self, break_expr: &'ckr ast::BaseExpr) -> CkrResult {
+    todo!()
+  }
+  pub fn check_while(&mut self, while_expr: &'ckr ast::WhileExpr) -> CkrResult {
     todo!()
   }
 
-  pub fn check_break(&mut self, break_expr: &'ckr ast::BaseExpr) -> CheckResult<Type> {
+  fn check_for(&mut self, for_expr: &'ckr ast::ForExpr) -> CkrResult {
     todo!()
   }
 
-  pub fn check_ret(&mut self, ret: &'ckr ast::RetExpr) -> CheckResult<Type> {
+  pub fn check_skip(&mut self, base_expr: &'ckr ast::BaseExpr) -> CkrResult {
     todo!()
   }
 
-  pub fn check_assign(&mut self, assign: &'ckr ast::AssignExpr) -> CheckResult<Type> {
-    todo!()
-  }
-
-  pub fn check_while(&mut self, while_expr: &'ckr ast::WhileExpr) -> CheckResult<Type> {
-    todo!()
-  }
-
-  fn check_for(&mut self, for_expr: &'ckr ast::ForExpr) -> CheckResult<Type> {
-    todo!()
-  }
-
-  pub fn check_skip(&mut self, base_expr: &'ckr ast::BaseExpr) -> CheckResult<Type> {
-    todo!()
-  }
-
-  fn check_pipe(&mut self, pipe_expr: &'ckr ast::PipeExpr) -> CheckResult<Type> {
-    todo!()
-  }
-
-  pub fn check_import(&mut self, import_expr: &'ckr ast::ImportExpr) -> CheckResult<Type> {
+  pub fn check_import(&mut self, import_expr: &'ckr ast::ImportExpr) -> CkrResult {
     todo!()
   }
 }

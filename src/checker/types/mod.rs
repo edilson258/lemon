@@ -1,5 +1,7 @@
 use crate::ast::Operator;
 use core::fmt;
+
+use super::context::scope::Symbol;
 pub mod show;
 
 #[derive(Debug, Clone)]
@@ -13,6 +15,9 @@ pub enum Type {
 }
 
 impl Type {
+  pub fn as_symbol(&self) -> Symbol {
+    Symbol::Type(self.clone())
+  }
   pub fn is_fn(&self) -> bool {
     matches!(self, Type::Fn(_))
   }
@@ -31,6 +36,13 @@ impl Type {
     match self {
       Type::Float(v) => Ok(v),
       _ => Err("is not a float"),
+    }
+  }
+
+  pub fn get_fn(&self) -> Result<&FnValue, &'static str> {
+    match self {
+      Type::Fn(v) => Ok(v),
+      _ => Err("is not a function"),
     }
   }
 
@@ -87,24 +99,27 @@ impl Type {
 
 #[derive(Debug, Clone)]
 pub struct FnValue {
-  pub params: Vec<Type>,
+  pub args: Vec<Type>,
   pub ret_type: Option<Box<Type>>,
 }
 
 impl FnValue {
-  pub fn new(params: Vec<Type>, ret_type: Option<Box<Type>>) -> Self {
-    FnValue { params, ret_type }
+  pub fn new(args: Vec<Type>, ret_type: Option<Box<Type>>) -> Self {
+    FnValue { args, ret_type }
   }
 
   pub fn has_ret(&self) -> bool {
     self.ret_type.is_some()
   }
 
+  pub fn get_ret(&self) -> Option<&Type> {
+    self.ret_type.as_ref().map(|t| t.as_ref())
+  }
   pub fn is_cmp_with(&self, target: &FnValue) -> bool {
     if self.has_ret() != target.has_ret() {
       return false;
     }
-    self.params.iter().zip(target.params.iter()).all(|(l, r)| l.is_cmp_with(r))
+    self.args.iter().zip(target.args.iter()).all(|(l, r)| l.is_cmp_with(r))
   }
 }
 
@@ -115,6 +130,14 @@ pub struct NumbValue {
 }
 
 impl NumbValue {
+  pub fn new(bits: Option<u8>, signed: bool) -> Self {
+    Self { bits, signed }
+  }
+
+  pub fn new_signed(bits: Option<u8>) -> Self {
+    Self { bits, signed: true }
+  }
+
   pub fn is_signed(&self) -> bool {
     self.signed
   }
@@ -170,7 +193,7 @@ impl PartialEq for FnValue {
     if self.has_ret() != other.has_ret() {
       return false;
     }
-    self.params.iter().zip(other.params.iter()).all(|(l, r)| l.eq(r))
+    self.args.iter().zip(other.args.iter()).all(|(l, r)| l.eq(r))
   }
 }
 

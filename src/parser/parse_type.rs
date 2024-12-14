@@ -116,7 +116,6 @@ impl<'l> Parser<'l> {
     let text = self.take_text_and_next()?;
     Ok(ast_type::IdentType { text, range })
   }
-  // let callback: fn(usize) -> usize = fn(x: usize): usize = x + 1;
   fn parse_fn_type(&mut self) -> PResult<'l, ast_type::FnType> {
     let range = self.expect(Token::Fn)?.clone();
     let mut params = vec![];

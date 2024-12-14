@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
+use core::fmt;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
   range::Range,
-  report::{report_err, report_info, report_warn},
+  report::{report_err, report_syntax_err, report_type_err},
   source::Source,
 };
 
@@ -45,16 +46,30 @@ impl Diag {
     &self.range
   }
 
-  pub fn report(&self, path: &PathBuf) {
-    match self.severity {
-      Severity::Err => report_err(self, path),
-      Severity::Warn => report_warn(self, path),
-      Severity::Info => report_info(self, path),
-    }
+  pub fn report_syntax_err(&self, path: &PathBuf) {
+    report_syntax_err(self, path);
   }
 
-  pub fn report_wrap(&self, path: &PathBuf) -> ! {
-    self.report(path);
+  pub fn report_type_err(&self, path: &PathBuf) {
+    report_type_err(self, path);
+  }
+
+  pub fn report_err(&self, path: &PathBuf) {
+    report_err(self, path);
+  }
+
+  pub fn report_syntax_err_wrap(&self, path: &PathBuf) -> ! {
+    self.report_syntax_err(path);
+    std::process::exit(1);
+  }
+
+  pub fn report_type_err_wrap(&self, path: &PathBuf) -> ! {
+    self.report_type_err(path);
+    std::process::exit(1);
+  }
+
+  pub fn report_err_wrap(&self, path: &PathBuf) -> ! {
+    self.report_err(path);
     std::process::exit(1);
   }
 }
@@ -73,7 +88,25 @@ impl<'ckr> DiagGroup<'ckr> {
   }
   pub fn report(&self, path: &PathBuf) {
     for diag in &self.diags {
-      diag.report(path);
+      diag.report_err(path);
+    }
+  }
+}
+
+impl fmt::Display for Diag {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    writeln!(f, "severity: {}", self.severity)?;
+    writeln!(f, "message: {}", self.message)?;
+    writeln!(f, "range: {}", self.range)
+  }
+}
+
+impl fmt::Display for Severity {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Severity::Err => write!(f, "error"),
+      Severity::Warn => write!(f, "warning"),
+      Severity::Info => write!(f, "info"),
     }
   }
 }

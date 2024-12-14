@@ -26,5 +26,6 @@ if [ ! -f "./target/release/lemon" ]; then
   echo "build failed"
   exit 1
 fi
+cargo build --release
 
 ./target/release/lemon "$@"

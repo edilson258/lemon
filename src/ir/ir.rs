@@ -108,9 +108,9 @@ pub struct IR {
 }
 
 impl IR {
-  pub fn new() -> Self {
-    Self { fns: HashMap::new() }
-  }
+  // pub fn new() -> Self {
+  //   Self { fns: HashMap::new() }
+  // }
   pub fn add_fn(&mut self, fn_ir: FnIr) {
     self.fns.insert(fn_ir.name.clone(), fn_ir);
   }

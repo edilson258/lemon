@@ -32,7 +32,7 @@ fn check(source: Source) {
   let mut parser = Parser::new(&mut lexer);
   let ast = match parser.parse_program() {
     Ok(ast) => ast,
-    Err(diag) => diag.report_wrap(source.path()),
+    Err(diag) => diag.report_syntax_err_wrap(source.path()),
   };
   // println!("{:?}", ast);
   let mut diag_group = DiagGroup::new(&source);
@@ -40,10 +40,10 @@ fn check(source: Source) {
   let mut checker = Checker::new(&mut diag_group, ctx);
   let tyy = match checker.check_program(&ast) {
     Ok(tyy) => tyy,
-    Err(diag) => diag.report_wrap(source.path()),
+    Err(diag) => diag.report_type_err_wrap(source.path()),
   };
   if let Some(tyy) = tyy {
-    println!("ok: {}", tyy);
+    println!("ok: {}", tyy.as_ty());
   } else {
     println!("ok.");
   }
@@ -54,7 +54,7 @@ fn compile(source: Source) {
   let mut parser = Parser::new(&mut lexer);
   let ast = match parser.parse_program() {
     Ok(ast) => ast,
-    Err(diag) => diag.report_wrap(source.path()),
+    Err(diag) => diag.report_syntax_err_wrap(source.path()),
   };
   println!("checking...");
   let mut diag_group = DiagGroup::new(&source);
@@ -62,12 +62,12 @@ fn compile(source: Source) {
   let mut checker = Checker::new(&mut diag_group, ctx);
   let _ = match checker.check_program(&ast) {
     Ok(tyy) => tyy,
-    Err(diag) => diag.report_wrap(source.path()),
+    Err(diag) => diag.report_type_err_wrap(source.path()),
   };
   println!("emmit ir...");
-  let mut builder = ir::Builder::new();
-  let ir = builder.build(ast);
-  println!("{}", ir);
+  // let mut builder = ir::Builder::new();
+  // let ir = builder.build(ast);
+  // println!("{}", ir);
 }
 
 fn lex(source: Source) {
@@ -79,9 +79,7 @@ fn lex(source: Source) {
 
 fn main() {
   let matches = cli::command_line();
-
   match matches.subcommand() {
-    // let a;
     Some(("check", matches)) => {
       let file = matches.get_one::<String>("file").expect("file is required");
       let source = loader(file);

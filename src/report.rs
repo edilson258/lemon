@@ -7,37 +7,50 @@ use dunh::{high_err_ctx, high_info_ctx, high_warn_ctx};
 
 const CTX_LOC: usize = 1; // -- context lines
 
+enum ReportKind {
+  SyntaxErr,
+  TypeErr,
+  Err,
+}
+
+impl ReportKind {
+  fn as_str(&self) -> &'static str {
+    match self {
+      ReportKind::SyntaxErr => "syntax error",
+      ReportKind::TypeErr => "type error",
+      ReportKind::Err => "error",
+    }
+  }
+}
+
 // ---
 //
 
 pub fn report_err(diag: &Diag, path: &PathBuf) {
-  report(diag, path)
+  report(diag, path, ReportKind::Err)
 }
 
-pub fn report_warn(diag: &Diag, path: &PathBuf) {
-  report(diag, path)
+pub fn report_type_err(diag: &Diag, path: &PathBuf) {
+  report(diag, path, ReportKind::TypeErr)
 }
-
-pub fn report_info(diag: &Diag, path: &PathBuf) {
-  report(diag, path)
-}
-
 pub fn report_wrap(diag: &Diag, path: &PathBuf) {
-  report(diag, path);
+  report(diag, path, ReportKind::Err);
+  std::process::exit(1);
+}
+
+pub fn report_syntax_err(diag: &Diag, path: &PathBuf) {
+  report(diag, path, ReportKind::SyntaxErr);
   std::process::exit(1);
 }
 
 // -- utils --
 //
 
-fn report(diag: &Diag, path: &PathBuf) {
+fn report(diag: &Diag, path: &PathBuf, kind: ReportKind) {
   println!(); // -- new line
 
   let slug = match diag.severity {
-    // Severity::Err => text_red("ERROR >>>"),
-    // Severity::Warn => text_yellow("WARNING >>>"),
-    // Severity::Info => text_gray("INFO >>>"),
-    Severity::Err => text_red("error"),
+    Severity::Err => text_red(kind.as_str()),
     Severity::Warn => text_yellow("warning"),
     Severity::Info => text_green("info"),
   };

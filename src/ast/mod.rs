@@ -31,15 +31,16 @@ pub enum Stmt {
 }
 
 impl Stmt {
-  pub fn last_stmt_range(&self) -> Option<Range> {
-    match self {
-      Stmt::Block(block_stmt) => block_stmt.last_stmt_range(),
-      _ => None,
-    }
-  }
-
   pub fn is_block(&self) -> bool {
     matches!(self, Stmt::Block(_))
+  }
+
+  pub fn final_stmt_range(&self) -> Range {
+    // match self {
+    //   Stmt::Block(block_stmt) => block_stmt.final_stmt_range(),
+    // _ => self.range(),
+    // }
+    self.range()
   }
 
   pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -68,6 +69,7 @@ impl TraitRange for Stmt {
 pub struct LetStmt {
   pub name: Binding,
   pub expr: Expr,
+  pub mutable: Option<Range>,
   pub range: Range, // let range
 }
 
@@ -76,6 +78,9 @@ impl LetStmt {
     &self.name.ident.text
   }
 
+  pub fn is_mut(&self) -> bool {
+    self.mutable.is_some()
+  }
   pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
     visitor.visit_let_stmt(self)
   }
@@ -124,9 +129,12 @@ impl BlockStmt {
   pub fn new(stmts: Vec<Stmt>, range: Range) -> Self {
     Self { stmts, range }
   }
-
-  pub fn last_stmt_range(&self) -> Option<Range> {
-    self.stmts.last().map(|stmt| stmt.range())
+  pub fn final_stmt_range(&self) -> Range {
+    let range = self.stmts.last().map(|stmt| stmt.final_stmt_range());
+    match range {
+      Some(range) => range,
+      None => self.range(),
+    }
   }
 
   pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -247,6 +255,9 @@ impl Expr {
       Expr::Skip(skip) => visitor.visit_base_expr(skip),
     }
   }
+  pub fn valid_assign_expr(&self) -> bool {
+    matches!(self, Expr::Ident(_))
+  }
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnExpr {
@@ -362,7 +373,7 @@ impl TraitRange for UnaryExpr {
 pub struct CallExpr {
   pub callee: Box<Expr>,
   pub args: Vec<Expr>,
-  pub range: Range, // fn(args...)
+  pub range: Range, // (args...)
 }
 
 impl CallExpr {
@@ -373,7 +384,7 @@ impl CallExpr {
 
 impl TraitRange for CallExpr {
   fn range(&self) -> Range {
-    self.range.clone()
+    self.callee.range().merged_with(&self.range)
   }
 }
 
@@ -670,7 +681,7 @@ impl Operator {
       Token::Less => Some(Self::LT),
       Token::Greater => Some(Self::GT),
       Token::And => Some(Self::AND),
-      Token::Or => Some(Self::OR),
+      Token::BarBar => Some(Self::OR),
       Token::DotDot => Some(Self::RANGE),
       Token::Rem => Some(Self::MOD),
       Token::RemEq => Some(Self::MODEQ),

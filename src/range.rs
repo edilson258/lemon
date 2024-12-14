@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use core::fmt;
 use logos::Span;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
@@ -33,4 +34,10 @@ impl Range {
 
 pub trait TraitRange {
   fn range(&self) -> Range;
+}
+
+impl fmt::Display for Range {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}..{}", self.start, self.end)
+  }
 }

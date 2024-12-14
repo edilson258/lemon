@@ -2,7 +2,7 @@ use super::*;
 
 impl fmt::Display for FnValue {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let params = self.params.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
+    let params = self.args.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
     if let Some(ret) = &self.ret_type {
       write!(f, "fn({}) -> {}", params, ret)
     } else {

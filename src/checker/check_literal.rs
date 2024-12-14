@@ -1,33 +1,36 @@
 use crate::ast::{self};
 
 use super::{
+  context::scope::Symbol,
   types::{FloatValue, NumbValue, Type},
-  CheckResult, Checker,
+  Checker, CkrResult,
 };
 
 impl<'ckr> Checker<'ckr> {
-  pub fn check_literal(&mut self, lit: &ast::Literal) -> CheckResult<Type> {
-    match lit {
+  pub fn check_literal(&mut self, lit: &ast::Literal) -> CkrResult {
+    let ty = match lit {
       ast::Literal::Num(num) => self.check_num_literal(num),
-      ast::Literal::String(string) => Ok(Some(Type::String)),
-      ast::Literal::Bool(bool) => Ok(Some(Type::Bool)),
-      ast::Literal::Char(char) => Ok(Some(Type::Char)),
+      ast::Literal::String(string) => Type::String,
+      ast::Literal::Bool(bool) => Type::Bool,
+      ast::Literal::Char(char) => Type::Char,
       ast::Literal::Null(null) => todo!(),
-    }
+    };
+
+    Ok(Some(Symbol::Type(ty)))
   }
 
-  pub fn check_num_literal(&mut self, num: &ast::NumLiteral) -> CheckResult<Type> {
+  pub fn check_num_literal(&mut self, num: &ast::NumLiteral) -> Type {
     if num.as_dot() {
-      let bits = self.check_float_bits(num)?.unwrap();
+      let bits = self.check_float_bits(num).unwrap();
       let float = FloatValue { bits };
-      return Ok(Some(Type::Float(float)));
+      return Type::Float(float);
     }
-    let bits = self.check_num_bits(num)?.unwrap();
-    let numb = NumbValue { bits: Some(bits), signed: false };
-    Ok(Some(Type::Numb(numb)))
+    let bits = self.check_num_bits(num).unwrap();
+    let numb = NumbValue::new_signed(Some(bits));
+    Type::Numb(numb)
   }
 
-  pub fn check_num_bits(&mut self, num: &ast::NumLiteral) -> CheckResult<u8> {
+  pub fn check_num_bits(&mut self, num: &ast::NumLiteral) -> Option<u8> {
     // todo:  we need o check if the number is valid
     let value = u128::from_str_radix(&num.text, num.base as u32).unwrap();
     let bit_range = (128 - value.leading_zeros()) as u8;
@@ -39,17 +42,17 @@ impl<'ckr> Checker<'ckr> {
       65..=128 => 128,
       _ => unreachable!(),
     };
-    Ok(Some(bits))
+    Some(bits)
   }
 
-  pub fn check_float_bits(&mut self, num: &ast::NumLiteral) -> CheckResult<u8> {
+  pub fn check_float_bits(&mut self, num: &ast::NumLiteral) -> Option<u8> {
     // todo: improve this...
     match num.text.parse::<f32>() {
-      Ok(num) if !num.is_nan() && !num.is_infinite() => return Ok(Some(32)),
+      Ok(num) if !num.is_nan() && !num.is_infinite() => return Some(32),
       _ => {}
     }
     match num.text.parse::<f64>() {
-      Ok(num) if !num.is_nan() && !num.is_infinite() => return Ok(Some(64)),
+      Ok(num) if !num.is_nan() && !num.is_infinite() => return Some(64),
       _ => {}
     }
     unreachable!()
