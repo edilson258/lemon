@@ -1,7 +1,6 @@
 use core::fmt;
 
 use logos::Logos;
-
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[logos(skip r"[ \t\n\f]+")]
 #[repr(u8)]
@@ -11,6 +10,8 @@ pub enum Token {
   Fn,
   #[token("let")]
   Let,
+  #[token("mut")]
+  Mut,
   #[token("if")]
   If,
   #[token("for")]
@@ -35,6 +36,10 @@ pub enum Token {
   Match,
   #[token("import")]
   Import,
+  #[token("pub")]
+  Pub,
+  #[token("mod")]
+  Mod,
 
   // Operators
   #[token("+")]
@@ -79,14 +84,16 @@ pub enum Token {
   Extract,
   #[token("->")]
   Arrow,
-  #[token("&&")]
+  #[token("&")]
   And,
-  #[token("||")]
-  Or,
+  #[token("&&")]
+  AndAnd,
   #[token(".")]
   Dot,
   #[token("..")]
   DotDot,
+  #[token("..=")]
+  DotDotEq,
   #[token("!")]
   Bang,
   #[token("?")]
@@ -99,6 +106,10 @@ pub enum Token {
   Pipe,
   #[token("|")]
   Bar,
+  #[token("||")]
+  BarBar,
+  #[token("~")]
+  Tilde,
   #[token("@")]
   At,
 
@@ -189,6 +200,7 @@ impl fmt::Display for Token {
     match self {
       Token::Fn => write!(f, "fn"),
       Token::Let => write!(f, "let"),
+      Token::Mut => write!(f, "mut"),
       Token::If => write!(f, "if"),
       Token::For => write!(f, "for"),
       Token::In => write!(f, "in"),
@@ -223,7 +235,7 @@ impl fmt::Display for Token {
       Token::Extract => write!(f, "?="),
       Token::Arrow => write!(f, "=>"),
       Token::And => write!(f, "&&"),
-      Token::Or => write!(f, "||"),
+      Token::BarBar => write!(f, "||"),
       Token::Dot => write!(f, "."),
       Token::DotDot => write!(f, ".."),
       Token::Bang => write!(f, "!"),
@@ -266,6 +278,11 @@ impl fmt::Display for Token {
       Token::F64Type => write!(f, "f64"),
       Token::CharType => write!(f, "char"),
       Token::StringType => write!(f, "string"),
+      Token::Pub => write!(f, "pub"),
+      Token::Mod => write!(f, "mod"),
+      Token::AndAnd => write!(f, "&&"),
+      Token::DotDotEq => write!(f, "..="),
+      Token::Tilde => write!(f, "~"),
     }
   }
 }
