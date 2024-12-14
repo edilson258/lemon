@@ -98,10 +98,25 @@ fn lexer() {
     let mut lexer = Token::lexer(source.raw());
     let mut result = Vec::new();
 
-    while let Some(Ok(token)) = lexer.next() {
-      let range = Range::from_span(lexer.span());
-      let token_text = lexer.slice().to_string();
-      result.push((range, token, token_text));
+    while let Some(token) = lexer.next() {
+      match token {
+        Ok(token) => {
+          let range = Range::from_span(lexer.span());
+          let token_text = lexer.slice().to_string();
+          result.push((range, token, token_text));
+        }
+        Err(_) => {
+          let range = Range::from_span(lexer.span());
+          let token_text = lexer.slice().to_string();
+          let pretty = format!(
+            "- error: {}\n    range: {:?}\n    lexeme: {}",
+            token_text,
+            range,
+            lexer.slice()
+          );
+          return Ok(pretty);
+        }
+      }
     }
     Ok(show_pretty_lexer(&result))
   });
