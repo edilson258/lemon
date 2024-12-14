@@ -1,5 +1,5 @@
-// let sum: u8 = 10 + 10 + 10000 - 10 * 1.0;
+let sum = 10 + 10 + 10000 - 10 * 1;
 
 
 
-let callback: fn(u8) -> u64 = 10;
+let callback: fn(u8) -> u64 = sum;

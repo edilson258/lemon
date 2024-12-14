@@ -1,0 +1,32 @@
+---
+source: tests/snippets_tests.rs
+input_file: tests/snippets/lexer/main.lemon
+---
+- entry 1:
+    range: 3..5
+    token: Fn
+    lexeme: fn
+- entry 2:
+    range: 6..10
+    token: Ident
+    lexeme: main
+- entry 3:
+    range: 10..11
+    token: LParen
+    lexeme: (
+- entry 4:
+    range: 11..12
+    token: RParen
+    lexeme: )
+- entry 5:
+    range: 13..14
+    token: Assign
+    lexeme: =
+- entry 6:
+    range: 15..16
+    token: LBrace
+    lexeme: {
+- entry 7:
+    range: 18..19
+    token: RBrace
+    lexeme: }
