@@ -1,2 +1,5 @@
-pub mod errs;
-pub mod warns;
+mod errs;
+mod warns;
+pub use errs::TypeCheckError;
+
+// pub use warns::TypeCheckWarn;

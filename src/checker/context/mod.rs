@@ -1,68 +1,98 @@
-use std::collections::HashMap;
+use borrow::{BorrowId, BorrowStore};
+use scope::{Scope, ScopeType};
+use value::{Value, ValueId};
+
+use super::types::{TypeId, TypeStore};
+
+mod borrow;
 pub mod scope;
-use super::types::Type;
-use scope::{Scope, Symbol, Value};
+pub mod value;
 
 #[derive(Debug)]
-pub struct Context<'ctx> {
-  pub types: HashMap<&'ctx str, Type>,
-  pub scopes: Vec<Scope<'ctx>>,
-  pub pipe_arg: Option<Type>,
+pub struct Context {
+	pub scopes: Vec<Scope>,
+	pub borrow_store: BorrowStore,
+	pub type_store: TypeStore,
+	pub value_counter: ValueId,
 }
 
-impl<'ctx> Context<'ctx> {
-  pub fn new() -> Self {
-    Self { pipe_arg: None, types: HashMap::new(), scopes: vec![Scope::new()] }
-  }
+impl Context {
+	pub fn new() -> Self {
+		let scopes = Vec::from_iter(vec![Scope::default()]);
+		let borrow_store = BorrowStore::default();
+		let type_store = TypeStore::default();
+		Self { scopes, borrow_store, type_store, value_counter: ValueId::init() }
+	}
 
-  pub fn add_type(&mut self, name: &'ctx str, kind: Type) {
-    self.types.entry(name).or_insert(kind);
-  }
+	pub fn get_type_store(&self) -> &TypeStore {
+		&self.type_store
+	}
 
-  pub fn get_type(&self, name: &str) -> Option<&Type> {
-    self.types.get(name)
-  }
+	pub fn get_scope(&self) -> &Scope {
+		self.scopes.last().unwrap()
+	}
 
-  pub fn add_value(&mut self, name: &'ctx str, ty: Type) {
-    let scope = self.scopes.last_mut().unwrap(); // we always have at least one scope
-    scope.add_value(name, ty);
-  }
+	pub fn get_scope_mut(&mut self) -> &mut Scope {
+		self.scopes.last_mut().unwrap()
+	}
 
-  pub fn add_value_mut(&mut self, name: &'ctx str, ty: Type) {
-    let scope = self.scopes.last_mut().unwrap(); // we always have at least one scope
-    scope.add_value_mut(name, ty);
-  }
+	pub fn enter_scope(&mut self, scope_type: ScopeType) {
+		self.scopes.push(Scope::new(scope_type));
+	}
 
-  pub fn set_value(&mut self, name: &'ctx str, ty: Type) -> bool {
-    let scope = self.scopes.last_mut().unwrap(); // we always have at least one scope
-    scope.set_value(name, ty)
-  }
+	pub fn exit_scope(&mut self) {
+		self.scopes.pop();
+	}
 
-  pub fn get_value(&self, name: &str) -> Option<&Value> {
-    self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
-  }
+	pub fn has_fn_scope(&self) -> bool {
+		self.scopes.iter().rev().any(|scope| scope.is_fn_scope())
+	}
 
-  pub fn add_pipe_arg(&mut self, symbol: Symbol) {
-    self.pipe_arg = Some(symbol.as_ty());
-  }
-  pub fn take_pipe_arg(&mut self) -> Option<Type> {
-    self.pipe_arg.take()
-  }
+	pub fn has_loop_scope(&self) -> bool {
+		self.scopes.iter().rev().any(|scope| scope.is_loop_scope())
+	}
 
-  pub fn get_symbol(&self, name: &str) -> Option<Symbol> {
-    let value = self.scopes.iter().rev().find_map(|scope| scope.get_value(name));
-    value.map(|value| Symbol::Value(value.clone()))
-  }
+	pub fn get_fn_scope_ret_type(&self) -> Option<TypeId> {
+		self.scopes.iter().rev().find_map(|scope| scope.ret_scope())
+	}
+	// values
+	pub fn add_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
+		let value = Value::new_scoped(self.value_counter, type_id, is_mut);
+		self.get_scope_mut().add_value(name.to_string(), value);
+		self.value_counter.next_id()
+	}
 
-  pub fn get_value_mut(&mut self, name: &str) -> Option<&mut Value> {
-    self.scopes.iter_mut().rev().find_map(|scope| scope.get_value_mut(name))
-  }
+	pub fn add_value_external(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
+		let value = Value::new_external(self.value_counter, type_id, is_mut);
+		self.get_scope_mut().add_value(name.to_string(), value);
+		self.value_counter.next_id()
+	}
+	pub fn get_value(&self, name: &str) -> Option<&Value> {
+		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
+	}
 
-  pub fn enter_scope(&mut self) {
-    self.scopes.push(Scope::new());
-  }
+	// borrows
+	//
+	//
+	pub fn add_borrow(&mut self, value_id: ValueId, is_mut: bool) -> Option<BorrowId> {
+		if self.borrow_store.conflicts_with_borrow(value_id, is_mut) {
+			return None;
+		}
+		// let scope_id = ScopeId(self.scopes.len() - 1);
+		Some(self.borrow_store.add_borrow(value_id, is_mut))
+	}
 
-  pub fn exit_scope(&mut self) {
-    self.scopes.pop();
-  }
+	pub fn release_borrow(&mut self, borrow_id: BorrowId) {
+		self.borrow_store.drop_borrows(borrow_id)
+	}
+
+	pub fn conflicts_with_borrow(&self, value_id: ValueId, is_mut: bool) -> bool {
+		self.borrow_store.conflicts_with_borrow(value_id, is_mut)
+	}
+}
+
+impl Default for Context {
+	fn default() -> Self {
+		Self::new()
+	}
 }

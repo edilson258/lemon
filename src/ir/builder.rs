@@ -9,13 +9,13 @@ use std::collections::HashMap;
 use super::ir;
 
 pub struct Builder {
-  ctx: Context,
+	ctx: Context,
 }
 
 pub struct Context {
-  values: HashMap<String, ir::Bind>,
-  reg: usize,
-  block_id: usize,
+	values: HashMap<String, ir::Bind>,
+	reg: usize,
+	block_id: usize,
 }
 
 // impl Context {

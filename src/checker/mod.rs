@@ -1,80 +1,70 @@
 #![allow(dead_code, unused_variables)]
-
 use crate::{
-  ast::{self, Operator},
-  diag::{self, Diag},
-  range::Range,
+	ast,
+	diag::{Diag, DiagGroup},
 };
-use context::{scope::Symbol, Context};
-use diags::errs::TypeErr;
-use types::Type;
+use context::Context;
+use types::{Type, TypeFormatter, TypeId};
+mod synthesis;
 
-mod check_binary;
-mod check_call;
+// mod check_assign_expr
+mod check_binary_expr;
+mod check_block_stmt;
+mod check_borrow;
+mod check_call_expr;
+mod check_deref_expr;
 mod check_expr;
-mod check_fn;
-mod check_if;
+mod check_fn_stmt;
+mod check_ident_expr;
+mod check_if_expr;
+mod check_let_stmt;
 mod check_literal;
-mod check_pipe;
-mod check_stmt;
+mod check_number;
+mod check_primitive_type;
+mod check_ref_expr;
+mod check_return_expr;
 mod check_type;
 pub mod context;
 mod diags;
+mod equal_type;
+mod infer;
+pub(crate) mod modules;
 pub mod types;
 
-type DiagResult<T> = Result<T, diag::Diag>;
-type CkrResult = Result<Option<Symbol>, Diag>;
+type TypeResult<T> = Result<T, Diag>;
 
 pub struct Checker<'ckr> {
-  ctx: Context<'ckr>,
-  diag_group: &'ckr mut diag::DiagGroup<'ckr>,
+	ctx: Context,
+	diag_group: &'ckr mut DiagGroup<'ckr>,
 }
 
 impl<'ckr> Checker<'ckr> {
-  pub fn new(diag_group: &'ckr mut diag::DiagGroup<'ckr>, ctx: Context<'ckr>) -> Self {
-    Self { ctx, diag_group }
-  }
+	pub fn new(diag_group: &'ckr mut DiagGroup<'ckr>, ctx: Context) -> Self {
+		Self { ctx, diag_group }
+	}
 
-  pub fn check_program(&mut self, ast: &'ckr ast::Program) -> CkrResult {
-    ast.stmts.split_last().map_or(Ok(None), |(last, rest)| {
-      for stmt in rest {
-        self.check_stmt(stmt)?;
-      }
-      self.check_stmt(last)
-    })
-  }
-  pub fn check_binding(&mut self, binding: &'ckr ast::Binding) -> CkrResult {
-    binding.ty.as_ref().map_or(Ok(None), |ty| self.check_type(ty))
-  }
+	pub fn check_program(&mut self, ast: &ast::Program) -> TypeResult<TypeId> {
+		for stmt in ast.stmts.iter() {
+			self.check_stmt(stmt)?;
+		}
+		Ok(TypeId::NOTHING)
+	}
 
-  pub fn operator_supported(&self, left: &Symbol, right: &Symbol, operator: &Operator) -> bool {
-    let left = left.as_ref_ty();
-    let right = right.as_ref_ty();
-    if !left.can_operate_with(operator) || !right.can_operate_with(operator) {
-      return false;
-    }
-    left.is_cmp_with(right)
-  }
+	pub(crate) fn check_stmt(&mut self, stmt: &ast::Stmt) -> TypeResult<TypeId> {
+		match stmt {
+			ast::Stmt::Expr(expr) => self.check_expr(expr),
+			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
+			ast::Stmt::Fn(fn_stmt) => self.check_fn_stmt(fn_stmt),
+			ast::Stmt::Block(block_stmt) => self.check_block_stmt(block_stmt),
+		}
+	}
 
-  pub fn take_common_type(&self, left: &Symbol, right: &Symbol) -> Type {
-    match (left.as_ref_ty(), right.as_ref_ty()) {
-      (Type::Float(l), Type::Float(r)) => Type::Float(l.higher_bits(r)),
-      (Type::Numb(l), Type::Numb(r)) => Type::Numb(l.higher_bits(r)),
-      (_, r) => r.clone(),
-    }
-  }
-
-  pub fn assign_compatible(&self, expect: &Type, found: &Type, range: Range) -> Result<(), Diag> {
-    if found.is_cmp_with(expect) {
-      if !found.fits_into(expect) {
-        return Err(TypeErr::out_of_range(expect, found, range));
-      }
-      return Ok(());
-    }
-
-    if !expect.eq(found) {
-      return Err(TypeErr::mismatched_type(expect, found, range));
-    }
-    Ok(())
-  }
+	fn get_stored_type(&self, type_id: TypeId) -> TypeResult<&Type> {
+		Ok(self.ctx.type_store.get_type(type_id).unwrap()) // TODO: error handling
+	}
+	pub fn format(&self, type_id: TypeId) -> String {
+		// todo: we can use Rc and make format global???
+		let formatter = TypeFormatter::new(&self.ctx.type_store);
+		formatter.format(type_id)
+	}
 }
