@@ -1,11 +1,13 @@
 use borrow::{BorrowId, BorrowStore};
 use scope::{Scope, ScopeType};
+use store::Store;
 use value::{Value, ValueId};
 
 use super::types::{TypeId, TypeStore};
 
 mod borrow;
 pub mod scope;
+pub mod store;
 pub mod value;
 
 #[derive(Debug)]
@@ -13,7 +15,9 @@ pub struct Context {
 	pub scopes: Vec<Scope>,
 	pub borrow_store: BorrowStore,
 	pub type_store: TypeStore,
-	pub value_counter: ValueId,
+	pub store: Store,
+	pub value_id: ValueId,
+	pub store_id: usize,
 }
 
 impl Context {
@@ -21,7 +25,10 @@ impl Context {
 		let scopes = Vec::from_iter(vec![Scope::default()]);
 		let borrow_store = BorrowStore::default();
 		let type_store = TypeStore::default();
-		Self { scopes, borrow_store, type_store, value_counter: ValueId::init() }
+		let store = Store::new();
+		let value_id = ValueId::init();
+		let store_id = 0;
+		Self { scopes, borrow_store, type_store, store, value_id, store_id }
 	}
 
 	pub fn get_type_store(&self) -> &TypeStore {
@@ -38,6 +45,7 @@ impl Context {
 
 	pub fn enter_scope(&mut self, scope_type: ScopeType) {
 		self.scopes.push(Scope::new(scope_type));
+		self.store_id += 1;
 	}
 
 	pub fn exit_scope(&mut self) {
@@ -57,16 +65,12 @@ impl Context {
 	}
 	// values
 	pub fn add_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
-		let value = Value::new_scoped(self.value_counter, type_id, is_mut);
+		let value = Value::new_scoped(self.value_id, type_id, is_mut);
+		self.store.add_value(self.store_id, name.to_string(), type_id);
 		self.get_scope_mut().add_value(name.to_string(), value);
-		self.value_counter.next_id()
+		self.value_id.next_id()
 	}
 
-	pub fn add_value_external(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
-		let value = Value::new_external(self.value_counter, type_id, is_mut);
-		self.get_scope_mut().add_value(name.to_string(), value);
-		self.value_counter.next_id()
-	}
 	pub fn get_value(&self, name: &str) -> Option<&Value> {
 		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
 	}

@@ -26,10 +26,8 @@ impl Checker<'_> {
 
 		for (lexeme, range, type_id) in cache {
 			let par_id = self.ctx.type_store.add_type(Type::Par { target: type_id });
-			let value_id = self.ctx.add_value_external(lexeme, par_id, false);
-			self.check_borrow(value_id, par_id, range)?;
+			let value_id = self.ctx.add_value(lexeme, par_id, false);
 		}
-
 		let ret_found = self.check_fn_body(&fn_stmt.body)?;
 		self.equal_type_id(ret_id, ret_found, fn_stmt.body.get_range())?;
 		self.ctx.exit_scope();
@@ -58,12 +56,10 @@ impl Checker<'_> {
 	}
 
 	fn check_fn_block_stmt(&mut self, stmt: &ast::BlockStmt) -> TypeResult<TypeId> {
+		let mut ret_type = TypeId::NOTHING;
 		for stmt in stmt.stmts.iter() {
-			let ret_type = self.check_stmt(stmt)?;
-			if ret_type != TypeId::NOTHING {
-				return Ok(ret_type);
-			}
+			ret_type = self.check_stmt(stmt)?;
 		}
-		Ok(TypeId::NOTHING)
+		Ok(ret_type)
 	}
 }

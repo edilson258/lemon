@@ -55,9 +55,8 @@ impl BorrowStore {
 	pub fn drop_borrows(&mut self, borrow_id: BorrowId) {
 		self.borrows.retain(|borrow| borrow.id != borrow_id);
 	}
-
 	pub fn conflicts_with_borrow(&self, value_id: ValueId, is_mut: bool) -> bool {
-		println!("{:?}", self.borrows);
+		// only  one mutable boorrow is allowed
 		self.borrows.iter().any(|borrow| borrow.value_id == value_id && borrow.is_mutable() && is_mut)
 	}
 

@@ -1,6 +1,7 @@
 mod ast;
 mod checker;
 mod cli;
+// mod compiler;
 mod diag;
 mod ir;
 mod lexer;
@@ -12,6 +13,7 @@ mod source;
 use std::path::Path;
 
 use checker::{context::Context, Checker};
+// use compiler::Compiler;
 use diag::DiagGroup;
 use lexer::Token;
 use logos::Logos;
@@ -36,8 +38,8 @@ fn check(source: Source) {
 	};
 	// println!("{:?}", ast);
 	let mut diag_group = DiagGroup::new(&source);
-	let ctx = Context::new();
-	let mut checker = Checker::new(&mut diag_group, ctx);
+	let mut ctx = Context::new();
+	let mut checker = Checker::new(&mut diag_group, &mut ctx);
 	let _ = match checker.check_program(&ast) {
 		Ok(tyy) => tyy,
 		Err(diag) => diag.report_type_err_wrap(&source),
@@ -52,18 +54,17 @@ fn compile(source: Source) {
 		Ok(ast) => ast,
 		Err(diag) => diag.report_syntax_err_wrap(&source),
 	};
-	println!("checking...");
 	let mut diag_group = DiagGroup::new(&source);
-	let ctx = Context::new();
-	let mut checker = Checker::new(&mut diag_group, ctx);
+	let mut ctx = Context::new();
+	let mut checker = Checker::new(&mut diag_group, &mut ctx);
 	let _ = match checker.check_program(&ast) {
 		Ok(tyy) => tyy,
 		Err(diag) => diag.report_type_err_wrap(&source),
 	};
-	println!("emmit ir...");
-	// let mut builder = ir::Builder::new();
-	// let ir = builder.build(ast);
-	// println!("{}", ir);
+	// println!("ok.");
+	let mut ir_builder = ir::Builder::new(&ctx.store, &ctx.type_store);
+	let ir = ir_builder.build(&ast);
+	println!("{}", ir);
 }
 
 fn lex(source: Source) {

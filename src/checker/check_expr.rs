@@ -14,7 +14,6 @@ impl Checker<'_> {
 			ast::Expr::Call(call_expr) => self.check_call_expr(call_expr),
 			ast::Expr::Ret(ret) => self.check_return_expr(ret),
 			ast::Expr::If(if_expr) => self.check_if_expr(if_expr),
-
 			_ => todo!(),
 		}
 	}

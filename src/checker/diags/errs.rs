@@ -169,8 +169,9 @@ impl<'tce> From<TypeCheckError<'tce>> for diag::Diag {
 				diag::Diag::new(Severity::Err, text, range)
 			}
 			TypeCheckError::BorrowConflict { range } => {
-				let text = "cannot borrow as mutable and immutable at the same time.".to_string();
+				let text = "mutable and immutable borrows conflict.".to_string();
 				diag::Diag::new(Severity::Err, text, range)
+					.with_note("cannot borrow as mutable and immutable at the same time.")
 			}
 			TypeCheckError::DoubleMutBorrow { range } => {
 				let text = "already mutably borrowed.".to_string();

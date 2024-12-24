@@ -11,7 +11,7 @@ impl Checker<'_> {
 		let fn_type = self.unwrap_fn_type(callee_id, call_expr.get_range())?;
 
 		self.call_args_match(fn_type.args, &call_expr.args)?;
-		//  just fuck fix ... sorry :(
+
 		Ok(fn_type.ret)
 	}
 

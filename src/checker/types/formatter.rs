@@ -18,7 +18,7 @@ impl<'tf> TypeFormatter<'tf> {
 	fn format_inner(&self, type_id: TypeId, type_str: &mut String) {
 		match self.type_store.get_type(type_id) {
 			Some(found_type) => self.format_inner_type(found_type, type_str),
-			None => type_str.push_str("unknown"),
+			None => type_str.push_str("???"),
 		}
 	}
 
@@ -88,6 +88,6 @@ impl<'tf> TypeFormatter<'tf> {
 	fn format_inner_infer_int(&self, bits: &u8, type_str: &mut String) {
 		type_str.push('i');
 		type_str.push_str(if *bits <= 32 { "32" } else { "64" });
-		// type_str.push('?');
+		type_str.push('?');
 	}
 }

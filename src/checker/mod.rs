@@ -10,7 +10,6 @@ mod synthesis;
 // mod check_assign_expr
 mod check_binary_expr;
 mod check_block_stmt;
-mod check_borrow;
 mod check_call_expr;
 mod check_deref_expr;
 mod check_expr;
@@ -34,12 +33,12 @@ pub mod types;
 type TypeResult<T> = Result<T, Diag>;
 
 pub struct Checker<'ckr> {
-	ctx: Context,
+	ctx: &'ckr mut Context,
 	diag_group: &'ckr mut DiagGroup<'ckr>,
 }
 
 impl<'ckr> Checker<'ckr> {
-	pub fn new(diag_group: &'ckr mut DiagGroup<'ckr>, ctx: Context) -> Self {
+	pub fn new(diag_group: &'ckr mut DiagGroup<'ckr>, ctx: &'ckr mut Context) -> Self {
 		Self { ctx, diag_group }
 	}
 

@@ -21,30 +21,6 @@ impl TypeStore {
 
 impl Default for TypeStore {
 	fn default() -> Self {
-		/*
-
-		pub const NOTHING: TypeId = TypeId(0);
-		pub const BOOL: TypeId = TypeId(1);
-		pub const STR: TypeId = TypeId(2);
-		pub const STRING: TypeId = TypeId(3);
-		pub const CHAR: TypeId = TypeId(4);
-		// int
-		pub const I8: TypeId = TypeId(5);
-		pub const I16: TypeId = TypeId(6);
-		pub const I32: TypeId = TypeId(7);
-		pub const I64: TypeId = TypeId(8);
-		pub const INT: TypeId = TypeId(9);
-		// usize
-		pub const U8: TypeId = TypeId(10);
-		pub const U16: TypeId = TypeId(11);
-		pub const U32: TypeId = TypeId(12);
-		pub const U64: TypeId = TypeId(13);
-		pub const USIZE: TypeId = TypeId(14);
-		// float
-		pub const FLOAT32: TypeId = TypeId(15);
-		pub const FLOAT64: TypeId = TypeId(16);
-
-		*/
 		let types = vec![
 			Type::None,                    // 0
 			Type::Bool,                    // 1
@@ -63,8 +39,6 @@ impl Default for TypeStore {
 			Type::Usize(UsizeType::Usize), // 14
 			Type::Float(FloatType::F32),   // 15
 			Type::Float(FloatType::F64),   // 16
-			                               // Type::InferI32,
-			                               // Type::InferF32,
 		];
 
 		assert_eq!(types.len(), TypeId::LENGTH);
