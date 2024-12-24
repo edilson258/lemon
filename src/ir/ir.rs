@@ -214,114 +214,114 @@ impl Default for Ir {
 	}
 }
 
-// display
-impl std::fmt::Display for Ir {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		for fn_ir in self.fns.iter() {
-			writeln!(f, "{}", fn_ir)?;
-		}
-		Ok(())
-	}
-}
+// // display
+// impl std::fmt::Display for Ir {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		for fn_ir in self.fns.iter() {
+// 			writeln!(f, "{}", fn_ir)?;
+// 		}
+// 		Ok(())
+// 	}
+// }
 
-impl std::fmt::Display for Fn {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "fn {}", self.fn_id)?;
-		write!(f, "(")?;
-		for (i, param) in self.params.iter().enumerate() {
-			if i > 0 {
-				write!(f, ", ")?;
-			}
-			write!(f, "{}", param)?;
-		}
-		write!(f, ")")?;
-		write!(f, " -> ??")?;
+// impl std::fmt::Display for Fn {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		write!(f, "fn {}", self.fn_id)?;
+// 		write!(f, "(")?;
+// 		for (i, param) in self.params.iter().enumerate() {
+// 			if i > 0 {
+// 				write!(f, ", ")?;
+// 			}
+// 			write!(f, "{}", param)?;
+// 		}
+// 		write!(f, ")")?;
+// 		write!(f, " -> ??")?;
 
-		writeln!(f)?;
-		for block in self.body.iter() {
-			write!(f, "{}", block)?;
-		}
-		Ok(())
-	}
-}
+// 		writeln!(f)?;
+// 		for block in self.body.iter() {
+// 			write!(f, "{}", block)?;
+// 		}
+// 		Ok(())
+// 	}
+// }
 
-impl std::fmt::Display for Block {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		for (i, instr) in self.instrs.iter().enumerate() {
-			if i == 0 {
-				writeln!(f, "l{}: {}", self.label.0, instr)?;
-			} else {
-				writeln!(f, "    {}", instr)?;
-			}
-		}
-		Ok(())
-	}
-}
+// impl std::fmt::Display for Block {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		for (i, instr) in self.instrs.iter().enumerate() {
+// 			if i == 0 {
+// 				writeln!(f, "l{}: {}", self.label.0, instr)?;
+// 			} else {
+// 				writeln!(f, "    {}", instr)?;
+// 			}
+// 		}
+// 		Ok(())
+// 	}
+// }
 
-impl std::fmt::Display for Instr {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match &self.code {
-			Code::ADD { lhs, rhs, dest } => write!(f, "add {}, {} -> {}", lhs, rhs, dest),
-			Code::SUB { lhs, rhs, dest } => write!(f, "sub {}, {} -> {}", lhs, rhs, dest),
-			Code::DIV { lhs, rhs, dest } => write!(f, "div {}, {} -> {}", lhs, rhs, dest),
-			Code::MUL { lhs, rhs, dest } => write!(f, "mul {}, {} -> {}", lhs, rhs, dest),
-			Code::MOD { lhs, rhs, dest } => write!(f, "mod {}, {} -> {}", lhs, rhs, dest),
-			Code::CMPGT { lhs, rhs, dest } => write!(f, "cmp_gt {}, {} -> {}", lhs, rhs, dest),
-			Code::CMPEQ { lhs, rhs, dest } => write!(f, "cmp_eq {}, {} -> {}", lhs, rhs, dest),
-			Code::CMPLT { lhs, rhs, dest } => write!(f, "cmp_lt {}, {} -> {}", lhs, rhs, dest),
-			Code::CMPLE { lhs, rhs, dest } => write!(f, "cmp_le {}, {} -> {}", lhs, rhs, dest),
-			Code::JMPIF { cond, l0, l1 } => write!(f, "jmp_if {}, {}, {}", cond, l0, l1),
-			Code::GOTO { to } => write!(f, "goto {}", to),
-			Code::OWN { value, dest } => write!(f, "own {} -> {}", value, dest),
-			Code::BORROW { value, dest } => write!(f, "borrow {} -> {}", value, dest),
-			Code::BORROW_MUT { value, dest } => write!(f, "borrow_mut {} -> {}", value, dest),
-			Code::FREE { value } => write!(f, "free {}", value),
-			Code::RET { value } => write!(f, "ret {}", value),
-			Code::CALL { fn_id, args, dest } => {
-				write!(
-					f,
-					"call {} {} -> {}",
-					fn_id,
-					args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(", "),
-					dest
-				)
-			}
-			Code::HEAP { value, dest } => write!(f, "heap {} -> {}", value, dest),
-			Code::LOAD { value, dest } => write!(f, "load {} -> {}", value, dest),
-			_ => todo!(),
-		}
-	}
-}
-impl std::fmt::Display for Bind {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}: ??", self.register)
-	}
-}
+// impl std::fmt::Display for Instr {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		match &self.code {
+// 			Code::ADD { lhs, rhs, dest } => write!(f, "add {}, {} -> {}", lhs, rhs, dest),
+// 			Code::SUB { lhs, rhs, dest } => write!(f, "sub {}, {} -> {}", lhs, rhs, dest),
+// 			Code::DIV { lhs, rhs, dest } => write!(f, "div {}, {} -> {}", lhs, rhs, dest),
+// 			Code::MUL { lhs, rhs, dest } => write!(f, "mul {}, {} -> {}", lhs, rhs, dest),
+// 			Code::MOD { lhs, rhs, dest } => write!(f, "mod {}, {} -> {}", lhs, rhs, dest),
+// 			Code::CMPGT { lhs, rhs, dest } => write!(f, "cmp_gt {}, {} -> {}", lhs, rhs, dest),
+// 			Code::CMPEQ { lhs, rhs, dest } => write!(f, "cmp_eq {}, {} -> {}", lhs, rhs, dest),
+// 			Code::CMPLT { lhs, rhs, dest } => write!(f, "cmp_lt {}, {} -> {}", lhs, rhs, dest),
+// 			Code::CMPLE { lhs, rhs, dest } => write!(f, "cmp_le {}, {} -> {}", lhs, rhs, dest),
+// 			Code::JMPIF { cond, l0, l1 } => write!(f, "jmp_if {}, {}, {}", cond, l0, l1),
+// 			Code::GOTO { to } => write!(f, "goto {}", to),
+// 			Code::OWN { value, dest } => write!(f, "own {} -> {}", value, dest),
+// 			Code::BORROW { value, dest } => write!(f, "borrow {} -> {}", value, dest),
+// 			Code::BORROW_MUT { value, dest } => write!(f, "borrow_mut {} -> {}", value, dest),
+// 			Code::FREE { value } => write!(f, "free {}", value),
+// 			Code::RET { value } => write!(f, "ret {}", value),
+// 			Code::CALL { fn_id, args, dest } => {
+// 				write!(
+// 					f,
+// 					"call {} {} -> {}",
+// 					fn_id,
+// 					args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(", "),
+// 					dest
+// 				)
+// 			}
+// 			Code::HEAP { value, dest } => write!(f, "heap {} -> {}", value, dest),
+// 			Code::LOAD { value, dest } => write!(f, "load {} -> {}", value, dest),
+// 			_ => todo!(),
+// 		}
+// 	}
+// }
+// impl std::fmt::Display for Bind {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		write!(f, "{}: ??", self.register)
+// 	}
+// }
 
-impl std::fmt::Display for Register {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "r{}", self.0)
-	}
-}
-impl std::fmt::Display for FnId {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", self.0)
-	}
-}
-impl std::fmt::Display for Label {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "l{}", self.0)
-	}
-}
+// impl std::fmt::Display for Register {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		write!(f, "r{}", self.0)
+// 	}
+// }
+// impl std::fmt::Display for FnId {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		write!(f, "{}", self.0)
+// 	}
+// }
+// impl std::fmt::Display for Label {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		write!(f, "l{}", self.0)
+// 	}
+// }
 
-impl std::fmt::Display for HeapValue {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			HeapValue::Char(c) => write!(f, "{}", c),
-			HeapValue::String(s) => write!(f, "{}", s),
-			HeapValue::Int(i) => write!(f, "{}", i),
-			HeapValue::Float(fl) => write!(f, "{}", fl),
-			HeapValue::Bool(b) => write!(f, "{}", b),
-		}
-	}
-}
+// impl std::fmt::Display for HeapValue {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		match self {
+// 			HeapValue::Char(c) => write!(f, "{}", c),
+// 			HeapValue::String(s) => write!(f, "{}", s),
+// 			HeapValue::Int(i) => write!(f, "{}", i),
+// 			HeapValue::Float(fl) => write!(f, "{}", fl),
+// 			HeapValue::Bool(b) => write!(f, "{}", b),
+// 		}
+// 	}
+// }

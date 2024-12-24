@@ -2,7 +2,7 @@
 use core::fmt;
 use std::fmt::Display;
 
-use crate::{lexer::Token, range::Range};
+use crate::{checker::types::TypeId, lexer::Token, range::Range};
 use serde::{Deserialize, Serialize};
 mod ast_type;
 pub use ast_type::*;
@@ -42,6 +42,7 @@ pub struct LetStmt {
 	pub expr: Expr,
 	pub mutable: Option<Range>,
 	pub range: Range, // let range
+	pub type_id: Option<TypeId>,
 }
 
 impl LetStmt {
@@ -55,6 +56,14 @@ impl LetStmt {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
 	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+		self.name.set_type_id(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
+	}
 }
 
 // fn <name>(<pats>): <type> = { <stmts> }
@@ -65,6 +74,7 @@ pub struct FnStmt {
 	pub return_type: Option<ast_type::AstType>, // todo: implement this
 	pub body: Box<Stmt>,
 	pub range: Range, // fn range
+	pub type_id: Option<TypeId>,
 }
 
 impl FnStmt {
@@ -74,6 +84,13 @@ impl FnStmt {
 	pub fn get_range(&self) -> Range {
 		// fn ... body
 		self.range.merged_with(&self.body.get_range())
+	}
+
+	pub fn set_ret_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_ret_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -112,6 +129,7 @@ impl Ident {
 pub struct Binding {
 	pub ident: Ident,
 	pub ty: Option<ast_type::AstType>,
+	pub type_id: Option<TypeId>,
 }
 
 impl Binding {
@@ -124,6 +142,13 @@ impl Binding {
 		} else {
 			self.ident.get_range()
 		}
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -184,11 +209,19 @@ pub struct FnExpr {
 	pub return_type: Option<ast_type::AstType>,
 	pub body: Box<Stmt>,
 	pub range: Range, // fn range
+	pub type_id: Option<TypeId>,
 }
 
 impl FnExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.body.get_range())
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -197,11 +230,18 @@ pub struct AssignExpr {
 	pub left: Box<Expr>,
 	pub right: Box<Expr>,
 	pub range: Range, // assign range
+	pub type_id: Option<TypeId>,
 }
 
 impl AssignExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.left.get_range()).merged_with(&self.right.get_range())
+	}
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -236,11 +276,19 @@ pub struct BinaryExpr {
 	pub right: Box<Expr>,
 	pub operator: Operator,
 	pub range: Range, //  operator range
+	pub type_id: Option<TypeId>,
 }
 
 impl BinaryExpr {
 	pub fn get_range(&self) -> Range {
 		self.left.get_range().merged_with(&self.range).merged_with(&self.right.get_range())
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -262,11 +310,18 @@ pub struct CallExpr {
 	pub callee: Box<Expr>,
 	pub args: Vec<Expr>,
 	pub range: Range, // (args...)
+	pub type_id: Option<TypeId>,
 }
 
 impl CallExpr {
 	pub fn get_range(&self) -> Range {
 		self.callee.get_range().merged_with(&self.range)
+	}
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -336,11 +391,18 @@ pub struct RefExpr {
 	pub expr: Box<Expr>,
 	pub range: Range,           // ref range
 	pub mutable: Option<Range>, // mutable range
+	pub type_id: Option<TypeId>,
 }
 
 impl RefExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.expr.get_range())
+	}
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -348,11 +410,18 @@ impl RefExpr {
 pub struct DerefExpr {
 	pub expr: Box<Expr>,
 	pub range: Range, // deref range
+	pub type_id: Option<TypeId>,
 }
 
 impl DerefExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.expr.get_range())
+	}
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 

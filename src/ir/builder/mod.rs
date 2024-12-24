@@ -2,17 +2,14 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-use std::collections::HashMap;
-
-use serde::ser;
-
 use crate::{
 	ast,
 	checker::{
 		context::store,
-		types::{self, TypeId},
+		types::{self, Type, TypeId},
 	},
 };
+use std::collections::HashMap;
 
 use super::ir::{self, HeapValue};
 
@@ -111,10 +108,10 @@ impl<'br> Builder<'br> {
 
 	fn build_fn_stmt(&mut self, fn_stmt: &ast::FnStmt) {
 		let register = self.take_register();
-		let name = fn_stmt.name.lexeme().to_owned();
+		let name = fn_stmt.lexeme().to_owned();
 		self.ir_ctx.add_value(fn_stmt.lexeme(), register);
 		let params = self.build_fn_params(&fn_stmt.params);
-		let ret_id = self.build_fn_return_type(fn_stmt.return_type.as_ref());
+		let ret_id = fn_stmt.type_id.unwrap();
 		self.start_fn(register, name, params, ret_id);
 		self.ir_ctx.enter_scope();
 		self.build_fn_body(fn_stmt.body.as_ref());
@@ -134,7 +131,8 @@ impl<'br> Builder<'br> {
 	fn build_binding(&mut self, binding: &ast::Binding) -> ir::Bind {
 		let register = self.take_register();
 		self.ir_ctx.add_value(binding.lexeme(), register);
-		ir::Bind { register, type_id: self.nothing_type_id() }
+		let type_id = binding.type_id.unwrap();
+		ir::Bind { register, type_id }
 	}
 
 	fn build_fn_return_type(&mut self, _ret_type: Option<&ast::AstType>) -> TypeId {
@@ -272,7 +270,7 @@ impl<'br> Builder<'br> {
 	fn get_fn_id(&mut self, fn_register: ir::Register) -> ir::FnId {
 		let fn_id = self.ir_ctx.get_fn_value(fn_register);
 		if fn_id.is_none() {
-			panic!("unknown fn id '{}'", fn_register);
+			panic!("unknown fn id '{:?}'", fn_register);
 		}
 		fn_id.unwrap().clone()
 	}
@@ -346,6 +344,10 @@ impl<'br> Builder<'br> {
 		let label = ir::Label(self.label_id);
 		self.label_id += 1;
 		label
+	}
+
+	pub fn take_type_id(&mut self, type_id: TypeId) -> Type {
+		self.type_store.get_type(type_id).unwrap().clone()
 	}
 
 	pub fn start_fn(

@@ -3,7 +3,7 @@ use crate::ast;
 use super::types::TypeId;
 use super::{Checker, TypeResult};
 impl Checker<'_> {
-	pub fn check_expr(&mut self, expr: &ast::Expr) -> TypeResult<TypeId> {
+	pub fn check_expr(&mut self, expr: &mut ast::Expr) -> TypeResult<TypeId> {
 		match expr {
 			ast::Expr::Binary(binary_expr) => self.check_binary_expr(binary_expr),
 			ast::Expr::Literal(literal) => self.check_literal(literal),

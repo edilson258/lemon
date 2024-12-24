@@ -42,14 +42,14 @@ impl<'ckr> Checker<'ckr> {
 		Self { ctx, diag_group }
 	}
 
-	pub fn check_program(&mut self, ast: &ast::Program) -> TypeResult<TypeId> {
-		for stmt in ast.stmts.iter() {
+	pub fn check_program(&mut self, ast: &mut ast::Program) -> TypeResult<TypeId> {
+		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}
 		Ok(TypeId::NOTHING)
 	}
 
-	pub(crate) fn check_stmt(&mut self, stmt: &ast::Stmt) -> TypeResult<TypeId> {
+	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> TypeResult<TypeId> {
 		match stmt {
 			ast::Stmt::Expr(expr) => self.check_expr(expr),
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),

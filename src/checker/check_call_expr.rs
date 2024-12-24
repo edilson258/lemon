@@ -5,17 +5,17 @@ use crate::ast::{self};
 use crate::range::Range;
 
 impl Checker<'_> {
-	pub fn check_call_expr(&mut self, call_expr: &ast::CallExpr) -> TypeResult<TypeId> {
-		let callee_id = self.check_expr(&call_expr.callee)?;
+	pub fn check_call_expr(&mut self, call_expr: &mut ast::CallExpr) -> TypeResult<TypeId> {
+		let callee_id = self.check_expr(&mut call_expr.callee)?;
 
 		let fn_type = self.unwrap_fn_type(callee_id, call_expr.get_range())?;
 
-		self.call_args_match(fn_type.args, &call_expr.args)?;
+		self.call_args_match(fn_type.args, &mut call_expr.args)?;
 
 		Ok(fn_type.ret)
 	}
 
-	fn call_args_match(&mut self, expects: Vec<TypeId>, founds: &[ast::Expr]) -> TypeResult<()> {
+	fn call_args_match(&mut self, expects: Vec<TypeId>, founds: &mut [ast::Expr]) -> TypeResult<()> {
 		for (expected_id, found_expr) in expects.iter().zip(founds) {
 			let found_id = self.check_expr(found_expr)?;
 			self.equal_type_id(*expected_id, found_id, found_expr.get_range())?;

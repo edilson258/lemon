@@ -56,7 +56,7 @@ impl<'lex> Parser<'lex> {
 		let name = self.parse_binding()?;
 		self.expect(Token::Assign)?; // =
 		let expr = self.parse_expr(MIN_PDE)?;
-		Ok(ast::LetStmt { name, mutable, expr, range })
+		Ok(ast::LetStmt { name, mutable, expr, range, type_id: None })
 	}
 
 	fn parse_fn_stmt(&mut self) -> PResult<'lex, ast::FnStmt> {
@@ -81,7 +81,7 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = Box::new(self.parse_stmt()?);
-		Ok(ast::FnStmt { name, params, return_type, body, range })
+		Ok(ast::FnStmt { name, params, return_type, body, range, type_id: None })
 	}
 
 	fn parse_block_stmt(&mut self) -> PResult<'lex, ast::BlockStmt> {
@@ -105,6 +105,7 @@ impl<'lex> Parser<'lex> {
 				operator,
 				right: Box::new(right),
 				range,
+				type_id: None,
 			});
 		}
 		Ok(left)
@@ -164,14 +165,14 @@ impl<'lex> Parser<'lex> {
 			mutable = Some(self.expect(Token::Mut)?);
 		}
 		let expr = self.parse_ref_and_deref_value()?;
-		Ok(ast::RefExpr { expr: Box::new(expr), range, mutable })
+		Ok(ast::RefExpr { expr: Box::new(expr), range, mutable, type_id: None })
 	}
 
 	// *<expr>
 	fn parse_deref_expr(&mut self) -> PResult<'lex, ast::DerefExpr> {
 		let range = self.expect(Token::Star)?.clone();
 		let expr = self.parse_ref_and_deref_value()?;
-		Ok(ast::DerefExpr { expr: Box::new(expr), range })
+		Ok(ast::DerefExpr { expr: Box::new(expr), range, type_id: None })
 	}
 
 	fn parse_ref_and_deref_value(&mut self) -> PResult<'lex, ast::Expr> {
@@ -244,7 +245,7 @@ impl<'lex> Parser<'lex> {
 
 		let body = Box::new(self.parse_stmt()?);
 
-		Ok(ast::FnExpr { params, body, range, return_type })
+		Ok(ast::FnExpr { params, body, range, return_type, type_id: None })
 	}
 
 	fn parse_if_expr(&mut self) -> PResult<'lex, ast::IfExpr> {
@@ -280,7 +281,7 @@ impl<'lex> Parser<'lex> {
 			}
 		}
 		range.merge(&self.expect(Token::RParen)?); // consume ')'
-		let call_expr = ast::CallExpr { callee: Box::new(callee), args, range };
+		let call_expr = ast::CallExpr { callee: Box::new(callee), args, range, type_id: None };
 		Ok(ast::Expr::Call(call_expr))
 	}
 
@@ -291,7 +292,8 @@ impl<'lex> Parser<'lex> {
 			return Err(diag);
 		}
 		let right = self.parse_expr(MIN_PDE)?;
-		let assign_expr = ast::AssignExpr { left: Box::new(left), right: Box::new(right), range };
+		let assign_expr =
+			ast::AssignExpr { left: Box::new(left), right: Box::new(right), range, type_id: None };
 		Ok(ast::Expr::Assign(assign_expr))
 	}
 
@@ -356,7 +358,7 @@ impl<'lex> Parser<'lex> {
 			self.expect(Token::Colon)?;
 			ty = Some(self.parse_type()?);
 		}
-		Ok(ast::Binding { ident, ty })
+		Ok(ast::Binding { ident, ty, type_id: None })
 	}
 
 	fn parse_ident(&mut self) -> PResult<'lex, ast::Ident> {

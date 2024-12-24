@@ -7,9 +7,9 @@ use ast::Operator;
 use super::{diags::TypeCheckError, types::TypeId, Checker, TypeResult};
 
 impl Checker<'_> {
-	pub fn check_binary_expr(&mut self, binary_expr: &ast::BinaryExpr) -> TypeResult<TypeId> {
-		let left = self.check_expr(&binary_expr.left)?;
-		let right = self.check_expr(&binary_expr.right)?;
+	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> TypeResult<TypeId> {
+		let left = self.check_expr(&mut binary_expr.left)?;
+		let right = self.check_expr(&mut binary_expr.right)?;
 		let range = binary_expr.get_range();
 		match binary_expr.operator {
 			Operator::ADD => {

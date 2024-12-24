@@ -32,7 +32,7 @@ fn loader(path_name: &str) -> Source {
 fn check(source: Source) {
 	let mut lexer = Token::lexer(source.raw());
 	let mut parser = Parser::new(&mut lexer);
-	let ast = match parser.parse_program() {
+	let mut ast = match parser.parse_program() {
 		Ok(ast) => ast,
 		Err(diag) => diag.report_syntax_err_wrap(&source),
 	};
@@ -40,7 +40,7 @@ fn check(source: Source) {
 	let mut diag_group = DiagGroup::new(&source);
 	let mut ctx = Context::new();
 	let mut checker = Checker::new(&mut diag_group, &mut ctx);
-	let _ = match checker.check_program(&ast) {
+	let _ = match checker.check_program(&mut ast) {
 		Ok(tyy) => tyy,
 		Err(diag) => diag.report_type_err_wrap(&source),
 	};
@@ -50,21 +50,22 @@ fn check(source: Source) {
 fn compile(source: Source) {
 	let mut lexer = Token::lexer(source.raw());
 	let mut parser = Parser::new(&mut lexer);
-	let ast = match parser.parse_program() {
+	let mut ast = match parser.parse_program() {
 		Ok(ast) => ast,
 		Err(diag) => diag.report_syntax_err_wrap(&source),
 	};
 	let mut diag_group = DiagGroup::new(&source);
 	let mut ctx = Context::new();
 	let mut checker = Checker::new(&mut diag_group, &mut ctx);
-	let _ = match checker.check_program(&ast) {
+	let _ = match checker.check_program(&mut ast) {
 		Ok(tyy) => tyy,
 		Err(diag) => diag.report_type_err_wrap(&source),
 	};
 	// println!("ok.");
 	let mut ir_builder = ir::Builder::new(&ctx.store, &ctx.type_store);
 	let ir = ir_builder.build(&ast);
-	println!("{}", ir);
+	let disassembler = ir::Disassembler::new(&ctx.type_store);
+	println!("{}", disassembler.disassemble(&ir));
 }
 
 fn lex(source: Source) {

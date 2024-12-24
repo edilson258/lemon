@@ -5,12 +5,12 @@ use super::diags::TypeCheckError;
 use super::types::{Type, TypeId};
 use super::{Checker, TypeResult};
 impl Checker<'_> {
-	pub fn check_return_expr(&mut self, ret_expr: &ast::RetExpr) -> TypeResult<TypeId> {
+	pub fn check_return_expr(&mut self, ret_expr: &mut ast::RetExpr) -> TypeResult<TypeId> {
 		if !self.ctx.has_fn_scope() {
 			return Err(TypeCheckError::return_outside_fn(ret_expr.get_range()));
 		}
 		let ret_scope_id = self.ctx.get_fn_scope_ret_type().unwrap(); // we know it's a fn
-		if let Some(value_expr) = &ret_expr.value {
+		if let Some(value_expr) = &mut ret_expr.value {
 			let type_id = self.check_expr(value_expr)?;
 			let ret_id = self.check_ref_return_value(type_id, ret_expr.get_range())?;
 			self.equal_type_id(ret_scope_id, ret_id, ret_expr.get_range())?;

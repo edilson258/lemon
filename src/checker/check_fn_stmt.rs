@@ -5,13 +5,15 @@ use super::{diags::TypeCheckError, Checker, TypeResult};
 use crate::ast;
 
 impl Checker<'_> {
-	pub fn check_fn_stmt(&mut self, fn_stmt: &ast::FnStmt) -> TypeResult<TypeId> {
-		let lexeme = fn_stmt.lexeme();
+	pub fn check_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) -> TypeResult<TypeId> {
+		let lexeme = fn_stmt.name.lexeme();
 		let mut params: Vec<TypeId> = Vec::with_capacity(fn_stmt.params.len());
 		let mut cache = Vec::with_capacity(fn_stmt.params.len());
-		for param in fn_stmt.params.iter() {
+		for param in fn_stmt.params.iter_mut() {
 			let type_id = self.check_fn_param(param)?;
-			cache.push((param.lexeme(), param.get_range(), type_id));
+			let par_id = self.ctx.type_store.add_type(Type::Par { target: type_id });
+			param.set_type_id(par_id);
+			cache.push((param.lexeme(), par_id));
 			params.push(type_id);
 		}
 
@@ -21,20 +23,19 @@ impl Checker<'_> {
 		let fn_id = self.ctx.type_store.add_type(fn_type);
 
 		let value_id = self.ctx.add_value(lexeme, fn_id, false);
-
 		self.ctx.enter_scope(ScopeType::new_fn(ret_id));
 
-		for (lexeme, range, type_id) in cache {
-			let par_id = self.ctx.type_store.add_type(Type::Par { target: type_id });
-			let value_id = self.ctx.add_value(lexeme, par_id, false);
+		for (lexeme, type_id) in cache {
+			self.ctx.add_value(lexeme, type_id, false);
 		}
-		let ret_found = self.check_fn_body(&fn_stmt.body)?;
+		let ret_found = self.check_fn_body(&mut fn_stmt.body)?;
 		self.equal_type_id(ret_id, ret_found, fn_stmt.body.get_range())?;
+		fn_stmt.set_ret_type_id(ret_id);
 		self.ctx.exit_scope();
 		Ok(TypeId::NOTHING)
 	}
 
-	pub fn check_fn_param(&mut self, param: &ast::Binding) -> TypeResult<TypeId> {
+	pub fn check_fn_param(&mut self, param: &mut ast::Binding) -> TypeResult<TypeId> {
 		match &param.ty {
 			Some(ty) => self.check_type(ty),
 			None => Err(TypeCheckError::required_type_notation(param.get_range())),
@@ -48,16 +49,16 @@ impl Checker<'_> {
 		}
 	}
 
-	fn check_fn_body(&mut self, stmt: &ast::Stmt) -> TypeResult<TypeId> {
+	fn check_fn_body(&mut self, stmt: &mut ast::Stmt) -> TypeResult<TypeId> {
 		match stmt {
 			ast::Stmt::Block(block) => self.check_fn_block_stmt(block),
 			_ => self.check_stmt(stmt),
 		}
 	}
 
-	fn check_fn_block_stmt(&mut self, stmt: &ast::BlockStmt) -> TypeResult<TypeId> {
+	fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> TypeResult<TypeId> {
 		let mut ret_type = TypeId::NOTHING;
-		for stmt in stmt.stmts.iter() {
+		for stmt in stmt.stmts.iter_mut() {
 			ret_type = self.check_stmt(stmt)?;
 		}
 		Ok(ret_type)
