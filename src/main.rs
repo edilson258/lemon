@@ -62,7 +62,7 @@ fn compile(source: Source) {
 		Err(diag) => diag.report_type_err_wrap(&source),
 	};
 	// println!("ok.");
-	let mut ir_builder = ir::Builder::new(&ctx.store, &ctx.type_store);
+	let mut ir_builder = ir::Builder::new();
 	let ir = ir_builder.build(&ast);
 	let disassembler = ir::Disassembler::new(&ctx.type_store);
 	println!("{}", disassembler.disassemble(&ir));

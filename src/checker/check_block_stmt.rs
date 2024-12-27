@@ -7,10 +7,7 @@ impl Checker<'_> {
 		// todo: warn unreachable code
 		self.ctx.enter_scope(ScopeType::new_block());
 		for stmt in block.stmts.iter_mut() {
-			let ret_type = self.check_stmt(stmt)?;
-			if ret_type != TypeId::NOTHING {
-				return Ok(ret_type);
-			}
+			self.check_stmt(stmt)?;
 		}
 		self.ctx.exit_scope();
 		Ok(TypeId::NOTHING)

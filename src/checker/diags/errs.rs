@@ -35,9 +35,26 @@ pub enum TypeCheckError<'tce> {
 	NumberTooLarge { range: Range },
 	ExpectedNumber { range: Range },
 	DerefOfNonRef { range: Range },
+
+	// const errors
+	ConstOutsideGlobalScope { range: Range },
+	ConstRedefinition { range: Range },
+	ConstRequiredTypeNotation { range: Range },
 }
 
 impl<'tce> TypeCheckError<'tce> {
+	pub fn const_outside_global_scope(range: Range) -> Diag {
+		Self::ConstOutsideGlobalScope { range }.into()
+	}
+
+	pub fn const_redefinition(range: Range) -> Diag {
+		Self::ConstRedefinition { range }.into()
+	}
+
+	pub fn const_required_type_notation(range: Range) -> Diag {
+		Self::ConstRequiredTypeNotation { range }.into()
+	}
+
 	pub fn immutable(name: &'tce str, range: Range) -> Diag {
 		Self::Immutable { name, range }.into()
 	}
@@ -221,6 +238,20 @@ impl<'tce> From<TypeCheckError<'tce>> for diag::Diag {
 			TypeCheckError::ConnotReturnLocalRerefence { range } => {
 				let text = "cannot return a reference to a scoped value".to_string();
 				diag::Diag::new(Severity::Err, text, range).with_note("try to return a value instead")
+			}
+
+			// const errors
+			TypeCheckError::ConstOutsideGlobalScope { range } => {
+				let text = "const can only be defined at global scope".to_string();
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			TypeCheckError::ConstRedefinition { range } => {
+				let text = "const already defined".to_string();
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			TypeCheckError::ConstRequiredTypeNotation { range } => {
+				let text = "required type notation, cannot infer type".to_string();
+				diag::Diag::new(Severity::Err, text, range)
 			}
 		}
 	}

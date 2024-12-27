@@ -58,7 +58,7 @@ impl Checker<'_> {
 
 	fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> TypeResult<TypeId> {
 		let mut ret_type = TypeId::NOTHING;
-		for stmt in stmt.stmts.iter_mut() {
+		for (idx, stmt) in stmt.stmts.iter_mut().enumerate() {
 			ret_type = self.check_stmt(stmt)?;
 		}
 		Ok(ret_type)

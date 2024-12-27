@@ -52,6 +52,10 @@ impl Context {
 		self.scopes.pop();
 	}
 
+	pub fn is_global_scope(&self) -> bool {
+		self.get_scope().is_global_scope()
+	}
+
 	pub fn has_fn_scope(&self) -> bool {
 		self.scopes.iter().rev().any(|scope| scope.is_fn_scope())
 	}

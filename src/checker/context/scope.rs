@@ -9,6 +9,7 @@ pub enum ScopeType {
 	Fn { ret_type: TypeId },
 	Loop,
 	Block,
+	Global,
 }
 
 impl ScopeType {
@@ -20,6 +21,10 @@ impl ScopeType {
 	}
 	pub fn new_block() -> Self {
 		Self::Block
+	}
+
+	pub fn new_global() -> Self {
+		Self::Global
 	}
 
 	pub fn ret_scope(&self) -> Option<TypeId> {
@@ -39,6 +44,9 @@ impl ScopeType {
 
 	pub fn is_block(&self) -> bool {
 		matches!(self, Self::Block)
+	}
+	pub fn is_global(&self) -> bool {
+		matches!(self, Self::Global)
 	}
 }
 
@@ -84,10 +92,14 @@ impl Scope {
 	pub fn is_block_scope(&self) -> bool {
 		self.scope_type.is_block()
 	}
+
+	pub fn is_global_scope(&self) -> bool {
+		self.scope_type.is_global()
+	}
 }
 
 impl Default for Scope {
 	fn default() -> Self {
-		Self::new(ScopeType::Block)
+		Self::new(ScopeType::new_global())
 	}
 }

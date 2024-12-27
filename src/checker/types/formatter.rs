@@ -1,4 +1,4 @@
-use super::{FloatType, FnType, IntType, RefType, Type, TypeId, TypeStore, UsizeType};
+use super::{ConstType, FloatType, FnType, IntType, RefType, Type, TypeId, TypeStore, UsizeType};
 
 pub struct TypeFormatter<'tf> {
 	pub type_store: &'tf TypeStore,
@@ -36,6 +36,7 @@ impl<'tf> TypeFormatter<'tf> {
 			Type::Fn(fn_type) => self.format_inner_fn(fn_type, type_str),
 			Type::Par { target } => self.format_inner(*target, type_str),
 			Type::InferInt { bits } => self.format_inner_infer_int(bits, type_str),
+			Type::Const(const_type) => self.format_inner_const(const_type, type_str),
 		}
 	}
 
@@ -89,5 +90,9 @@ impl<'tf> TypeFormatter<'tf> {
 		type_str.push('i');
 		type_str.push_str(if *bits <= 32 { "32" } else { "64" });
 		type_str.push('?');
+	}
+
+	fn format_inner_const(&self, const_type: &ConstType, type_str: &mut String) {
+		self.format_inner(const_type.value, type_str);
 	}
 }

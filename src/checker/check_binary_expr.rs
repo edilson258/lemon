@@ -1,5 +1,6 @@
 use crate::{
 	ast::{self},
+	diag::Diag,
 	range::Range,
 };
 use ast::Operator;
@@ -11,55 +12,71 @@ impl Checker<'_> {
 		let left = self.check_expr(&mut binary_expr.left)?;
 		let right = self.check_expr(&mut binary_expr.right)?;
 		let range = binary_expr.get_range();
-		match binary_expr.operator {
-			Operator::ADD => {
-				self.can_apply(left, right, Operator::ADD, range)?;
-				Ok(left)
+		let typed_id = self.apply_operator(&binary_expr.operator, left, right, range)?;
+		binary_expr.set_type_id(typed_id);
+		Ok(typed_id)
+	}
+
+	fn apply_operator(
+		&mut self,
+		operator: &Operator,
+		left: TypeId,
+		right: TypeId,
+		range: Range,
+	) -> TypeResult<TypeId> {
+		match operator {
+			Operator::ADD | Operator::SUB | Operator::MUL | Operator::DIV => {
+				self.numeric_operation(left, right, operator, range)
 			}
-			Operator::SUB => {
-				self.can_apply(left, right, Operator::SUB, range)?;
-				Ok(left)
+			Operator::LT | Operator::GT | Operator::LE | Operator::GE | Operator::EQ => {
+				self.comparison_operation(left, right, operator, range)
 			}
-			Operator::MUL => {
-				self.can_apply(left, right, Operator::MUL, range)?;
-				Ok(left)
-			}
-			Operator::LT => {
-				self.can_apply(left, right, Operator::LT, range)?;
-				Ok(TypeId::BOOL)
-			}
-			Operator::GT => {
-				self.can_apply(left, right, Operator::GT, range)?;
-				Ok(TypeId::BOOL)
-			}
-			Operator::LE => {
-				self.can_apply(left, right, Operator::LE, range)?;
-				Ok(TypeId::BOOL)
-			}
-			Operator::GE => {
-				self.can_apply(left, right, Operator::GE, range)?;
-				Ok(TypeId::BOOL)
-			}
-			Operator::EQ => {
-				self.can_apply(left, right, Operator::EQ, range)?;
-				Ok(TypeId::BOOL)
-			}
-			_ => todo!(),
+			_ => Err(self.unsupported_operator(left, right, operator, range)),
 		}
 	}
 
-	fn can_apply(&self, left: TypeId, right: TypeId, op: Operator, range: Range) -> TypeResult<()> {
-		let right_id = self.infer_type(left, right)?;
-		let left_id = self.infer_type(right, left)?;
+	fn numeric_operation(
+		&self,
+		left: TypeId,
+		right: TypeId,
+		operator: &Operator,
+		range: Range,
+	) -> TypeResult<TypeId> {
+		let resolved_left = self.resolve_par(left)?;
+		let resolved_right = self.resolve_par(right)?;
 
-		let left_type = self.resolve_par(left_id)?;
-		let right_type = self.resolve_par(right_id)?;
-
-		if left_type != right_type {
-			let left = self.format(left_id);
-			let right = self.format(right_id);
-			return Err(TypeCheckError::unsupported_operator(left, right, &op, range));
+		if !resolved_left.is_numeric() || !resolved_right.is_numeric() {
+			return Err(self.unsupported_operator(left, right, operator, range));
 		}
-		Ok(())
+
+		let common_type = self.infer_type(left, right)?;
+		Ok(common_type)
+	}
+
+	fn comparison_operation(
+		&self,
+		left: TypeId,
+		right: TypeId,
+		operator: &Operator,
+		range: Range,
+	) -> TypeResult<TypeId> {
+		let resolved_left = self.resolve_par(left)?;
+		let resolved_right = self.resolve_par(right)?;
+
+		if resolved_left != resolved_right {
+			return Err(self.unsupported_operator(left, right, operator, range));
+		}
+
+		Ok(TypeId::BOOL)
+	}
+
+	fn unsupported_operator(
+		&self,
+		left: TypeId,
+		right: TypeId,
+		operator: &Operator,
+		range: Range,
+	) -> Diag {
+		TypeCheckError::unsupported_operator(self.format(left), self.format(right), operator, range)
 	}
 }

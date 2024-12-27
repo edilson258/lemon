@@ -1,9 +1,13 @@
-use crate::{ast, ir::ir};
+use crate::ast;
 
 use super::Builder;
 
-impl Builder<'_> {
-	// pub fn build_block_stmt(&mut self, fn_stmt: ast::BlockStmt) -> ir::Block {
-	// 	todo!()
-	// }
+impl Builder {
+	pub fn build_block_stmt(&mut self, block_stmt: &ast::BlockStmt) {
+		self.ctx.enter_scope();
+		for stmt in block_stmt.stmts.iter() {
+			self.build_stmt(stmt);
+		}
+		self.ctx.exit_scope();
+	}
 }

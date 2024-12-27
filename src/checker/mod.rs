@@ -11,6 +11,7 @@ mod synthesis;
 mod check_binary_expr;
 mod check_block_stmt;
 mod check_call_expr;
+mod check_const_stmt;
 mod check_deref_expr;
 mod check_expr;
 mod check_fn_stmt;
@@ -21,7 +22,7 @@ mod check_literal;
 mod check_number;
 mod check_primitive_type;
 mod check_ref_expr;
-mod check_return_expr;
+mod check_ret_stmt;
 mod check_type;
 pub mod context;
 mod diags;
@@ -55,6 +56,8 @@ impl<'ckr> Checker<'ckr> {
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
 			ast::Stmt::Fn(fn_stmt) => self.check_fn_stmt(fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.check_block_stmt(block_stmt),
+			ast::Stmt::Const(const_stmt) => self.check_const_stmt(const_stmt),
+			ast::Stmt::Ret(ret_stmt) => self.check_ret_stmt(ret_stmt),
 		}
 	}
 

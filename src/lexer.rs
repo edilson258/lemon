@@ -10,6 +10,8 @@ pub enum Token {
 	Fn,
 	#[token("let")]
 	Let,
+	#[token("const")]
+	Const,
 	#[token("mut")]
 	Mut,
 	#[token("if")]
@@ -283,6 +285,7 @@ impl fmt::Display for Token {
 			Token::Mod => write!(f, "mod"),
 			Token::DotDotEq => write!(f, "..="),
 			Token::Tilde => write!(f, "~"),
+			Token::Const => write!(f, "const"),
 		}
 	}
 }

@@ -19,6 +19,13 @@ pub enum Type {
 	Usize(UsizeType),
 	Float(FloatType),
 	Ref(RefType),
+	Const(ConstType),
+}
+
+impl Type {
+	pub fn is_numeric(&self) -> bool {
+		matches!(self, Type::Int(_) | Type::Float(_) | Type::Usize(_) | Type::InferInt { .. })
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -77,6 +84,17 @@ pub struct InferType {
 impl InferType {
 	pub fn new(bits: usize) -> Self {
 		Self { bits }
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ConstType {
+	pub value: TypeId,
+}
+
+impl ConstType {
+	pub fn new(value: TypeId) -> Self {
+		Self { value }
 	}
 }
 

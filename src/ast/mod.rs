@@ -16,8 +16,10 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Stmt {
 	Let(LetStmt),
+	Const(ConstStmt),
 	Expr(Expr),
 	Fn(FnStmt),
+	Ret(RetStmt),
 	Block(BlockStmt),
 }
 
@@ -31,7 +33,57 @@ impl Stmt {
 			Stmt::Fn(function_stmt) => function_stmt.get_range(),
 			Stmt::Block(block_stmt) => block_stmt.get_range(),
 			Stmt::Expr(expr) => expr.get_range(),
+			Stmt::Const(const_stmt) => const_stmt.get_range(),
+			Stmt::Ret(ret_stmt) => ret_stmt.get_range(),
 		}
+	}
+	pub fn ends_with_ret(&self) -> bool {
+		match self {
+			Stmt::Ret(_) => true,
+			Stmt::Block(block_stmt) => block_stmt.ends_with_ret(),
+			_ => false,
+		}
+	}
+}
+
+// ret <expr>
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RetStmt {
+	pub expr: Option<Box<Expr>>,
+	pub range: Range, // return range
+}
+
+impl RetStmt {
+	pub fn get_range(&self) -> Range {
+		match &self.expr {
+			Some(expr) => self.range.merged_with(&expr.get_range()),
+			None => self.range.clone(),
+		}
+	}
+}
+
+// const <pat> = <expr>
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConstStmt {
+	pub name: Binding,
+	pub expr: Expr,
+	pub range: Range, // let range
+	pub type_id: Option<TypeId>,
+}
+
+impl ConstStmt {
+	pub fn lexeme(&self) -> &str {
+		&self.name.ident.text
+	}
+	pub fn get_range(&self) -> Range {
+		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -108,12 +160,17 @@ impl BlockStmt {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
 	}
+
+	pub fn ends_with_ret(&self) -> bool {
+		self.stmts.last().map(|stmt| stmt.ends_with_ret()).unwrap_or(false)
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Ident {
 	pub range: Range,
 	pub text: String,
+	pub type_id: Option<TypeId>,
 }
 
 impl Ident {
@@ -122,6 +179,12 @@ impl Ident {
 	}
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
+	}
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&mut self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 
@@ -167,7 +230,6 @@ pub enum Expr {
 	Unary(UnaryExpr),
 	Call(CallExpr),
 	If(IfExpr),
-	Ret(RetExpr),
 	Import(ImportExpr),
 	Ident(Ident),
 	Literal(Literal),
@@ -185,7 +247,7 @@ impl Expr {
 			Expr::Unary(unary) => unary.get_range(),
 			Expr::Call(call) => call.get_range(),
 			Expr::If(if_expr) => if_expr.get_range(),
-			Expr::Ret(ret_expr) => ret_expr.get_range(),
+			// Expr::Ret(ret_expr) => ret_expr.get_range(),
 			Expr::Ident(ident) => ident.get_range(),
 			Expr::Assign(assign) => assign.get_range(),
 			Expr::Literal(literal) => literal.get_range(),
@@ -287,7 +349,7 @@ impl BinaryExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -370,20 +432,20 @@ impl WhileExpr {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RetExpr {
-	pub value: Option<Box<Expr>>,
-	pub range: Range, // return range
-}
+// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// pub struct RetExpr {
+// 	pub value: Option<Box<Expr>>,
+// 	pub range: Range, // return range
+// }
 
-impl RetExpr {
-	pub fn get_range(&self) -> Range {
-		match &self.value {
-			Some(value) => self.range.merged_with(&value.get_range()),
-			None => self.range.clone(),
-		}
-	}
-}
+// impl RetExpr {
+// 	pub fn get_range(&self) -> Range {
+// 		match &self.value {
+// 			Some(value) => self.range.merged_with(&value.get_range()),
+// 			None => self.range.clone(),
+// 		}
+// 	}
+// }
 
 // &<expr>
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

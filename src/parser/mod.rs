@@ -37,12 +37,29 @@ impl<'lex> Parser<'lex> {
 	fn parse_stmt(&mut self) -> PResult<'lex, ast::Stmt> {
 		let stmt = match self.token {
 			Some(Token::Let) => self.parse_let_stmt().map(ast::Stmt::Let),
+			Some(Token::Const) => self.parse_const_stmt().map(ast::Stmt::Const),
 			Some(Token::Fn) => self.parse_fn_stmt().map(ast::Stmt::Fn),
 			Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
+			Some(Token::Ret) => self.parse_ret_stmt().map(ast::Stmt::Ret),
 			_ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
 		};
 		self.match_take(Token::Semi)?;
 		stmt
+	}
+	fn parse_ret_stmt(&mut self) -> PResult<'lex, ast::RetStmt> {
+		let range = self.expect(Token::Ret)?.clone();
+		let mut expr = None;
+		if !self.match_token(Token::Semi) {
+			expr = Some(Box::new(self.parse_expr(MIN_PDE)?));
+		}
+		Ok(ast::RetStmt { expr, range })
+	}
+	fn parse_const_stmt(&mut self) -> PResult<'lex, ast::ConstStmt> {
+		let range = self.expect(Token::Const)?.clone();
+		let name = self.parse_binding()?;
+		self.expect(Token::Assign)?; // take '='
+		let expr = self.parse_expr(MIN_PDE)?;
+		Ok(ast::ConstStmt { name, expr, range, type_id: None })
 	}
 
 	fn parse_let_stmt(&mut self) -> PResult<'lex, ast::LetStmt> {
@@ -131,7 +148,6 @@ impl<'lex> Parser<'lex> {
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
 			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
-			Some(Token::Ret) => self.parse_ret_expr().map(ast::Expr::Ret)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
 			}
@@ -262,15 +278,6 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::IfExpr { cond, then, otherwise, range })
 	}
 
-	fn parse_ret_expr(&mut self) -> PResult<'lex, ast::RetExpr> {
-		let range = self.expect(Token::Ret)?.clone();
-		let mut value = None;
-		if !self.match_token(Token::Semi) {
-			value = Some(Box::new(self.parse_expr(MIN_PDE)?));
-		}
-		Ok(ast::RetExpr { value, range })
-	}
-
 	fn parse_call_expr(&mut self, callee: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let mut range = self.expect(Token::LParen)?; // consume '('
 		let mut args = Vec::new();
@@ -367,7 +374,7 @@ impl<'lex> Parser<'lex> {
 		}
 		let range = self.range.clone();
 		let text = self.take_text_and_next()?;
-		Ok(ast::Ident { text, range })
+		Ok(ast::Ident { text, range, type_id: None })
 	}
 
 	// helpers
