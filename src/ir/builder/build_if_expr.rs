@@ -29,6 +29,7 @@ impl Builder {
 			self.build_stmt(otherwise);
 		};
 		self.ctx.switch_to_block(merge_b_id);
+		// todo: we dont need to return here... maybe move if expr to stmt?
 		Value::Null
 	}
 }
