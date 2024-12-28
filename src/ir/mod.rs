@@ -4,3 +4,4 @@ mod disassembler;
 mod ir;
 pub use builder::*;
 pub use disassembler::*;
+pub use ir::*;

@@ -2,13 +2,13 @@ mod ast;
 mod checker;
 mod cli;
 // mod compiler;
+mod comptime;
 mod diag;
 mod ir;
 mod lexer;
 mod parser;
 mod range;
 mod report;
-mod runtime;
 mod source;
 use std::path::Path;
 
