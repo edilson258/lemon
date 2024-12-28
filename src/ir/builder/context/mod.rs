@@ -101,9 +101,6 @@ impl Context {
 		}
 		self.active_block = block_id;
 	}
-	pub fn end_block(&mut self) -> Vec<Block> {
-		self.blocks.clone()
-	}
 }
 
 impl Default for Context {

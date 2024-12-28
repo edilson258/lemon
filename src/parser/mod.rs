@@ -52,7 +52,7 @@ impl<'lex> Parser<'lex> {
 		if !self.match_token(Token::Semi) {
 			expr = Some(Box::new(self.parse_expr(MIN_PDE)?));
 		}
-		Ok(ast::RetStmt { expr, range })
+		Ok(ast::RetStmt { expr, range, type_id: None })
 	}
 	fn parse_const_stmt(&mut self) -> PResult<'lex, ast::ConstStmt> {
 		let range = self.expect(Token::Const)?.clone();

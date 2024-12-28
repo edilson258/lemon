@@ -103,9 +103,21 @@ pub enum Instr {
 	// goto label
 	Goto(GotoInstr),
 	// ret value;
-	Ret(Option<Register>),
+	Ret(RetInstr),
 	// call fn(args) -> dest;
 	Call(CallInstr),
+}
+
+#[derive(Debug, Clone)]
+pub struct RetInstr {
+	pub value: Option<Register>,
+	pub type_id: TypeId,
+}
+
+impl RetInstr {
+	pub fn new(type_id: Option<TypeId>, value: Option<Register>) -> Self {
+		Self { type_id: type_id.unwrap_or(TypeId::NOTHING), value }
+	}
 }
 
 #[derive(Debug, Clone)]

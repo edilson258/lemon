@@ -51,6 +51,7 @@ impl Stmt {
 pub struct RetStmt {
 	pub expr: Option<Box<Expr>>,
 	pub range: Range, // return range
+	pub type_id: Option<TypeId>,
 }
 
 impl RetStmt {
@@ -59,6 +60,13 @@ impl RetStmt {
 			Some(expr) => self.range.merged_with(&expr.get_range()),
 			None => self.range.clone(),
 		}
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 

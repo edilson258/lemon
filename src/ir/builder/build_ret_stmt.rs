@@ -10,9 +10,11 @@ impl Builder {
 		if let Some(expr) = &ret_stmt.expr {
 			let value = self.build_expr(expr);
 			let register = value.get_register();
-			self.add_instr(ir::Instr::Ret(register));
+			let instr = ir::RetInstr::new(ret_stmt.type_id, register);
+			self.add_instr(ir::Instr::Ret(instr));
 		} else {
-			self.add_instr(ir::Instr::Ret(None));
+			let instr = ir::RetInstr::new(ret_stmt.type_id, None);
+			self.add_instr(ir::Instr::Ret(instr));
 		}
 	}
 }

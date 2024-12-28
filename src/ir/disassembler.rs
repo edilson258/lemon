@@ -141,16 +141,24 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::Own(own) => self.disassemble_own(own, result),
 
 			ir::Instr::Free(free) => self.disassemble_unary_instr("free", free, result),
-			ir::Instr::Ret(ret) => {
-				result.push_str("ret ");
-				if let Some(value) = &ret {
-					self.disassemble_register(value, result);
-				}
-			}
+			ir::Instr::Ret(ret) => self.disassemble_ret(ret, result),
 			ir::Instr::Call(call) => self.disassemble_call(call, result),
 			ir::Instr::Load(unary) => self.disassemble_unary_instr("load", unary, result),
 			ir::Instr::Goto(goto) => self.disassemble_goto(goto, result),
 			_ => todo!("code {:?}", instr),
+		}
+	}
+
+	fn disassemble_ret(&self, ret: &ir::RetInstr, result: &mut String) {
+		result.push_str("ret");
+
+		if ret.type_id != TypeId::NOTHING {
+			result.push(' ');
+			self.resolve_type_id(ret.type_id, result);
+		}
+		if let Some(value) = &ret.value {
+			result.push(' ');
+			self.disassemble_register(value, result);
 		}
 	}
 
