@@ -9,14 +9,7 @@ impl Checker<'_> {
 		let mut ret_type = TypeId::NOTHING;
 		for stmt in block.stmts.iter_mut() {
 			self.ctx.flow.set_paths_return(stmt.ends_with_ret());
-
-			if ret_type.is_nothing() {
-				ret_type = self.check_stmt(stmt)?;
-				continue;
-			}
-			self.ctx.flow.set_unreachable(true);
-			let diag = TypeCheckWarn::unreachable(stmt.get_range());
-			self.diag_group.add(diag);
+			ret_type = self.check_stmt(stmt)?;
 		}
 		self.ctx.exit_scope();
 		Ok(ret_type)

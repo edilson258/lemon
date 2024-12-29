@@ -1,8 +1,6 @@
-use crate::ast;
-
-use super::{Checker, TypeResult};
-
 use super::types::TypeId;
+use super::{Checker, TypeResult};
+use crate::ast;
 
 impl Checker<'_> {
 	pub fn check_if_expr(&mut self, if_expr: &mut ast::IfExpr) -> TypeResult<TypeId> {
