@@ -35,6 +35,7 @@ pub enum TypeCheckError<'tce> {
 	NumberTooLarge { range: Range },
 	ExpectedNumber { range: Range },
 	DerefOfNonRef { range: Range },
+	NotAllPathsReturn { range: Range },
 
 	// const errors
 	ConstOutsideGlobalScope { range: Range },
@@ -89,6 +90,10 @@ impl<'tce> TypeCheckError<'tce> {
 
 	pub fn return_outside_fn(range: Range) -> Diag {
 		Self::ReturnOutsideFn { range }.into()
+	}
+
+	pub fn not_all_paths_return(range: Range) -> Diag {
+		Self::NotAllPathsReturn { range }.into()
 	}
 
 	pub fn invalid_float(range: Range) -> Diag {
@@ -252,6 +257,11 @@ impl<'tce> From<TypeCheckError<'tce>> for diag::Diag {
 			TypeCheckError::ConstRequiredTypeNotation { range } => {
 				let text = "required type notation, cannot infer type".to_string();
 				diag::Diag::new(Severity::Err, text, range)
+			}
+			TypeCheckError::NotAllPathsReturn { range } => {
+				let text = "expected return value in all cases".to_string();
+				diag::Diag::new(Severity::Err, text, range)
+					.with_note("ensure every path returns a value".to_string())
 			}
 		}
 	}

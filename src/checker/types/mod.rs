@@ -26,6 +26,10 @@ impl Type {
 	pub fn is_numeric(&self) -> bool {
 		matches!(self, Type::Int(_) | Type::Float(_) | Type::Usize(_) | Type::InferInt { .. })
 	}
+
+	pub fn is_infer(&self) -> bool {
+		matches!(self, Type::InferInt { .. })
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

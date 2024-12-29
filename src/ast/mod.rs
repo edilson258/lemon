@@ -44,6 +44,12 @@ impl Stmt {
 			_ => false,
 		}
 	}
+	pub fn last_stmt_range(&self) -> Range {
+		match self {
+			Stmt::Block(block_stmt) => block_stmt.last_stmt_range(),
+			_ => self.get_range(),
+		}
+	}
 }
 
 // ret <expr>
@@ -171,6 +177,10 @@ impl BlockStmt {
 
 	pub fn ends_with_ret(&self) -> bool {
 		self.stmts.last().map(|stmt| stmt.ends_with_ret()).unwrap_or(false)
+	}
+
+	pub fn last_stmt_range(&self) -> Range {
+		self.stmts.last().map(|stmt| stmt.get_range()).unwrap_or(self.range.clone())
 	}
 }
 

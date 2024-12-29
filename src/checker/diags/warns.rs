@@ -1,5 +1,5 @@
 use crate::{
-	diag::{self, Severity},
+	diag::{self, Diag, Severity},
 	range::Range,
 };
 
@@ -7,6 +7,13 @@ use crate::{
 pub enum TypeCheckWarn {
 	Unused(String, Range),
 	UnusedBorrow { range: Range }, // Warn
+	Ureachable { range: Range },   // Warn
+}
+
+impl TypeCheckWarn {
+	pub fn unreachable(range: Range) -> Diag {
+		Self::Ureachable { range }.into()
+	}
 }
 
 impl From<TypeCheckWarn> for diag::Diag {
@@ -19,6 +26,10 @@ impl From<TypeCheckWarn> for diag::Diag {
 			TypeCheckWarn::Unused(name, range) => {
 				let text = format!("unused value '{}'", name);
 				diag::Diag::new(Severity::Warn, text, range)
+			}
+			TypeCheckWarn::Ureachable { range } => {
+				let text = "unreachable code".to_string();
+				diag::Diag::new(Severity::Warn, text, range).with_note("consider removing it".to_string())
 			}
 		}
 	}

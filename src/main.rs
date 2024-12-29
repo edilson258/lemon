@@ -74,6 +74,7 @@ fn lex(source: Source) {
 		println!("{:?}: {:?}", token, lexer.slice());
 	}
 }
+
 fn main() {
 	let matches = cli::command_line();
 	match matches.subcommand() {

@@ -1,4 +1,5 @@
 use super::context::scope::ScopeType;
+use super::diags::TypeCheckWarn;
 use super::types::{FnType, Type, TypeId};
 use super::{diags::TypeCheckError, Checker, TypeResult};
 
@@ -29,12 +30,18 @@ impl Checker<'_> {
 			self.ctx.add_value(lexeme, type_id, false);
 		}
 		let ret_found = self.check_fn_body(&mut fn_stmt.body)?;
+
+		if !self.ctx.flow.is_paths_return() {
+			return Err(TypeCheckError::not_all_paths_return(fn_stmt.body.last_stmt_range()));
+		}
+
 		self.equal_type_id(ret_id, ret_found, fn_stmt.body.get_range())?;
 		fn_stmt.set_ret_type_id(ret_id);
 		self.ctx.exit_scope();
 		Ok(TypeId::NOTHING)
 	}
 
+	#[inline(always)]
 	pub fn check_fn_param(&mut self, param: &mut ast::Binding) -> TypeResult<TypeId> {
 		match &param.ty {
 			Some(ty) => self.check_type(ty),
@@ -42,6 +49,7 @@ impl Checker<'_> {
 		}
 	}
 
+	#[inline(always)]
 	fn check_fn_return_type(&mut self, ret_type: &Option<ast::AstType>) -> TypeResult<TypeId> {
 		match ret_type {
 			Some(ty) => self.check_type(ty),
@@ -49,6 +57,7 @@ impl Checker<'_> {
 		}
 	}
 
+	#[inline(always)]
 	fn check_fn_body(&mut self, stmt: &mut ast::Stmt) -> TypeResult<TypeId> {
 		match stmt {
 			ast::Stmt::Block(block) => self.check_fn_block_stmt(block),
@@ -56,10 +65,19 @@ impl Checker<'_> {
 		}
 	}
 
+	#[inline(always)]
 	fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> TypeResult<TypeId> {
 		let mut ret_type = TypeId::NOTHING;
-		for (idx, stmt) in stmt.stmts.iter_mut().enumerate() {
-			ret_type = self.check_stmt(stmt)?;
+		for stmt in stmt.stmts.iter_mut() {
+			self.ctx.flow.set_paths_return(stmt.ends_with_ret());
+
+			if ret_type.is_nothing() {
+				ret_type = self.check_stmt(stmt)?;
+				continue;
+			}
+			self.ctx.flow.set_unreachable(true);
+			let diag = TypeCheckWarn::unreachable(stmt.get_range());
+			self.diag_group.add(diag);
 		}
 		Ok(ret_type)
 	}

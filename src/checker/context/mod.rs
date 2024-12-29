@@ -1,4 +1,5 @@
 use borrow::{BorrowId, BorrowStore};
+use flow::Flow;
 use scope::{Scope, ScopeType};
 use store::Store;
 use value::{Value, ValueId};
@@ -6,6 +7,7 @@ use value::{Value, ValueId};
 use super::types::{TypeId, TypeStore};
 
 mod borrow;
+mod flow;
 pub mod scope;
 pub mod store;
 pub mod value;
@@ -13,6 +15,7 @@ pub mod value;
 #[derive(Debug)]
 pub struct Context {
 	pub scopes: Vec<Scope>,
+	pub flow: Flow,
 	pub borrow_store: BorrowStore,
 	pub type_store: TypeStore,
 	pub store: Store,
@@ -26,9 +29,10 @@ impl Context {
 		let borrow_store = BorrowStore::default();
 		let type_store = TypeStore::default();
 		let store = Store::new();
+		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		Self { scopes, borrow_store, type_store, store, value_id, store_id }
+		Self { scopes, flow, borrow_store, type_store, store, value_id, store_id }
 	}
 
 	pub fn get_type_store(&self) -> &TypeStore {

@@ -4,6 +4,8 @@ use super::types::{Type, TypeId, UsizeType};
 use crate::checker::types::IntType;
 
 impl Checker<'_> {
+	/// * `expected` and `found` type_ids
+	/// * `return a found inferred type`
 	pub fn infer_type(&self, expected: TypeId, found: TypeId) -> TypeResult<TypeId> {
 		match self.resolve_par(found)? {
 			Type::InferInt { bits } => self.infer_int_type(*bits, expected, found),

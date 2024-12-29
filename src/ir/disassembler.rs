@@ -131,6 +131,7 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::CmpEq(binary) => self.disassemble_binary_instr("cmp_eq", binary, result),
 			ir::Instr::CmpLt(binary) => self.disassemble_binary_instr("cmp_lt", binary, result),
 			ir::Instr::CmpLe(binary) => self.disassemble_binary_instr("cmp_le", binary, result),
+			ir::Instr::CmpGe(binary) => self.disassemble_binary_instr("cmp_ge", binary, result),
 
 			// unary
 			ir::Instr::Borrow(borrow) => self.disassemble_unary_instr("borrow", borrow, result),

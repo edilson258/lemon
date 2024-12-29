@@ -35,4 +35,7 @@ impl TypeId {
 	pub fn as_usize(&self) -> usize {
 		self.0
 	}
+	pub fn is_nothing(&self) -> bool {
+		self.0 == TypeId::NOTHING.0
+	}
 }

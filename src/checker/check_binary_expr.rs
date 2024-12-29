@@ -42,6 +42,9 @@ impl Checker<'_> {
 		operator: &Operator,
 		range: Range,
 	) -> TypeResult<TypeId> {
+		let left_infered = self.infer_type(right, left)?;
+		let right_infered = self.infer_type(left, right)?;
+
 		let resolved_left = self.resolve_par(left)?;
 		let resolved_right = self.resolve_par(right)?;
 
@@ -60,8 +63,11 @@ impl Checker<'_> {
 		operator: &Operator,
 		range: Range,
 	) -> TypeResult<TypeId> {
-		let resolved_left = self.resolve_par(left)?;
-		let resolved_right = self.resolve_par(right)?;
+		let left_infered = self.infer_type(right, left)?;
+		let right_infered = self.infer_type(left, right)?;
+
+		let resolved_left = self.resolve_par(left_infered)?;
+		let resolved_right = self.resolve_par(right_infered)?;
 
 		if resolved_left != resolved_right {
 			return Err(self.unsupported_operator(left, right, operator, range));
