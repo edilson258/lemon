@@ -1,3 +1,5 @@
+<!--
+
 ```rs
 let std = import("std");
 let fmt = import("fmt");
@@ -39,7 +41,7 @@ server::route("/hello/:name", fn({ params, query }) = {
 
 server::start(3003);
 ```
-
+-->
 #### Lemon IR
 
 - lemon
