@@ -2,7 +2,7 @@ use core::fmt;
 
 use logos::Logos;
 #[derive(Logos, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"[ \t\n\f\r]+")]
 #[repr(u8)]
 pub enum Token {
 	// Keywords
