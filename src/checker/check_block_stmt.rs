@@ -1,6 +1,6 @@
 use crate::ast::{self};
 
-use super::{context::scope::ScopeType, diags::TypeCheckWarn, types::TypeId, Checker, TypeResult};
+use super::{context::scope::ScopeType, types::TypeId, Checker, TypeResult};
 
 impl Checker<'_> {
 	pub fn check_block_stmt(&mut self, block: &mut ast::BlockStmt) -> TypeResult<TypeId> {

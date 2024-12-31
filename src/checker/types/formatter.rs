@@ -83,6 +83,7 @@ impl<'tf> TypeFormatter<'tf> {
 			}
 			self.format_inner(*arg, type_str);
 		}
+		type_str.push_str(") -> ");
 		self.format_inner(fn_type.ret, type_str);
 	}
 
