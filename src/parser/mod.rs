@@ -435,7 +435,12 @@ impl<'lex> Parser<'lex> {
 	}
 
 	fn unexpected_token(&mut self) -> Diag {
-		Diag::error(format!("unexpected token '{}'", self.token.as_ref().unwrap()), self.range.clone())
+		if let Some(token) = self.token {
+			let message = format!("unexpected token '{}'", token);
+			let diag = Diag::error(message, self.range.clone());
+			return diag;
+		}
+		self.create_custom_diag("unexpected token, lexer error please report this")
 	}
 
 	pub fn create_custom_diag(&self, message: impl Into<String>) -> Diag {
