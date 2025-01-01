@@ -27,6 +27,10 @@ impl Type {
 		matches!(self, Type::Int(_) | Type::Float(_) | Type::Usize(_) | Type::InferInt { .. })
 	}
 
+	pub fn is_float(&self) -> bool {
+		matches!(self, Type::Float(_))
+	}
+
 	pub fn is_infer(&self) -> bool {
 		matches!(self, Type::InferInt { .. })
 	}

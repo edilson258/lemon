@@ -31,8 +31,26 @@ impl Checker<'_> {
 			Operator::LT | Operator::GT | Operator::LE | Operator::GE | Operator::EQ => {
 				self.comparison_operation(left, right, operator, range)
 			}
+			Operator::MOD => self.mod_operation(left, right, range),
 			_ => Err(self.unsupported_operator(left, right, operator, range)),
 		}
+	}
+
+	fn mod_operation(&self, left: TypeId, right: TypeId, range: Range) -> TypeResult<TypeId> {
+		let left_infered = self.infer_type(right, left)?;
+		let right_infered = self.infer_type(left, right)?;
+
+		let resolved_left = self.resolve_par(left_infered)?;
+		let resolved_right = self.resolve_par(right_infered)?;
+
+		println!("left: {:?}", left_infered);
+		println!("right: {:?}", right_infered);
+
+		if !resolved_left.is_numeric() || !resolved_right.is_numeric() {
+			return Err(self.unsupported_operator(left, right, &Operator::MOD, range));
+		}
+
+		Ok(left_infered)
 	}
 
 	fn numeric_operation(
@@ -45,15 +63,15 @@ impl Checker<'_> {
 		let left_infered = self.infer_type(right, left)?;
 		let right_infered = self.infer_type(left, right)?;
 
-		let resolved_left = self.resolve_par(left)?;
-		let resolved_right = self.resolve_par(right)?;
+		// self.equal_type_id(left_infered, right_infered, range.clone())?;
+		let resolved_left = self.resolve_par(left_infered)?;
+		let resolved_right = self.resolve_par(right_infered)?;
 
 		if !resolved_left.is_numeric() || !resolved_right.is_numeric() {
 			return Err(self.unsupported_operator(left, right, operator, range));
 		}
 
-		let common_type = self.infer_type(left, right)?;
-		Ok(common_type)
+		Ok(right_infered)
 	}
 
 	fn comparison_operation(

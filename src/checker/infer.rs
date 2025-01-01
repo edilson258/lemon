@@ -9,6 +9,7 @@ impl Checker<'_> {
 	pub fn infer_type(&self, expected: TypeId, found: TypeId) -> TypeResult<TypeId> {
 		match self.resolve_par(found)? {
 			Type::InferInt { bits } => self.infer_int_type(*bits, expected, found),
+			Type::Const(const_type) => self.infer_type(const_type.value, expected),
 			// Type::InferFloat { bits } => self.infer_float_type(bits, lt_type_id),
 			_ => Ok(found),
 		}
