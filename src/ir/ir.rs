@@ -248,7 +248,9 @@ impl Value {
 			_ => None,
 		}
 	}
-
+	pub fn is_register(&self) -> bool {
+		matches!(self, Self::Register(_))
+	}
 	pub fn get_bind(&self) -> Option<&Bind> {
 		match self {
 			Self::Bind(bind) => Some(bind),
