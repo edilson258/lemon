@@ -18,7 +18,9 @@ impl<'ir> Disassembler<'ir> {
 
 	fn disassemble_root(&self, root: &ir::Root, result: &mut String) {
 		self.disassemble_global(&root.globals, result);
-		result.push('\n');
+		if !root.fns.is_empty() {
+			result.push('\n');
+		}
 		for fn_ir in root.fns.iter() {
 			self.disassemble_fn(fn_ir, result);
 			result.push('\n');

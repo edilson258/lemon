@@ -14,6 +14,7 @@ use std::path::Path;
 
 use checker::{context::Context, Checker};
 // use compiler::Compiler;
+use comptime::engine;
 use diag::DiagGroup;
 use lexer::Token;
 use logos::Logos;
@@ -63,8 +64,13 @@ fn compile(source: Source) {
 	};
 	// println!("ok.");
 	let mut ir_builder = ir::Builder::new();
-	let ir = ir_builder.build(&ast);
+	let mut ir = ir_builder.build(&ast);
 	let disassembler = ir::Disassembler::new(&ctx.type_store);
+	println!("--- unoptimized ir ---");
+	println!("{}", disassembler.disassemble(&ir));
+	let mut engine = engine::Engine::new(&mut ir);
+	engine.execute();
+	println!("--- optimized ir ---");
 	println!("{}", disassembler.disassemble(&ir));
 }
 
