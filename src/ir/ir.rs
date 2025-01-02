@@ -382,10 +382,17 @@ impl Fn {
 #[derive(Debug, Clone)]
 pub struct Global {
 	pub instrs: Vec<Instr>,
+	pub fns: Vec<Fn>,
 }
 impl Global {
 	pub fn new() -> Self {
-		Self { instrs: vec![] }
+		Self { instrs: vec![], fns: vec![] }
+	}
+
+	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
+		if let Some(fn_ir) = self.fns.last_mut() {
+			fn_ir.add_blocks(blocks);
+		}
 	}
 }
 
@@ -410,6 +417,10 @@ impl Root {
 		self.fns.push(fn_ir);
 	}
 
+	pub fn add_fn_global(&mut self, fn_ir: Fn) {
+		self.globals.fns.push(fn_ir);
+	}
+
 	pub fn add_block(&mut self, block: Block) {
 		if let Some(fn_ir) = self.fns.last_mut() {
 			fn_ir.add_block(block);
@@ -420,6 +431,9 @@ impl Root {
 		if let Some(fn_ir) = self.fns.last_mut() {
 			fn_ir.add_blocks(blocks);
 		}
+	}
+	pub fn add_global_blocks(&mut self, blocks: Vec<Block>) {
+		self.globals.add_blocks(blocks);
 	}
 	pub fn add_global(&mut self, instr: Instr) {
 		self.globals.instrs.push(instr);

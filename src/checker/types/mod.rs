@@ -19,7 +19,8 @@ pub enum Type {
 	Usize(UsizeType),
 	Float(FloatType),
 	Ref(RefType),
-	Const(ConstType),
+	ConstDel(ConstDelType),
+	ConstFn(ConstFnType),
 }
 
 impl Type {
@@ -27,12 +28,23 @@ impl Type {
 		matches!(self, Type::Int(_) | Type::Float(_) | Type::Usize(_) | Type::InferInt { .. })
 	}
 
+	pub fn is_const_fn(&self) -> bool {
+		matches!(self, Type::ConstFn(_))
+	}
 	pub fn is_float(&self) -> bool {
 		matches!(self, Type::Float(_))
 	}
 
 	pub fn is_infer(&self) -> bool {
 		matches!(self, Type::InferInt { .. })
+	}
+
+	pub fn new_const_del(value: TypeId) -> Self {
+		Self::ConstDel(ConstDelType::new(value))
+	}
+
+	pub fn new_const_fn(value: TypeId) -> Self {
+		Self::ConstFn(ConstFnType::new(value))
 	}
 }
 
@@ -96,11 +108,22 @@ impl InferType {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ConstType {
+pub struct ConstDelType {
 	pub value: TypeId,
 }
 
-impl ConstType {
+impl ConstDelType {
+	pub fn new(value: TypeId) -> Self {
+		Self { value }
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ConstFnType {
+	pub value: TypeId,
+}
+
+impl ConstFnType {
 	pub fn new(value: TypeId) -> Self {
 		Self { value }
 	}

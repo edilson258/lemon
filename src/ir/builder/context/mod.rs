@@ -10,6 +10,7 @@ pub struct Context {
 	pub blocks: Vec<Block>,
 	pub active_block: BlockId,
 	pub comptime: bool,
+	pub fn_comptime: bool,
 }
 
 impl Context {
@@ -19,15 +20,26 @@ impl Context {
 		let active_block = BlockId::new(0);
 		let blocks = Vec::from_iter(vec![Block::new(active_block)]);
 		let fns = HashMap::new();
-		Self { register, values, blocks, fns, comptime: false, active_block }
+		Self { register, values, blocks, fns, comptime: false, fn_comptime: false, active_block }
 	}
 
 	pub fn is_comptime(&self) -> bool {
 		self.comptime
 	}
+	pub fn is_fn_comptime(&self) -> bool {
+		self.fn_comptime
+	}
 
 	pub fn enter_comptime(&mut self) {
 		self.comptime = true;
+	}
+
+	pub fn enter_fn_comptime(&mut self) {
+		self.fn_comptime = true;
+	}
+
+	pub fn exit_fn_comptime(&mut self) {
+		self.fn_comptime = false;
 	}
 
 	pub fn exit_comptime(&mut self) {

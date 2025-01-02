@@ -3,7 +3,8 @@ use crate::ast;
 mod build_binary_expr;
 mod build_block_stmt;
 mod build_call_expr;
-mod build_const_stmt;
+mod build_const_del_stmt;
+mod build_const_fn_stmt;
 mod build_deref_expr;
 mod build_expr;
 mod build_fn_stmt;
@@ -40,12 +41,24 @@ impl Builder {
 	}
 
 	pub fn add_fn(&mut self, fn_ir: ir::Fn) {
-		self.root.fns.push(fn_ir);
+		if self.ctx.is_fn_comptime() {
+			self.root.add_fn_global(fn_ir);
+		} else {
+			self.root.add_fn(fn_ir);
+		}
+	}
+
+	pub fn add_blocks(&mut self, blocks: Vec<ir::Block>) {
+		if self.ctx.is_fn_comptime() {
+			self.root.add_global_blocks(blocks);
+		} else {
+			self.root.add_blocks(blocks);
+		}
 	}
 
 	pub fn exit_fn_scope(&mut self) {
 		let blocks = self.ctx.exit_fn_scope();
-		self.root.add_blocks(blocks);
+		self.add_blocks(blocks);
 	}
 
 	pub fn build(&mut self, program: &ast::Program) -> ir::Root {
@@ -63,7 +76,8 @@ impl Builder {
 			ast::Stmt::Expr(expr) => {
 				self.build_expr(expr);
 			}
-			ast::Stmt::Const(const_stmt) => self.build_const_stmt(const_stmt),
+			ast::Stmt::ConstDel(const_del) => self.build_const_del_stmt(const_del),
+			ast::Stmt::ConstFn(const_fn) => self.build_const_fn_stmt(const_fn),
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
 		}
 	}

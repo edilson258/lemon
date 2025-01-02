@@ -33,6 +33,11 @@ impl<'ir> Disassembler<'ir> {
 			self.disassemble_instr(instr, result);
 			result.push('\n');
 		}
+		result.push('\n');
+		for fn_ir in global.fns.iter() {
+			self.disassemble_fn(fn_ir, result);
+			result.push('\n');
+		}
 	}
 
 	fn disassemble_fn(&self, fn_ir: &ir::Fn, result: &mut String) {

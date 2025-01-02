@@ -7,6 +7,7 @@ use super::value::Value;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScopeType {
 	Fn { ret_type: TypeId },
+	ConstFn { ret_type: TypeId },
 	Loop,
 	Block,
 	Global,
@@ -15,6 +16,9 @@ pub enum ScopeType {
 impl ScopeType {
 	pub fn new_fn(ret_type: TypeId) -> Self {
 		Self::Fn { ret_type }
+	}
+	pub fn new_const_fn(ret_type: TypeId) -> Self {
+		Self::ConstFn { ret_type }
 	}
 	pub fn new_loop() -> Self {
 		Self::Loop
@@ -30,12 +34,17 @@ impl ScopeType {
 	pub fn ret_scope(&self) -> Option<TypeId> {
 		match self {
 			Self::Fn { ret_type } => Some(*ret_type),
+			Self::ConstFn { ret_type } => Some(*ret_type),
 			_ => None,
 		}
 	}
 
 	pub fn is_fn(&self) -> bool {
-		matches!(self, Self::Fn { .. })
+		matches!(self, Self::Fn { .. } | Self::ConstFn { .. })
+	}
+
+	pub fn is_const_fn(&self) -> bool {
+		matches!(self, Self::ConstFn { .. })
 	}
 
 	pub fn is_loop(&self) -> bool {
