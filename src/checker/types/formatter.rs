@@ -41,6 +41,7 @@ impl<'tf> TypeFormatter<'tf> {
 			Type::InferInt { bits } => self.format_inner_infer_int(bits, type_str),
 			Type::ConstDel(const_type) => self.format_inner_const_del(const_type, type_str),
 			Type::ConstFn(const_type) => self.format_inner_const_fn(const_type, type_str),
+			Type::Println => type_str.push_str("println"),
 		}
 	}
 

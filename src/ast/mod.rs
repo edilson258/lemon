@@ -309,6 +309,14 @@ impl Expr {
 		}
 	}
 
+	pub fn get_bind_type_id(&self) -> Option<TypeId> {
+		match self {
+			Expr::Ident(ident) => ident.type_id,
+			Expr::Ref(ref_expr) => ref_expr.type_id,
+			Expr::Deref(deref_expr) => deref_expr.type_id,
+			_ => None,
+		}
+	}
 	pub fn valid_assign_expr(&self) -> bool {
 		matches!(self, Expr::Ident(_)) | matches!(self, Expr::Ref(_)) | matches!(self, Expr::Deref(_))
 	}
@@ -419,6 +427,7 @@ impl UnaryExpr {
 pub struct CallExpr {
 	pub callee: Box<Expr>,
 	pub args: Vec<Expr>,
+	pub args_type: Vec<TypeId>,
 	pub range: Range, // (args...)
 	pub type_id: Option<TypeId>,
 }
@@ -432,6 +441,12 @@ impl CallExpr {
 	}
 	pub fn get_type_id(&mut self) -> Option<TypeId> {
 		self.type_id
+	}
+	pub fn set_args_type(&mut self, args_type: Vec<TypeId>) {
+		self.args_type = args_type;
+	}
+	pub fn get_args_type(&self) -> &Vec<TypeId> {
+		&self.args_type
 	}
 }
 
@@ -544,6 +559,10 @@ pub struct ImportExpr {
 impl ImportExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
+	}
+	pub fn get_path(&self) -> String {
+		// remove " "
+		self.path.text.replace("\"", "")
 	}
 }
 

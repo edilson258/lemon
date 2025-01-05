@@ -6,7 +6,7 @@ use crate::{
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_literal(&mut self, expr: &ast::Literal) -> Value {
 		let value = match expr {
 			ast::Literal::Number(number) => self.build_number_expr(number),

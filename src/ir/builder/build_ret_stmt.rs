@@ -5,7 +5,7 @@ use crate::{
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_ret_stmt(&mut self, ret_stmt: &ast::RetStmt) {
 		if let Some(expr) = &ret_stmt.expr {
 			let value = self.build_expr(expr);

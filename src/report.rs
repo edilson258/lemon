@@ -33,6 +33,16 @@ pub fn report_wrap(diag: &Diag, source: &Source) {
 	std::process::exit(1);
 }
 
+pub fn report_engine_err(diag: &Diag) {
+	let slug = text_red("comptime error");
+	println!("{}: {}", slug, diag.message); // -- message
+																				 // println!("---> {}", text_gray(source.path_str().as_str())); // -- filename
+	if let Some(note) = &diag.note {
+		println!("== {} {}", text_cyan("note:"), note);
+	}
+	std::process::exit(1);
+}
+
 pub fn report_syntax_err(diag: &Diag, source: &Source) {
 	report(diag, ReportKind::SyntaxErr, source);
 	std::process::exit(1);
@@ -60,7 +70,30 @@ fn report(diag: &Diag, kind: ReportKind, source: &Source) {
 }
 
 pub fn throw_error(text: impl Into<String>) -> ! {
-	println!("{} {}", text_red("error: "), text_white(text.into().as_str()));
+	println!("{} {}", text_red("error:"), text_white(text.into().as_str()));
+	std::process::exit(1);
+}
+pub fn throw_engine_error(text: impl Into<String>) -> ! {
+	println!("{} {}", text_red("comptime error:"), text_white(text.into().as_str()));
+	std::process::exit(1);
+}
+
+pub fn throw_llvm_error(text: impl Into<String>) -> ! {
+	println!("{} {}", text_red("llvm error:"), text_white(text.into().as_str()));
+	std::process::exit(1);
+}
+
+pub fn throw_linker_error(text: impl Into<String>) -> ! {
+	println!("{} {}", text_red("linker error:"), text_white(text.into().as_str()));
+	std::process::exit(1);
+}
+
+pub fn throw_cross_compile_error(text: impl Into<String>) -> ! {
+	println!("{} {}", text_red("cross compile error:"), text_white(text.into().as_str()));
+	std::process::exit(1);
+}
+pub fn throw_ir_build_error(text: impl Into<String>) -> ! {
+	println!("{} {}", text_red("ir build error:"), text_white(text.into().as_str()));
 	std::process::exit(1);
 }
 

@@ -7,7 +7,7 @@ use context::Context;
 use types::{Type, TypeFormatter, TypeId};
 mod synthesis;
 
-// mod check_assign_expr
+// mod check_assign_expr;
 mod check_binary_expr;
 mod check_block_stmt;
 mod check_call_expr;
@@ -18,6 +18,7 @@ mod check_expr;
 mod check_fn_stmt;
 mod check_ident_expr;
 mod check_if_expr;
+mod check_import_expr;
 mod check_let_stmt;
 mod check_literal;
 mod check_number;

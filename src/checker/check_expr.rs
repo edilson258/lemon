@@ -13,6 +13,7 @@ impl Checker<'_> {
 			ast::Expr::Ident(ident_expr) => self.check_ident_expr(ident_expr),
 			ast::Expr::Call(call_expr) => self.check_call_expr(call_expr),
 			ast::Expr::If(if_expr) => self.check_if_expr(if_expr),
+			ast::Expr::Import(import_expr) => self.check_import_expr(import_expr),
 			_ => todo!(),
 		}
 	}

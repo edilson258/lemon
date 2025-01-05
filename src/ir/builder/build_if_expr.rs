@@ -5,7 +5,7 @@ use crate::{
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_if_expr(&mut self, expr: &ast::IfExpr) -> Value {
 		let cond = self.build_expr(&expr.cond).get_register().unwrap();
 		let then_b_id = self.ctx.create_block();

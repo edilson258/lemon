@@ -2,10 +2,10 @@ use crate::{ast, ir::ir};
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_fn_stmt(&mut self, fn_stmt: &ast::FnStmt) {
 		let lexeme = fn_stmt.name.lexeme();
-		let ret = fn_stmt.get_ret_id().unwrap();
+		let ret = self.get_type_id(fn_stmt.get_ret_id());
 		let fn_id = ir::FnId::new(lexeme);
 		self.ctx.enter_scope();
 		let params = self.build_fn_params(&fn_stmt.params);

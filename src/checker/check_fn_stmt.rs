@@ -25,7 +25,7 @@ impl Checker<'_> {
 		}
 		let ret_found = self.check_fn_body(&mut fn_stmt.body)?;
 
-		if !self.ctx.flow.is_paths_return() {
+		if !self.ctx.flow.is_paths_return() && ret_id != TypeId::NOTHING {
 			return Err(TypeCheckError::not_all_paths_return(fn_stmt.body.last_stmt_range()));
 		}
 

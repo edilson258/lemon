@@ -1,3 +1,5 @@
+use lemon::report::throw_engine_error;
+
 use crate::ir;
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -15,9 +17,8 @@ pub struct Frame {
 }
 
 impl Frame {
-	pub fn new() -> Self {
-		// todo: set registers size based on the root
-		let registers = Vec::from_iter(vec![Value::Zero; 1024]);
+	pub fn new(size: usize) -> Self {
+		let registers = Vec::from_iter(vec![Value::Zero; size]);
 		Self { registers, return_value: None }
 	}
 	pub fn set_register(&mut self, reg: &ir::Register, value: Value) {
@@ -27,11 +28,11 @@ impl Frame {
 	pub fn get_register(&self, reg: &ir::Register) -> Value {
 		if let Some(value) = self.registers.get(reg.as_usize()) {
 			if let Value::Zero = value {
-				todo!("comptime error: register is zero");
+				throw_engine_error("register is zero");
 			}
 			value.clone()
 		} else {
-			todo!("comptime error: register not found");
+			throw_engine_error("register not found");
 		}
 	}
 

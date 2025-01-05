@@ -2,7 +2,7 @@ use crate::{ast, ir::ir};
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_const_fn_stmt(&mut self, const_fn: &ast::ConstFnStmt) {
 		self.ctx.enter_fn_comptime();
 		let lexeme = const_fn.name.lexeme();

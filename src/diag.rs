@@ -76,6 +76,11 @@ impl Diag {
 		self.report_err(source);
 		std::process::exit(1);
 	}
+
+	pub fn report_engine_err_wrap(&self) -> ! {
+		report::report_engine_err(self);
+		std::process::exit(1);
+	}
 }
 
 pub struct DiagGroup<'ckr> {

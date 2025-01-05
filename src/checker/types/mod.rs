@@ -21,6 +21,9 @@ pub enum Type {
 	Ref(RefType),
 	ConstDel(ConstDelType),
 	ConstFn(ConstFnType),
+
+	// remove this
+	Println,
 }
 
 impl Type {
@@ -28,6 +31,9 @@ impl Type {
 		matches!(self, Type::Int(_) | Type::Float(_) | Type::Usize(_) | Type::InferInt { .. })
 	}
 
+	pub fn can_free_value(&self) -> bool {
+		!matches!(self, Type::Par { .. } | Type::ConstDel(_) | Type::ConstFn(_))
+	}
 	pub fn is_const_fn(&self) -> bool {
 		matches!(self, Type::ConstFn(_))
 	}

@@ -179,6 +179,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
 			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
+			Some(Token::Import) => self.parse_import_expr().map(ast::Expr::Import)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
 			}
@@ -203,7 +204,17 @@ impl<'lex> Parser<'lex> {
 		}
 		Ok(expr)
 	}
-
+	// import("std/mem.ln", os = "windows")
+	fn parse_import_expr(&mut self) -> PResult<'lex, ast::ImportExpr> {
+		let range = self.expect(Token::Import)?;
+		self.expect(Token::LParen)?;
+		let path = match self.parse_string()? {
+			ast::Literal::String(string) => string,
+			_ => return Err(self.unexpected_token()),
+		};
+		self.expect(Token::RParen)?;
+		Ok(ast::ImportExpr { path, range })
+	}
 	// &mut <expr>
 	fn parse_ref_expr(&mut self) -> PResult<'lex, ast::RefExpr> {
 		let range = self.expect(Token::And)?;
@@ -319,7 +330,8 @@ impl<'lex> Parser<'lex> {
 			}
 		}
 		range.merge(&self.expect(Token::RParen)?); // consume ')'
-		let call_expr = ast::CallExpr { callee: Box::new(callee), args, range, type_id: None };
+		let call_expr =
+			ast::CallExpr { callee: Box::new(callee), args, range, type_id: None, args_type: vec![] };
 		Ok(ast::Expr::Call(call_expr))
 	}
 
