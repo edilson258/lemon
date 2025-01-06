@@ -1,3 +1,5 @@
+use crate::report::throw_engine_error;
+
 use super::frame::Frame;
 
 pub struct Stack {
@@ -5,8 +7,8 @@ pub struct Stack {
 }
 
 impl Stack {
-	pub fn new() -> Self {
-		let frames = Vec::from_iter(vec![Frame::new()]);
+	pub fn new(registers_size: usize) -> Self {
+		let frames = Vec::from_iter(vec![Frame::new(registers_size)]);
 		Self { frames }
 	}
 
@@ -20,7 +22,7 @@ impl Stack {
 
 	pub fn current_frame(&mut self) -> &mut Frame {
 		if self.frames.is_empty() {
-			todo!("comptime error: stack is empty");
+			throw_engine_error("stack is empty");
 		}
 		self.frames.last_mut().unwrap()
 	}

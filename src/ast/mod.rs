@@ -16,10 +16,11 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Stmt {
 	Let(LetStmt),
-	Const(ConstStmt),
 	Expr(Expr),
 	Fn(FnStmt),
 	Ret(RetStmt),
+	ConstDel(ConstDelStmt),
+	ConstFn(ConstFnStmt),
 	Block(BlockStmt),
 }
 
@@ -33,7 +34,8 @@ impl Stmt {
 			Stmt::Fn(function_stmt) => function_stmt.get_range(),
 			Stmt::Block(block_stmt) => block_stmt.get_range(),
 			Stmt::Expr(expr) => expr.get_range(),
-			Stmt::Const(const_stmt) => const_stmt.get_range(),
+			Stmt::ConstDel(const_del) => const_del.get_range(),
+			Stmt::ConstFn(const_stmt) => const_stmt.get_range(),
 			Stmt::Ret(ret_stmt) => ret_stmt.get_range(),
 		}
 	}
@@ -76,16 +78,44 @@ impl RetStmt {
 	}
 }
 
+// const <fn>
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConstFnStmt {
+	pub name: Ident,
+	pub params: Vec<Binding>,
+	pub ret_type: Option<ast_type::AstType>,
+	pub body: Box<Stmt>,
+	pub range: Range,    // const range
+	pub fn_range: Range, // fn range
+	pub ret_id: Option<TypeId>,
+}
+
+impl ConstFnStmt {
+	pub fn lexeme(&self) -> &str {
+		&self.name.text
+	}
+	pub fn get_range(&self) -> Range {
+		self.range.merged_with(&self.body.get_range())
+	}
+
+	pub fn set_ret_id(&mut self, type_id: TypeId) {
+		self.ret_id = Some(type_id);
+	}
+	pub fn get_ret_id(&self) -> Option<TypeId> {
+		self.ret_id
+	}
+}
+
 // const <pat> = <expr>
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ConstStmt {
+pub struct ConstDelStmt {
 	pub name: Binding,
 	pub expr: Expr,
 	pub range: Range, // let range
 	pub type_id: Option<TypeId>,
 }
 
-impl ConstStmt {
+impl ConstDelStmt {
 	pub fn lexeme(&self) -> &str {
 		&self.name.ident.text
 	}
@@ -137,10 +167,10 @@ impl LetStmt {
 pub struct FnStmt {
 	pub name: Ident,
 	pub params: Vec<Binding>,
-	pub return_type: Option<ast_type::AstType>, // todo: implement this
+	pub ret_type: Option<ast_type::AstType>, // todo: implement this
 	pub body: Box<Stmt>,
 	pub range: Range, // fn range
-	pub type_id: Option<TypeId>,
+	pub ret_id: Option<TypeId>,
 }
 
 impl FnStmt {
@@ -152,11 +182,11 @@ impl FnStmt {
 		self.range.merged_with(&self.body.get_range())
 	}
 
-	pub fn set_ret_type_id(&mut self, type_id: TypeId) {
-		self.type_id = Some(type_id);
+	pub fn set_ret_id(&mut self, ret_id: TypeId) {
+		self.ret_id = Some(ret_id);
 	}
-	pub fn get_ret_type_id(&mut self) -> Option<TypeId> {
-		self.type_id
+	pub fn get_ret_id(&self) -> Option<TypeId> {
+		self.ret_id
 	}
 }
 
@@ -279,6 +309,14 @@ impl Expr {
 		}
 	}
 
+	pub fn get_bind_type_id(&self) -> Option<TypeId> {
+		match self {
+			Expr::Ident(ident) => ident.type_id,
+			Expr::Ref(ref_expr) => ref_expr.type_id,
+			Expr::Deref(deref_expr) => deref_expr.type_id,
+			_ => None,
+		}
+	}
 	pub fn valid_assign_expr(&self) -> bool {
 		matches!(self, Expr::Ident(_)) | matches!(self, Expr::Ref(_)) | matches!(self, Expr::Deref(_))
 	}
@@ -286,7 +324,7 @@ impl Expr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnExpr {
 	pub params: Vec<Binding>,
-	pub return_type: Option<ast_type::AstType>,
+	pub ret_type: Option<ast_type::AstType>,
 	pub body: Box<Stmt>,
 	pub range: Range, // fn range
 	pub type_id: Option<TypeId>,
@@ -389,6 +427,7 @@ impl UnaryExpr {
 pub struct CallExpr {
 	pub callee: Box<Expr>,
 	pub args: Vec<Expr>,
+	pub args_type: Vec<TypeId>,
 	pub range: Range, // (args...)
 	pub type_id: Option<TypeId>,
 }
@@ -402,6 +441,12 @@ impl CallExpr {
 	}
 	pub fn get_type_id(&mut self) -> Option<TypeId> {
 		self.type_id
+	}
+	pub fn set_args_type(&mut self, args_type: Vec<TypeId>) {
+		self.args_type = args_type;
+	}
+	pub fn get_args_type(&self) -> &Vec<TypeId> {
+		&self.args_type
 	}
 }
 
@@ -514,6 +559,10 @@ pub struct ImportExpr {
 impl ImportExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
+	}
+	pub fn get_path(&self) -> String {
+		// remove " "
+		self.path.text.replace("\"", "")
 	}
 }
 

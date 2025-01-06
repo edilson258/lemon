@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::ir::{self};
 use crate::checker::types::{TypeFormatter, TypeId, TypeStore};
 
@@ -31,6 +32,11 @@ impl<'ir> Disassembler<'ir> {
 		result.push_str("globals:\n");
 		for instr in global.instrs.iter() {
 			self.disassemble_instr(instr, result);
+			result.push('\n');
+		}
+		result.push('\n');
+		for fn_ir in global.fns.iter() {
+			self.disassemble_fn(fn_ir, result);
 			result.push('\n');
 		}
 	}
@@ -143,13 +149,23 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::JmpIf(jmp_if) => self.disassemble_jmpif(jmp_if, result),
 			ir::Instr::Own(own) => self.disassemble_own(own, result),
 
-			ir::Instr::Free(free) => self.disassemble_unary_instr("free", free, result),
+			ir::Instr::Free(free) => self.disassemble_free(free, result),
 			ir::Instr::Ret(ret) => self.disassemble_ret(ret, result),
 			ir::Instr::Call(call) => self.disassemble_call(call, result),
 			ir::Instr::Load(unary) => self.disassemble_unary_instr("load", unary, result),
 			ir::Instr::Goto(goto) => self.disassemble_goto(goto, result),
+			ir::Instr::Import(import) => self.disassemble_import(import, result),
 			_ => todo!("code {:?}", instr),
 		}
+	}
+
+	pub fn disassemble_import(&self, import: &ir::ImportInstr, result: &mut String) {
+		result.push_str("port ");
+		result.push_str(import.module.as_str());
+	}
+	pub fn disassemble_free(&self, value: &ir::Register, result: &mut String) {
+		result.push_str("free ");
+		self.disassemble_register(value, result);
 	}
 
 	fn disassemble_ret(&self, ret: &ir::RetInstr, result: &mut String) {

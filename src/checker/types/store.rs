@@ -39,6 +39,7 @@ impl Default for TypeStore {
 			Type::Usize(UsizeType::Usize), // 14
 			Type::Float(FloatType::F32),   // 15
 			Type::Float(FloatType::F64),   // 16
+			Type::Println,                 // 17
 		];
 
 		assert_eq!(types.len(), TypeId::LENGTH);

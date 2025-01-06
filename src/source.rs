@@ -20,4 +20,8 @@ impl Source {
 	pub fn path_str(&self) -> String {
 		self.path().display().to_string()
 	}
+
+	pub fn file_name(&self) -> &str {
+		self.path().file_name().unwrap().to_str().unwrap()
+	}
 }

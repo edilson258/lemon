@@ -2,7 +2,7 @@ use crate::{ast, ir::ir::Value};
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_expr(&mut self, expr: &ast::Expr) -> Value {
 		match expr {
 			ast::Expr::Binary(binary) => self.build_binary_expr(binary),
@@ -12,6 +12,7 @@ impl Builder {
 			ast::Expr::Call(call) => self.build_call_expr(call),
 			ast::Expr::Deref(deref) => self.build_deref_expr(deref),
 			ast::Expr::Ref(ref_expr) => self.build_ref_expr(ref_expr),
+			ast::Expr::Import(import) => self.build_import_expr(import),
 			_ => todo!(),
 		}
 	}

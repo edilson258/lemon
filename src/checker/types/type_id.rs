@@ -26,10 +26,9 @@ impl TypeId {
 	pub const FLOAT64: TypeId = TypeId(16);
 
 	// internal
-	// pub const INFERI32: TypeId = TypeId(19);
-	// pub const INFERF32: TypeId = TypeId(20);
+	pub const PRINTLN: TypeId = TypeId(17); // std/io/println
 
-	pub const LENGTH: usize = 17; // internal
+	pub const LENGTH: usize = 18; // internal
 
 	// methods
 	pub fn as_usize(&self) -> usize {

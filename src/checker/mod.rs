@@ -7,16 +7,18 @@ use context::Context;
 use types::{Type, TypeFormatter, TypeId};
 mod synthesis;
 
-// mod check_assign_expr
+// mod check_assign_expr;
 mod check_binary_expr;
 mod check_block_stmt;
 mod check_call_expr;
-mod check_const_stmt;
+mod check_const_del_stmt;
+mod check_const_fn_stmt;
 mod check_deref_expr;
 mod check_expr;
 mod check_fn_stmt;
 mod check_ident_expr;
 mod check_if_expr;
+mod check_import_expr;
 mod check_let_stmt;
 mod check_literal;
 mod check_number;
@@ -56,7 +58,8 @@ impl<'ckr> Checker<'ckr> {
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
 			ast::Stmt::Fn(fn_stmt) => self.check_fn_stmt(fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.check_block_stmt(block_stmt),
-			ast::Stmt::Const(const_stmt) => self.check_const_stmt(const_stmt),
+			ast::Stmt::ConstDel(const_del) => self.check_const_del_stmt(const_del),
+			ast::Stmt::ConstFn(const_fn) => self.check_const_fn_stmt(const_fn),
 			ast::Stmt::Ret(ret_stmt) => self.check_ret_stmt(ret_stmt),
 		}
 	}

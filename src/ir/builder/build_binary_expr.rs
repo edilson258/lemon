@@ -5,12 +5,12 @@ use crate::{
 
 use super::Builder;
 
-impl Builder {
+impl Builder<'_> {
 	pub fn build_binary_expr(&mut self, binary: &ast::BinaryExpr) -> Value {
 		let lhs = self.build_expr(&binary.left).get_register().unwrap();
 		let rhs = self.build_expr(&binary.right).get_register().unwrap();
 		let dest = self.ctx.get_register();
-		let type_id = binary.get_type_id().unwrap();
+		let type_id = self.get_type_id(binary.get_type_id());
 		let binary_instr = ir::BinaryInstr::new(type_id, lhs, rhs, dest);
 		let instr = match binary.operator {
 			ast::Operator::ADD => ir::Instr::Add(binary_instr),

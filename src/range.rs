@@ -34,3 +34,9 @@ impl fmt::Display for Range {
 		write!(f, "{}..{}", self.start, self.end)
 	}
 }
+
+impl Default for Range {
+	fn default() -> Self {
+		Self::new(0, 0)
+	}
+}

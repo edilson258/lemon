@@ -37,7 +37,7 @@ impl<'lex> Parser<'lex> {
 	fn parse_stmt(&mut self) -> PResult<'lex, ast::Stmt> {
 		let stmt = match self.token {
 			Some(Token::Let) => self.parse_let_stmt().map(ast::Stmt::Let),
-			Some(Token::Const) => self.parse_const_stmt().map(ast::Stmt::Const),
+			Some(Token::Const) => self.parse_const_stmt(),
 			Some(Token::Fn) => self.parse_fn_stmt().map(ast::Stmt::Fn),
 			Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
 			Some(Token::Ret) => self.parse_ret_stmt().map(ast::Stmt::Ret),
@@ -47,23 +47,54 @@ impl<'lex> Parser<'lex> {
 		stmt
 	}
 	fn parse_ret_stmt(&mut self) -> PResult<'lex, ast::RetStmt> {
-		let range = self.expect(Token::Ret)?.clone();
+		let range = self.expect(Token::Ret)?;
 		let mut expr = None;
 		if !self.match_token(Token::Semi) {
 			expr = Some(Box::new(self.parse_expr(MIN_PDE)?));
 		}
 		Ok(ast::RetStmt { expr, range, type_id: None })
 	}
-	fn parse_const_stmt(&mut self) -> PResult<'lex, ast::ConstStmt> {
-		let range = self.expect(Token::Const)?.clone();
+	fn parse_const_stmt(&mut self) -> PResult<'lex, ast::Stmt> {
+		let range = self.expect(Token::Const)?;
+		if self.match_token(Token::Fn) {
+			return self.parse_const_fn_stmt(range).map(ast::Stmt::ConstFn);
+		}
+		self.parse_const_del_stmt(range).map(ast::Stmt::ConstDel)
+	}
+
+	fn parse_const_fn_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstFnStmt> {
+		let fn_range = self.expect(Token::Fn)?;
+		let name = self.parse_ident()?;
+		self.expect(Token::LParen)?;
+
+		let mut params = vec![];
+		while !self.match_token(Token::RParen) {
+			params.push(self.parse_binding()?);
+			if !self.match_token(Token::RParen) {
+				self.expect(Token::Comma)?;
+			}
+		}
+		self.expect(Token::RParen)?;
+
+		let mut ret_type = None;
+		if self.match_token(Token::Colon) {
+			self.expect(Token::Colon)?;
+			ret_type = Some(self.parse_type()?);
+		}
+		self.expect(Token::Assign)?; // take '='
+		let body = Box::new(self.parse_stmt()?);
+		Ok(ast::ConstFnStmt { name, params, ret_type, body, range, fn_range, ret_id: None })
+	}
+
+	fn parse_const_del_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstDelStmt> {
 		let name = self.parse_binding()?;
 		self.expect(Token::Assign)?; // take '='
 		let expr = self.parse_expr(MIN_PDE)?;
-		Ok(ast::ConstStmt { name, expr, range, type_id: None })
+		Ok(ast::ConstDelStmt { name, expr, range, type_id: None })
 	}
 
 	fn parse_let_stmt(&mut self) -> PResult<'lex, ast::LetStmt> {
-		let range = self.expect(Token::Let)?.clone();
+		let range = self.expect(Token::Let)?;
 		let mut mutable = None;
 
 		if self.match_token(Token::Mut) {
@@ -77,7 +108,7 @@ impl<'lex> Parser<'lex> {
 	}
 
 	fn parse_fn_stmt(&mut self) -> PResult<'lex, ast::FnStmt> {
-		let range = self.expect(Token::Fn)?.clone();
+		let range = self.expect(Token::Fn)?;
 		let name = self.parse_ident()?;
 		self.expect(Token::LParen)?;
 
@@ -91,18 +122,18 @@ impl<'lex> Parser<'lex> {
 
 		self.expect(Token::RParen)?; // take ')'
 
-		let mut return_type = None;
+		let mut ret_type = None;
 		if self.match_token(Token::Colon) {
 			self.expect(Token::Colon)?;
-			return_type = Some(self.parse_type()?);
+			ret_type = Some(self.parse_type()?);
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = Box::new(self.parse_stmt()?);
-		Ok(ast::FnStmt { name, params, return_type, body, range, type_id: None })
+		Ok(ast::FnStmt { name, params, ret_type, body, range, ret_id: None })
 	}
 
 	fn parse_block_stmt(&mut self) -> PResult<'lex, ast::BlockStmt> {
-		let mut range = self.expect(Token::LBrace)?.clone();
+		let mut range = self.expect(Token::LBrace)?;
 		let mut stmts = vec![];
 		while !self.match_token(Token::RBrace) {
 			let stmt = self.parse_stmt()?;
@@ -148,6 +179,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
 			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
+			Some(Token::Import) => self.parse_import_expr().map(ast::Expr::Import)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
 			}
@@ -172,10 +204,20 @@ impl<'lex> Parser<'lex> {
 		}
 		Ok(expr)
 	}
-
+	// import("std/mem.ln", os = "windows")
+	fn parse_import_expr(&mut self) -> PResult<'lex, ast::ImportExpr> {
+		let range = self.expect(Token::Import)?;
+		self.expect(Token::LParen)?;
+		let path = match self.parse_string()? {
+			ast::Literal::String(string) => string,
+			_ => return Err(self.unexpected_token()),
+		};
+		self.expect(Token::RParen)?;
+		Ok(ast::ImportExpr { path, range })
+	}
 	// &mut <expr>
 	fn parse_ref_expr(&mut self) -> PResult<'lex, ast::RefExpr> {
-		let range = self.expect(Token::And)?.clone();
+		let range = self.expect(Token::And)?;
 		let mut mutable = None;
 		if self.match_token(Token::Mut) {
 			mutable = Some(self.expect(Token::Mut)?);
@@ -186,7 +228,7 @@ impl<'lex> Parser<'lex> {
 
 	// *<expr>
 	fn parse_deref_expr(&mut self) -> PResult<'lex, ast::DerefExpr> {
-		let range = self.expect(Token::Star)?.clone();
+		let range = self.expect(Token::Star)?;
 		let expr = self.parse_ref_and_deref_value()?;
 		Ok(ast::DerefExpr { expr: Box::new(expr), range, type_id: None })
 	}
@@ -238,7 +280,7 @@ impl<'lex> Parser<'lex> {
 	}
 
 	fn parse_fn_expr(&mut self) -> PResult<'lex, ast::FnExpr> {
-		let range = self.expect(Token::Fn)?.clone();
+		let range = self.expect(Token::Fn)?;
 		let mut params = vec![];
 		self.expect(Token::LParen)?; // take '('
 		while !self.match_token(Token::RParen) {
@@ -249,7 +291,7 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::RParen)?; // take ')'
 
-		let return_type = match self.token {
+		let ret_type = match self.token {
 			Some(Token::Colon) => {
 				self.expect(Token::Colon)?;
 				Some(self.parse_type()?)
@@ -261,11 +303,11 @@ impl<'lex> Parser<'lex> {
 
 		let body = Box::new(self.parse_stmt()?);
 
-		Ok(ast::FnExpr { params, body, range, return_type, type_id: None })
+		Ok(ast::FnExpr { params, body, range, ret_type, type_id: None })
 	}
 
 	fn parse_if_expr(&mut self) -> PResult<'lex, ast::IfExpr> {
-		let range = self.expect(Token::If)?.clone();
+		let range = self.expect(Token::If)?;
 		self.expect(Token::LParen)?; // take '('
 		let cond = Box::new(self.parse_expr(MIN_PDE)?);
 		self.expect(Token::RParen)?; // take ')'
@@ -288,12 +330,13 @@ impl<'lex> Parser<'lex> {
 			}
 		}
 		range.merge(&self.expect(Token::RParen)?); // consume ')'
-		let call_expr = ast::CallExpr { callee: Box::new(callee), args, range, type_id: None };
+		let call_expr =
+			ast::CallExpr { callee: Box::new(callee), args, range, type_id: None, args_type: vec![] };
 		Ok(ast::Expr::Call(call_expr))
 	}
 
 	fn parse_assign_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
-		let range = self.expect(Token::Assign)?.clone();
+		let range = self.expect(Token::Assign)?;
 		if !left.valid_assign_expr() {
 			let diag = self.create_custom_diag("left-hand side can't be assigned");
 			return Err(diag);
@@ -305,7 +348,7 @@ impl<'lex> Parser<'lex> {
 	}
 
 	fn parse_pipe_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
-		let range = self.expect(Token::Pipe)?.clone();
+		let range = self.expect(Token::Pipe)?;
 		let right = self.parse_expr(MIN_PDE)?;
 		let pipe_expr = ast::PipeExpr { left: Box::new(left), right: Box::new(right), range };
 		Ok(ast::Expr::Pipe(pipe_expr))

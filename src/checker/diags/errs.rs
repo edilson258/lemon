@@ -31,6 +31,7 @@ pub enum TypeCheckError<'tce> {
 
 	// other errors
 	NotFoundValue { name: &'tce str, range: Range },
+	NotFoundModule { name: &'tce str, range: Range },
 	InvalidFloat { range: Range },
 	NumberTooLarge { range: Range },
 	ExpectedNumber { range: Range },
@@ -110,6 +111,9 @@ impl<'tce> TypeCheckError<'tce> {
 
 	pub fn return_not_in_fn_scope(range: Range) -> Diag {
 		Self::ReturnNotInFnScope { range }.into()
+	}
+	pub fn not_found_module(name: &'tce str, range: Range) -> Diag {
+		Self::NotFoundModule { name, range }.into()
 	}
 
 	pub fn deref_of_non_ref(range: Range) -> Diag {
@@ -262,6 +266,10 @@ impl<'tce> From<TypeCheckError<'tce>> for diag::Diag {
 				let text = "expected return value in all cases".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 					.with_note("ensure every path returns a value".to_string())
+			}
+			TypeCheckError::NotFoundModule { name, range } => {
+				let text = format!("module '{}' not found", name);
+				diag::Diag::new(Severity::Err, text, range)
 			}
 		}
 	}

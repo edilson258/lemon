@@ -21,6 +21,17 @@ impl BlockId {
 }
 #[derive(Debug, Clone)]
 pub struct FnId(pub String);
+
+pub fn get_std_fn_id(name: &str) -> Option<FnId> {
+	match name {
+		"print" => Some(FnId::new("print")),
+		"println" => Some(FnId::new("println")),
+		"panic" => Some(FnId::new("panic")),
+		"exit" => Some(FnId::new("exit")),
+		_ => None,
+	}
+}
+
 impl FnId {
 	pub fn new(name: &str) -> Self {
 		Self(name.to_owned())
@@ -89,7 +100,7 @@ pub enum Instr {
 	// store value -> dest
 	Store(UnaryInstr),
 	// free value
-	Free(UnaryInstr),
+	Free(Register),
 	// own value -> dest
 	Own(OwnInstr),
 	// borrow value -> dest
@@ -106,6 +117,20 @@ pub enum Instr {
 	Ret(RetInstr),
 	// call fn(args) -> dest;
 	Call(CallInstr),
+
+	// import c fn like print, etc
+	Import(ImportInstr),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ImportInstr {
+	pub module: String,
+}
+
+impl ImportInstr {
+	pub fn new(module: String) -> Self {
+		Self { module }
+	}
 }
 
 #[derive(Debug, Clone)]
@@ -382,10 +407,17 @@ impl Fn {
 #[derive(Debug, Clone)]
 pub struct Global {
 	pub instrs: Vec<Instr>,
+	pub fns: Vec<Fn>,
 }
 impl Global {
 	pub fn new() -> Self {
-		Self { instrs: vec![] }
+		Self { instrs: vec![], fns: vec![] }
+	}
+
+	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
+		if let Some(fn_ir) = self.fns.last_mut() {
+			fn_ir.add_blocks(blocks);
+		}
 	}
 }
 
@@ -398,16 +430,29 @@ impl Default for Global {
 // root ir
 #[derive(Debug, Clone)]
 pub struct Root {
+	pub size: usize,
 	pub fns: Vec<Fn>,
 	pub globals: Global,
 }
 
 impl Root {
 	pub fn new() -> Self {
-		Self { fns: Vec::new(), globals: Global::new() }
+		Self { fns: Vec::new(), globals: Global::new(), size: 0 }
 	}
 	pub fn add_fn(&mut self, fn_ir: Fn) {
 		self.fns.push(fn_ir);
+	}
+
+	pub fn set_size(&mut self, size: usize) {
+		self.size = size;
+	}
+
+	pub fn get_size(&self) -> usize {
+		self.size
+	}
+
+	pub fn add_fn_global(&mut self, fn_ir: Fn) {
+		self.globals.fns.push(fn_ir);
 	}
 
 	pub fn add_block(&mut self, block: Block) {
@@ -420,6 +465,9 @@ impl Root {
 		if let Some(fn_ir) = self.fns.last_mut() {
 			fn_ir.add_blocks(blocks);
 		}
+	}
+	pub fn add_global_blocks(&mut self, blocks: Vec<Block>) {
+		self.globals.add_blocks(blocks);
 	}
 	pub fn add_global(&mut self, instr: Instr) {
 		self.globals.instrs.push(instr);

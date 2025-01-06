@@ -14,7 +14,7 @@ impl Checker<'_> {
 			let type_id = self.check_expr(value_expr)?;
 			let ret_id = self.check_ref_return_value(type_id, ret_stmt.get_range())?;
 			self.equal_type_id(ret_scope_id, ret_id, ret_stmt.get_range())?;
-			ret_stmt.set_type_id(ret_id);
+			ret_stmt.set_type_id(ret_scope_id);
 			return Ok(ret_id);
 		}
 		self.equal_type_id(ret_scope_id, TypeId::NOTHING, ret_stmt.get_range())?;
