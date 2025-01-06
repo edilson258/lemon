@@ -1,5 +1,8 @@
 use crate::ir::{self};
-use inkwell::values::{BasicValueEnum, FunctionValue};
+use inkwell::{
+	basic_block::BasicBlock,
+	values::{BasicValueEnum, FunctionValue},
+};
 use lemon::report::throw_llvm_error;
 
 use super::Llvm;
@@ -102,26 +105,39 @@ impl<'ll> Llvm<'ll> {
 		let value = self.load_value(store.value);
 		self.insert_value(store.dest, value);
 	}
-
 	fn compile_jmp_if(&mut self, jmp: &ir::JmpIfInstr) {
 		let cond_value = self.load_value(jmp.cond).into_int_value();
-		let l0_block_id = self.compile_block_id(&jmp.l0);
-		let l1_block_id = self.compile_block_id(&jmp.l1);
-		let block_left = self.ctx.append_basic_block(self.get_parent_block(), &l0_block_id);
-		let block_right = self.ctx.append_basic_block(self.get_parent_block(), &l1_block_id);
+		let block_left = self.get_or_create_block(&jmp.l0);
+		let block_right = self.get_or_create_block(&jmp.l1);
 		match self.builder.build_conditional_branch(cond_value, block_left, block_right) {
 			Ok(_) => {}
-			Err(err) => throw_llvm_error(format!("jmp_if register {:?}", jmp.cond)),
+			Err(err) => {
+				throw_llvm_error(format!(
+					"failed to build conditional branch: cond_register={:?}, error={:?}",
+					jmp.cond, err
+				));
+			}
 		}
+	}
+
+	fn get_or_create_block(&mut self, block_id: &ir::BlockId) -> BasicBlock<'ll> {
+		if let Some(existing_block) = self.block_store.get(block_id) {
+			return *existing_block;
+		}
+		let block_name = self.compile_block_id(block_id);
+		let parent_fn = self.get_parent_block();
+		let new_block = self.ctx.append_basic_block(parent_fn, &block_name);
+		self.set_block(block_id, new_block);
+		new_block
 	}
 
 	fn get_parent_block(&self) -> FunctionValue<'ll> {
 		match self.builder.get_insert_block() {
 			Some(block) => match block.get_parent() {
 				Some(parent) => parent,
-				None => throw_llvm_error("get parent block"),
+				None => throw_llvm_error("no parent fn found for the current block."),
 			},
-			None => throw_llvm_error("get parent block"),
+			None => throw_llvm_error("builder is not positioned in a block."),
 		}
 	}
 
