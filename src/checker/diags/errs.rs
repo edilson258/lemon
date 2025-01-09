@@ -5,15 +5,19 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub enum TypeCheckError<'tce> {
+pub enum SyntaxErr<'tce> {
 	// type errors
 	TypeMismatch { expected: String, found: String, range: Range },
 	NotFn { found: String, range: Range },
-	UnsupportedOperator { left: String, right: String, op: &'tce Operator, range: Range },
+	UnsupportedOperator { left: String, right: String, operator: &'tce Operator },
 	ValueExpected { value: String, range: Range },
 	UnexpectedValue { value: String, range: Range },
 	BoundsError { value: String, found: String, range: Range },
 	ArgsMismatch { expected: usize, found: usize, range: Range },
+
+	// fn errors
+	RedefineFnInSameScope { name: String, range: Range },
+	ReturnLocalBorrow { range: Range },
 
 	// context errors
 	ReturnOutsideFn { range: Range },
@@ -27,7 +31,10 @@ pub enum TypeCheckError<'tce> {
 	DoubleMutBorrow { range: Range },
 	InvalidBorrow { range: Range },
 	BorrowedValueDropped { range: Range },
-	ConnotBorrowAsMutable { range: Range },
+	CannotDereference { type_name: String, range: Range },
+	CannotBorrowAsMutable { name: String, range: Range },
+	BorrowExpected { range: Range },
+	CannotAssignImmutable { name: String, range: Range },
 
 	// other errors
 	NotFoundValue { name: &'tce str, range: Range },
@@ -35,16 +42,14 @@ pub enum TypeCheckError<'tce> {
 	InvalidFloat { range: Range },
 	NumberTooLarge { range: Range },
 	ExpectedNumber { range: Range },
-	DerefOfNonRef { range: Range },
 	NotAllPathsReturn { range: Range },
-
 	// const errors
 	ConstOutsideGlobalScope { range: Range },
 	ConstRedefinition { range: Range },
 	ConstRequiredTypeNotation { range: Range },
 }
 
-impl<'tce> TypeCheckError<'tce> {
+impl<'tce> SyntaxErr<'tce> {
 	pub fn const_outside_global_scope(range: Range) -> Diag {
 		Self::ConstOutsideGlobalScope { range }.into()
 	}
@@ -65,7 +70,7 @@ impl<'tce> TypeCheckError<'tce> {
 		Self::TypeMismatch { expected, found, range }.into()
 	}
 
-	pub fn arg_mismatch(expected: usize, found: usize, range: Range) -> Diag {
+	pub fn args_mismatch(expected: usize, found: usize, range: Range) -> Diag {
 		Self::ArgsMismatch { expected, found, range }.into()
 	}
 
@@ -116,10 +121,9 @@ impl<'tce> TypeCheckError<'tce> {
 		Self::NotFoundModule { name, range }.into()
 	}
 
-	pub fn deref_of_non_ref(range: Range) -> Diag {
-		Self::DerefOfNonRef { range }.into()
+	pub fn cannot_dereference(type_name: String, range: Range) -> Diag {
+		Self::CannotDereference { type_name, range }.into()
 	}
-
 	pub fn not_a_fn(found: String, range: Range) -> Diag {
 		Self::NotFn { found, range }.into()
 	}
@@ -140,136 +144,167 @@ impl<'tce> TypeCheckError<'tce> {
 		Self::BorrowedValueDropped { range }.into()
 	}
 
-	pub fn connot_borrow_as_mutable(range: Range) -> Diag {
-		Self::ConnotBorrowAsMutable { range }.into()
+	pub fn cannot_borrow_as_mutable(name: &str, range: Range) -> Diag {
+		Self::CannotBorrowAsMutable { name: name.to_string(), range }.into()
 	}
 	pub fn connot_return_local_rerefence(range: Range) -> Diag {
 		Self::ConnotReturnLocalRerefence { range }.into()
 	}
-	pub fn unsupported_operator(
-		left: String,
-		right: String,
-		op: &'tce Operator,
-		range: Range,
-	) -> Diag {
-		Self::UnsupportedOperator { left, right, op, range }.into()
+	pub fn unsupported_operator(left: String, right: String, operator: &'tce Operator) -> Diag {
+		Self::UnsupportedOperator { left, right, operator }.into()
+	}
+
+	pub fn redefine_fn_in_same_scope(name: &str, range: Range) -> Diag {
+		Self::RedefineFnInSameScope { name: name.to_string(), range }.into()
+	}
+
+	pub fn return_local_borrow(range: Range) -> Diag {
+		Self::ReturnLocalBorrow { range }.into()
+	}
+
+	pub fn borrow_expected(range: Range) -> Diag {
+		Self::BorrowExpected { range }.into()
+	}
+
+	pub fn cannot_assign_immutable(name: &str, range: Range) -> Diag {
+		Self::CannotAssignImmutable { name: name.to_string(), range }.into()
 	}
 }
-impl<'tce> From<TypeCheckError<'tce>> for diag::Diag {
-	fn from(err: TypeCheckError<'tce>) -> Self {
+impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
+	fn from(err: SyntaxErr<'tce>) -> Self {
 		match err {
-			TypeCheckError::TypeMismatch { expected, found, range } => {
+			SyntaxErr::TypeMismatch { expected, found, range } => {
 				let text = format!("expected '{}', found '{}'", expected, found);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::RequiredTypeNotation { range } => {
+			SyntaxErr::RequiredTypeNotation { range } => {
 				let text = "required type notation, cannot infer type".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::Immutable { name, range } => {
+			SyntaxErr::Immutable { name, range } => {
 				let text = format!("variable '{}' is not mutable", name);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::ArgsMismatch { expected, found, range } => {
+			SyntaxErr::ArgsMismatch { expected, found, range } => {
 				let text = format!("expected {} args, found {}", expected, found);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::NotFoundValue { name, range } => {
+			SyntaxErr::NotFoundValue { name, range } => {
 				let text = format!("value '{}' not found", name);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::BoundsError { value, found, range } => {
+			SyntaxErr::BoundsError { value, found, range } => {
 				let text = format!("'{}' out of bounds, expected '{}'", value, found);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::UnsupportedOperator { left, right, op, range } => {
-				let text = format!("cannot apply '{}' with '{}' and '{}'", op, left, right);
-				diag::Diag::new(Severity::Err, text, range)
+			SyntaxErr::UnsupportedOperator { left, right, operator } => {
+				let text = format!("cannot {} '{}' to '{}'", operator.display(), left, right);
+				diag::Diag::new(Severity::Err, text, operator.get_range())
 			}
-			TypeCheckError::ValueExpected { value, range } => {
+			SyntaxErr::ValueExpected { value, range } => {
 				let text = format!("expected '{}', found nothing", value);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::UnexpectedValue { value, range } => {
+			SyntaxErr::UnexpectedValue { value, range } => {
 				let text = format!("no expected value, found '{}'", value);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::BorrowConflict { range } => {
+			SyntaxErr::BorrowConflict { range } => {
 				let text = "mutable and immutable borrows conflict.".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 					.with_note("cannot borrow as mutable and immutable at the same time.")
 			}
-			TypeCheckError::DoubleMutBorrow { range } => {
+			SyntaxErr::DoubleMutBorrow { range } => {
 				let text = "already mutably borrowed.".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::InvalidBorrow { range } => {
+			SyntaxErr::InvalidBorrow { range } => {
 				let text = "invalid borrow, value already freed.".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::BorrowedValueDropped { range } => {
+			SyntaxErr::BorrowedValueDropped { range } => {
 				let text = "borrowed value was dropped before borrow ended.".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::InvalidFloat { range } => {
+			SyntaxErr::InvalidFloat { range } => {
 				let text = "floating-point number out of range".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::NumberTooLarge { range } => {
+			SyntaxErr::NumberTooLarge { range } => {
 				let text = "unsupport number".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::ExpectedNumber { range } => {
+			SyntaxErr::ExpectedNumber { range } => {
 				let text = "expected number".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::ConnotBorrowAsMutable { range } => {
-				let text = "cannot borrow as mutable".to_string();
-				diag::Diag::new(Severity::Err, text, range)
-			}
-			TypeCheckError::ReturnNotInFnScope { range } => {
+			SyntaxErr::ReturnNotInFnScope { range } => {
 				let text = "return cannot be used in this context".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::DerefOfNonRef { range } => {
-				let text = "cannot deref a non-reference value".to_string();
+			SyntaxErr::CannotDereference { type_name, range } => {
+				let text = format!("'{}' cannot be dereferenced, expected a reference", type_name);
 				diag::Diag::new(Severity::Err, text, range)
 					.with_note("try to use a reference instead".to_string())
 			}
-			TypeCheckError::ReturnOutsideFn { range } => {
+			SyntaxErr::ReturnOutsideFn { range } => {
 				let text = "cannot return outside of a fn".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::NotFn { found, range } => {
+			SyntaxErr::NotFn { found, range } => {
 				let text = format!("expected a fn, found '{}'", found);
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::ConnotReturnLocalRerefence { range } => {
+			SyntaxErr::ConnotReturnLocalRerefence { range } => {
 				let text = "cannot return a reference to a scoped value".to_string();
 				diag::Diag::new(Severity::Err, text, range).with_note("try to return a value instead")
 			}
 
 			// const errors
-			TypeCheckError::ConstOutsideGlobalScope { range } => {
+			SyntaxErr::ConstOutsideGlobalScope { range } => {
 				let text = "const can only be defined at global scope".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::ConstRedefinition { range } => {
+			SyntaxErr::ConstRedefinition { range } => {
 				let text = "const already defined".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::ConstRequiredTypeNotation { range } => {
+			SyntaxErr::ConstRequiredTypeNotation { range } => {
 				let text = "required type notation, cannot infer type".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			TypeCheckError::NotAllPathsReturn { range } => {
+			SyntaxErr::NotAllPathsReturn { range } => {
 				let text = "expected return value in all cases".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 					.with_note("ensure every path returns a value".to_string())
 			}
-			TypeCheckError::NotFoundModule { name, range } => {
+			SyntaxErr::NotFoundModule { name, range } => {
 				let text = format!("module '{}' not found", name);
 				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::RedefineFnInSameScope { name, range } => {
+				let text = format!("function '{}' is already defined in this scope", name);
+				diag::Diag::new(Severity::Err, text, range)
+					.with_note("consider renaming the function".to_string())
+			}
+			SyntaxErr::ReturnLocalBorrow { range } => {
+				let text = "cannot return a local borrow".to_string();
+				diag::Diag::new(Severity::Err, text, range).with_note("try to return a value instead")
+			}
+
+			SyntaxErr::BorrowExpected { range } => {
+				let text = "consider adding a borrow".to_string();
+				diag::Diag::new(Severity::Err, text, range)
+			}
+
+			SyntaxErr::CannotBorrowAsMutable { name, range } => {
+				let text = format!("cannot borrow '{}' as mutable more than once at a time", name);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::CannotAssignImmutable { name, range } => {
+				let text = format!("cannot assign immutable '{}'", name);
+				diag::Diag::new(Severity::Err, text, range)
+					.with_note("consider making it mutable".to_string())
 			}
 		}
 	}

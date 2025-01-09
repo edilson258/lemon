@@ -7,14 +7,15 @@ impl<'l> Parser<'l> {
 	pub fn parse_type(&mut self) -> PResult<'l, ast::AstType> {
 		match self.token {
 			Some(Token::BoolType) => self.parse_bool_type().map(ast::AstType::Bool),
+			Some(Token::VoidType) => self.parse_void_type().map(ast::AstType::Void),
 			Some(Token::CharType) => self.parse_char_type().map(ast::AstType::Char),
 			Some(Token::StringType) => self.parse_string_type().map(ast::AstType::String),
 			Some(Token::Ident) => self.parse_ident_type().map(ast::AstType::Ident),
 			Some(Token::Fn) => self.parse_fn_type().map(ast::AstType::Fn),
-			Some(Token::And) => self.parse_ref_type().map(ast::AstType::Ref),
-			Some(Token::F32Type) | Some(Token::F64Type) => {
-				self.parse_float_type().map(ast::AstType::Float)
-			}
+			Some(Token::And) => self.parse_borrow_type().map(ast::AstType::Borrow),
+
+			Some(Token::F32Type) | Some(Token::F64Type) => self.parse_float_type().map(ast::AstType::Float),
+
 			Some(Token::I8Type)      | Some(Token::U8Type)
 			| Some(Token::I16Type)   | Some(Token::U16Type)
 			| Some(Token::I32Type)   | Some(Token::U32Type)
@@ -25,7 +26,7 @@ impl<'l> Parser<'l> {
 	}
 
 	// &T or &mut T
-	fn parse_ref_type(&mut self) -> PResult<'l, ast::RefType> {
+	fn parse_borrow_type(&mut self) -> PResult<'l, ast::BorrowType> {
 		let range = self.expect(Token::And)?.clone();
 		let mut mutable = false;
 		if self.match_token(Token::Mut) {
@@ -33,7 +34,7 @@ impl<'l> Parser<'l> {
 			self.expect(Token::Mut)?;
 		}
 		let value = Box::new(self.parse_type()?);
-		Ok(ast::RefType { range, mutable, value })
+		Ok(ast::BorrowType { range, mutable, value })
 	}
 
 	// fn parse_deref_type(&mut self) -> PResult<'l, ast::DerefType> {
@@ -114,6 +115,11 @@ impl<'l> Parser<'l> {
 		Ok(ast::BaseType { range })
 	}
 
+	fn parse_void_type(&mut self) -> PResult<'l, ast::BaseType> {
+		let range = self.expect(Token::VoidType)?.clone();
+		Ok(ast::BaseType { range })
+	}
+
 	fn parse_char_type(&mut self) -> PResult<'l, ast::BaseType> {
 		let range = self.expect(Token::CharType)?.clone();
 		Ok(ast::BaseType { range })
@@ -142,11 +148,11 @@ impl<'l> Parser<'l> {
 			}
 		}
 		self.expect(Token::RParen)?;
-		let mut return_type = None;
+		let mut ret_type = None;
 		if self.match_token(Token::Arrow) {
 			self.expect(Token::Arrow)?;
-			return_type = Some(Box::new(self.parse_type()?));
+			ret_type = Some(Box::new(self.parse_type()?));
 		}
-		Ok(ast::FnType { params, return_type, range })
+		Ok(ast::FnType { params, ret_type, range })
 	}
 }

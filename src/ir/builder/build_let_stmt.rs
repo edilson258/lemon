@@ -4,13 +4,11 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_let_stmt(&mut self, let_stmt: &ast::LetStmt) {
-		let bind = self.build_binding(&let_stmt.name);
-		let value = self.build_expr(&let_stmt.expr);
-		if bind.type_id == TypeId::PRINTLN {
-			return;
-		}
-		let instr = ir::OwnInstr { value, type_id: bind.type_id, dest: bind.register };
-		self.add_instr(ir::Instr::Own(instr));
+		todo!()
+		// let bind = self.build_binding(&let_stmt.name);
+		// let value = self.build_expr(&let_stmt.expr);
+		// let instr = ir::OwnInstr { value, type_id: bind.type_id, dest: bind.register };
+		// self.add_instr(ir::Instr::Own(instr));
 	}
 
 	pub fn build_binding(&mut self, bind: &ast::Binding) -> ir::Bind {

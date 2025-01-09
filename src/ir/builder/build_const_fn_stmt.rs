@@ -13,7 +13,7 @@ impl Builder<'_> {
 		self.ctx.add_fn(lexeme);
 		let fn_native = ir::FnNative::new(fn_id, params, ret);
 		self.add_fn(ir::Fn::Native(fn_native));
-		self.build_fn_body(&const_fn.body);
+		// self.build_fn_body(&const_fn.body);
 		self.exit_fn_scope();
 		self.ctx.exit_fn_comptime();
 	}

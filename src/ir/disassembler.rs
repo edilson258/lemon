@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 use super::ir::{self};
-use crate::checker::types::{TypeFormatter, TypeId, TypeStore};
+use crate::checker::types::{TypeId, TypeStore};
 
 pub struct Disassembler<'ir> {
-	pub formatter_type: TypeFormatter<'ir>,
+	pub type_store: &'ir TypeStore,
 }
 
 impl<'ir> Disassembler<'ir> {
 	pub fn new(type_store: &'ir TypeStore) -> Self {
-		Self { formatter_type: TypeFormatter::new(type_store) }
+		Self { type_store }
 	}
 
 	pub fn disassemble(&self, ir: &ir::Root) -> String {
@@ -274,6 +274,12 @@ impl<'ir> Disassembler<'ir> {
 	}
 
 	fn resolve_type_id(&self, type_id: TypeId, result: &mut String) {
-		result.push_str(&self.formatter_type.format(type_id));
+		result.push_str(self.display_type(type_id).as_str());
+	}
+
+	pub fn display_type(&self, type_id: TypeId) -> String {
+		let mut text = String::new();
+		type_id.display_type(&mut text, self.type_store);
+		text
 	}
 }

@@ -15,12 +15,12 @@ impl Store {
 		Self { values: HashMap::new() }
 	}
 
-	pub fn add_value(&mut self, scope: usize, name: String, type_id: TypeId) {
+	pub fn add_value_type(&mut self, scope: usize, name: String, type_id: TypeId) {
 		let id = StoreId(scope, name);
 		self.values.insert(id, type_id);
 	}
 
-	pub fn get_value(&self, scope: usize, name: String) -> Option<&TypeId> {
+	pub fn get_value_type(&self, scope: usize, name: String) -> Option<&TypeId> {
 		let id = StoreId(scope, name);
 		self.values.get(&id)
 	}

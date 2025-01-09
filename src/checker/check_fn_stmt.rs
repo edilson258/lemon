@@ -1,87 +1,76 @@
 use super::context::scope::ScopeType;
-use super::types::{FnType, Type, TypeId};
-use super::{diags::TypeCheckError, Checker, TypeResult};
+use super::diags::SyntaxErr;
+use super::synthesis;
+use super::types::TypeId;
+use super::{Checker, TyResult};
 
 use crate::ast;
+use crate::range::Range;
 
 impl Checker<'_> {
-	pub fn check_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) -> TypeResult<TypeId> {
+	pub fn check_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) -> TyResult<TypeId> {
+		let fn_type = synthesis::synthesise_fn_stmt(fn_stmt, self.ctx)?;
 		let lexeme = fn_stmt.name.lexeme();
-		let params_processed = self.check_fn_params(&mut fn_stmt.params)?;
+		self.check_exist_fn_name(lexeme, fn_stmt.name.get_range())?;
+		let ret_id = fn_type.ret;
+		let fn_arg_types = fn_type.args.clone();
 
-		let ret_id = self.check_fn_return_type(&fn_stmt.ret_type)?;
+		let fn_type_id = self.ctx.type_store.add_type(fn_type.into());
 
-		let params = params_processed.iter().map(|(_, _, type_id)| *type_id).collect();
+		self.ctx.add_fn_value(lexeme, fn_type_id, false);
 
-		let fn_type = Type::Fn(FnType::new(params, ret_id));
-
-		let fn_id = self.ctx.type_store.add_type(fn_type);
-
-		let value_id = self.ctx.add_value(lexeme, fn_id, false);
 		self.ctx.enter_scope(ScopeType::new_fn(ret_id));
 
-		for (lexeme, type_id, _) in params_processed {
-			self.ctx.add_value(lexeme, type_id, false);
+		for (bind, bind_type_id) in fn_stmt.params.iter().zip(fn_arg_types.iter()) {
+			let type_value = self.get_stored_type(*bind_type_id);
+			self.ctx.add_value(bind.lexeme(), *bind_type_id, false);
 		}
+
 		let ret_found = self.check_fn_body(&mut fn_stmt.body)?;
+		self.equal_type_expected(ret_id, ret_found, fn_stmt.body.get_range())?;
 
-		if !self.ctx.flow.is_paths_return() && ret_id != TypeId::NOTHING {
-			return Err(TypeCheckError::not_all_paths_return(fn_stmt.body.last_stmt_range()));
-		}
-
-		self.equal_type_id(ret_id, ret_found, fn_stmt.body.get_range())?;
-		fn_stmt.set_ret_id(ret_id);
 		self.ctx.exit_scope();
 		Ok(TypeId::NOTHING)
 	}
 
 	#[inline(always)]
-	pub fn check_fn_params<'a>(
-		&mut self,
-		params: &'a mut [ast::Binding],
-	) -> TypeResult<Vec<(&'a str, TypeId, TypeId)>> {
-		let mut cache = Vec::with_capacity(params.len());
-		for param in params.iter_mut() {
-			let type_id = self.check_fn_param(param)?;
-			let par_id = self.ctx.type_store.add_type(Type::Par { target: type_id });
-			param.set_type_id(par_id);
-			cache.push((param.lexeme(), par_id, type_id));
-			// params.push(type_id);
-		}
-		Ok(cache)
-	}
-
-	#[inline(always)]
-	pub fn check_fn_param(&mut self, param: &mut ast::Binding) -> TypeResult<TypeId> {
-		match &param.ty {
-			Some(ty) => self.check_type(ty),
-			None => Err(TypeCheckError::required_type_notation(param.get_range())),
-		}
-	}
-
-	#[inline(always)]
-	pub fn check_fn_return_type(&mut self, ret_type: &Option<ast::AstType>) -> TypeResult<TypeId> {
-		match ret_type {
-			Some(ty) => self.check_type(ty),
-			_ => Ok(TypeId::NOTHING),
-		}
-	}
-
-	#[inline(always)]
-	pub fn check_fn_body(&mut self, stmt: &mut ast::Stmt) -> TypeResult<TypeId> {
+	pub fn check_fn_body(&mut self, stmt: &mut ast::FnBody) -> TyResult<TypeId> {
 		match stmt {
-			ast::Stmt::Block(block) => self.check_fn_block_stmt(block),
-			_ => self.check_stmt(stmt),
+			ast::FnBody::Block(block_stmt) => self.check_fn_block_stmt(block_stmt),
+			ast::FnBody::Expr(expr) => self.check_ret_expr(expr),
 		}
 	}
 
 	#[inline(always)]
-	pub fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> TypeResult<TypeId> {
+	pub fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> TyResult<TypeId> {
 		let mut ret_type = TypeId::NOTHING;
 		for stmt in stmt.stmts.iter_mut() {
-			self.ctx.flow.set_paths_return(stmt.ends_with_ret());
 			ret_type = self.check_stmt(stmt)?;
 		}
 		Ok(ret_type)
+	}
+
+	#[inline(always)]
+	pub fn check_ret_expr(&mut self, expr: &mut ast::Expr) -> TyResult<TypeId> {
+		if !self.ctx.has_fn_scope() {
+			// todo: change this error
+			return Err(SyntaxErr::return_outside_fn(expr.get_range()));
+		}
+
+		let expected_ret_id = self.ctx.ret_scope_type().unwrap();
+		let ret_id = self.check_expr(expr)?;
+		if !self.equal_type_id(expected_ret_id, ret_id) {
+			let expected = self.display_type(expected_ret_id);
+			let found = self.display_type(ret_id);
+			return Err(SyntaxErr::type_mismatch(expected, found, expr.get_range()));
+		}
+		Ok(ret_id)
+	}
+
+	pub fn check_exist_fn_name(&mut self, name: &str, range: Range) -> TyResult<()> {
+		if self.ctx.contains_fn_value_in_current_scope(name) {
+			return Err(SyntaxErr::redefine_fn_in_same_scope(name, range));
+		}
+		Ok(())
 	}
 }

@@ -8,9 +8,10 @@ pub enum AstType {
 	Bool(BaseType),
 	String(BaseType),
 	Char(BaseType),
+	Void(BaseType),
 	Ident(IdentType),
 	Fn(FnType),
-	Ref(RefType),
+	Borrow(BorrowType),
 }
 impl AstType {
 	pub fn get_range(&self) -> Range {
@@ -22,7 +23,8 @@ impl AstType {
 			AstType::Char(char) => char.get_range(),
 			AstType::Ident(ident) => ident.get_range(),
 			AstType::Fn(fn_type) => fn_type.get_range(),
-			AstType::Ref(ref_type) => ref_type.get_range(),
+			AstType::Borrow(borrow) => borrow.get_range(),
+			AstType::Void(void) => void.get_range(),
 		}
 	}
 }
@@ -70,13 +72,13 @@ impl NumberType {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RefType {
+pub struct BorrowType {
 	pub range: Range,
 	pub mutable: bool,
 	pub value: Box<AstType>,
 }
 
-impl RefType {
+impl BorrowType {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.value.get_range())
 	}
@@ -125,18 +127,18 @@ impl IdentType {
 	}
 }
 
-// fn(params_types...): return_type
+// fn(params_types...): ret_type
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnType {
 	pub params: Vec<AstType>,
-	pub return_type: Option<Box<AstType>>,
+	pub ret_type: Option<Box<AstType>>,
 	pub range: Range, // fn range
 }
 
 impl FnType {
 	pub fn get_range(&self) -> Range {
-		if let Some(return_type) = &self.return_type {
-			return self.range.merged_with(&return_type.get_range());
+		if let Some(ret_type) = &self.ret_type {
+			return self.range.merged_with(&ret_type.get_range());
 		}
 		self.range.clone()
 	}

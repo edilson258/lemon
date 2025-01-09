@@ -18,24 +18,24 @@ impl<'ll> Llvm<'ll> {
 	}
 
 	fn compile_native_fn_ir(&mut self, fn_native: &ir::FnNative) {
-		let fn_name = fn_native.fn_id.as_string();
-		let fn_type = self.create_fn_type(fn_native);
-		let llvm_fn = self.module.add_function(fn_name, fn_type, None);
-		for (i, param) in fn_native.params.iter().enumerate() {
-			let param_value = llvm_fn.get_nth_param(i as u32).unwrap();
-			self.insert_value(param.register, param_value);
-		}
-		for block in &fn_native.blocks {
-			self.compile_block(&llvm_fn, block);
-		}
-		if fn_native.ret.is_nothing() {
-			// return 0 if nothing
-			let zero = self.ctx.i32_type().const_zero();
-			match self.builder.build_return(Some(&zero)) {
-				Ok(_) => {}
-				Err(err) => throw_llvm_error(format!("when build a void return, error: {}", err)),
-			}
-		};
+		todo!()
+		// let fn_name = fn_native.fn_id.as_string();
+		// let fn_type = self.create_fn_type(fn_native);
+		// let llvm_fn = self.module.add_function(fn_name, fn_type, None);
+		// for (i, param) in fn_native.params.iter().enumerate() {
+		// 	let param_value = llvm_fn.get_nth_param(i as u32).unwrap();
+		// 	self.insert_value(param.register, param_value);
+		// }
+		// for block in &fn_native.blocks {
+		// 	self.compile_block(&llvm_fn, block);
+		// }
+		// if fn_native.ret.is_nothing() {
+		// 	// return 0 if nothing
+		// 	let zero = self.ctx.i32_type().const_zero();
+		// 	match self.builder.build_return(Some(&zero)) {
+		// 		Ok(_) => {}
+		// 		Err(err) => throw_llvm_error(format!("when build a void return, error: {}", err)),
+		// 	}
 	}
 
 	fn create_fn_type(&mut self, fn_native: &FnNative) -> FunctionType<'ll> {

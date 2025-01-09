@@ -113,7 +113,7 @@ impl<'ll> Llvm<'ll> {
 			TypeId::I16 => Some(self.ctx.i16_type().into()),
 			TypeId::I32 => Some(self.ctx.i32_type().into()),
 			TypeId::I64 => Some(self.ctx.i64_type().into()),
-			TypeId::INT => Some(self.ctx.i64_type().into()),
+			// TypeId::INT => Some(self.ctx.i64_type().into()),
 			// todo: check if this is correct
 			// usize
 			TypeId::U8 => Some(self.ctx.i8_type().into()),
@@ -122,15 +122,15 @@ impl<'ll> Llvm<'ll> {
 			TypeId::U64 => Some(self.ctx.i64_type().into()),
 			TypeId::USIZE => Some(self.ctx.i64_type().into()),
 			// todo: check if this is correct
-			TypeId::FLOAT32 => Some(self.ctx.f32_type().into()),
-			TypeId::FLOAT64 => Some(self.ctx.f64_type().into()),
+			TypeId::F32 => Some(self.ctx.f32_type().into()),
+			TypeId::F64 => Some(self.ctx.f64_type().into()),
 			TypeId::BOOL => Some(self.ctx.bool_type().into()),
 			TypeId::CHAR => Some(self.ctx.i8_type().into()),
 			TypeId::STRING => Some(self.ctx.i8_type().into()),
 			TypeId::NOTHING => None, // void
 			_ => match self.type_store.get_type(type_id).unwrap() {
-				Type::ConstFn(const_type) => self.compile_type_id(const_type.value),
-				Type::Par { target } => self.compile_type_id(*target),
+				// Type::ConstFn(const_type) => self.compile_type_id(const_type.value),
+				// Type::Par { target } => self.compile_type_id(*target),
 				_ => throw_llvm_error(format!("type {:?} not found", type_id)),
 			},
 		}

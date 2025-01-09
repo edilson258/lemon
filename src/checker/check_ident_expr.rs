@@ -1,16 +1,20 @@
 use crate::ast::{self};
 
-use super::diags::TypeCheckError;
+use super::diags::SyntaxErr;
 use super::types::TypeId;
-use super::{Checker, TypeResult};
+use super::{Checker, TyResult};
 
 impl Checker<'_> {
-	pub fn check_ident_expr(&mut self, ident: &mut ast::Ident) -> TypeResult<TypeId> {
-		let value = match self.ctx.get_value(ident.lexeme()) {
-			Some(value) => value,
-			None => return Err(TypeCheckError::not_found_value(ident.lexeme(), ident.get_range())),
-		};
-		ident.set_type_id(value.type_id);
-		Ok(value.type_id)
+	pub fn check_ident_expr(&mut self, ident: &mut ast::Ident) -> TyResult<TypeId> {
+		if let Some(value) = self.ctx.get_value(ident.lexeme()) {
+			ident.set_type_id(value.type_id);
+			return Ok(value.type_id);
+		}
+		if let Some(fn_value) = self.ctx.get_fn_value(ident.lexeme()) {
+			ident.set_type_id(fn_value.type_id);
+			return Ok(fn_value.type_id);
+		}
+
+		Err(SyntaxErr::not_found_value(ident.lexeme(), ident.get_range()))
 	}
 }
