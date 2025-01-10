@@ -17,7 +17,7 @@ impl Builder<'_> {
 		};
 		let register = self.ctx.get_register();
 		// todo: resolve type
-		let instr = ir::OwnInstr { type_id: TypeId::NOTHING, value, dest: register };
+		let instr = ir::OwnInstr { type_id: TypeId::UNIT, value, dest: register };
 		let own_instr = ir::Instr::Own(instr);
 		if self.ctx.is_comptime() {
 			self.add_global(own_instr);

@@ -6,7 +6,7 @@ impl Checker<'_> {
 	pub fn check_block_stmt(&mut self, block: &mut ast::BlockStmt) -> TyResult<TypeId> {
 		// todo: warn unreachable code
 		self.ctx.enter_scope(ScopeType::new_block());
-		let mut ret_type = TypeId::NOTHING;
+		let mut ret_type = TypeId::UNIT;
 		for stmt in block.stmts.iter_mut() {
 			self.ctx.flow.set_paths_return(stmt.ends_with_ret());
 			ret_type = self.check_stmt(stmt)?;

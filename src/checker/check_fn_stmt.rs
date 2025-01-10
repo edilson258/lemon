@@ -30,7 +30,7 @@ impl Checker<'_> {
 		self.equal_type_expected(ret_id, ret_found, fn_stmt.body.get_range())?;
 
 		self.ctx.exit_scope();
-		Ok(TypeId::NOTHING)
+		Ok(TypeId::UNIT)
 	}
 
 	#[inline(always)]
@@ -43,7 +43,7 @@ impl Checker<'_> {
 
 	#[inline(always)]
 	pub fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> TyResult<TypeId> {
-		let mut ret_type = TypeId::NOTHING;
+		let mut ret_type = TypeId::UNIT;
 		for stmt in stmt.stmts.iter_mut() {
 			ret_type = self.check_stmt(stmt)?;
 		}

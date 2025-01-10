@@ -28,7 +28,7 @@ impl Llvm<'_> {
 
 		// 	if let Some(return_value) = result.try_as_basic_value().left() {
 		// 		self.insert_value(call_instr.dest, return_value);
-		// 	} else if !call_instr.type_id.is_nothing() {
+		// 	} else if !call_instr.type_id.is_UNIT() {
 		// 		throw_llvm_error(format!("call return type {:?} not found", call_instr.type_id));
 		// 	}
 	}

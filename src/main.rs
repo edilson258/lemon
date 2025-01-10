@@ -65,14 +65,14 @@ use utils::{get_current_user_machine, Machine};
 // 	println!("sum: {}", sum);
 // }
 
-fn test() {
-	let x: i8 = 10;
-	*10 = 10;
-	println!("{}", x);
-}
+// fn test() {
+// 	let age = 10;
+// 	let age_ref = &mut age;
+// 	let age_ref_ref = &mut age_ref;
+// 	*age_ref_ref = &mut 18;
+// }
 
 fn check(path_name: &str) {
-	// test();
 	let mut loader = Loader::new();
 	let file_id = loader.load(path_name);
 	let source = loader.get_source(file_id);
@@ -83,6 +83,7 @@ fn check(path_name: &str) {
 		Ok(ast) => ast,
 		Err(diag) => diag.report_syntax_err_wrap(source),
 	};
+	// println!("{:#?}", ast);
 
 	let mut diag_group = DiagGroup::new(&loader);
 
@@ -169,7 +170,7 @@ fn compile(path_name: &str, matches: &ArgMatches) {
 	// println!("{}", disassembler.disassemble(&ir));
 	println!("emitting llvm...");
 	let llvm_context = inkwell::context::Context::create();
-	let llvm_module = llvm::create_module_from_source(&llvm_context, &source);
+	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
 	let mut llvm = Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
 	llvm.compile_root_ir(&ir);
 

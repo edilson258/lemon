@@ -156,7 +156,7 @@ impl<'lex> Parser<'lex> {
 	}
 
 	fn parse_expr(&mut self, min_pde: u8) -> PResult<'lex, ast::Expr> {
-		let mut left = self.parse_primary()?;
+		let mut left = self.parse_primary(true)?;
 		while let Some(operator) = self.match_operator(min_pde)? {
 			let right = self.parse_expr(min_pde + 1)?;
 			left = ast::Expr::Binary(ast::BinaryExpr {
@@ -210,7 +210,7 @@ impl<'lex> Parser<'lex> {
 		Ok(Some(ast::Operator { kind, range }))
 	}
 
-	fn parse_primary(&mut self) -> PResult<'lex, ast::Expr> {
+	fn parse_primary(&mut self, with_right_hand: bool) -> PResult<'lex, ast::Expr> {
 		let expr = match self.token {
 			Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident)?,
 			Some(Token::And) => self.parse_borrow_expr().map(ast::Expr::Borrow)?,
@@ -225,7 +225,9 @@ impl<'lex> Parser<'lex> {
 			}
 			_ => return Err(self.unexpected_token()),
 		};
-		let expr = self.parse_right_hand_expr(expr)?;
+		if with_right_hand {
+			return self.parse_right_hand_expr(expr);
+		}
 		Ok(expr)
 	}
 
@@ -262,14 +264,14 @@ impl<'lex> Parser<'lex> {
 		if self.match_token(Token::Mut) {
 			mutable = Some(self.expect(Token::Mut)?);
 		}
-		let expr = self.parse_expr(MIN_PDE)?;
+		let expr = self.parse_primary(false)?;
 		Ok(ast::BorrowExpr { expr: Box::new(expr), range, mutable, type_id: None })
 	}
 
 	// *<expr>
 	fn parse_deref_expr(&mut self) -> PResult<'lex, ast::DerefExpr> {
 		let range = self.expect(Token::Star)?;
-		let expr = self.parse_expr(MIN_PDE)?;
+		let expr = self.parse_primary(false)?;
 		Ok(ast::DerefExpr { expr: Box::new(expr), range, type_id: None })
 	}
 

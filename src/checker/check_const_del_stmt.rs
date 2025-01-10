@@ -9,7 +9,7 @@ impl Checker<'_> {
 			return Err(SyntaxErr::const_outside_global_scope(const_del.range.clone()));
 		}
 
-		Ok(TypeId::NOTHING)
+		Ok(TypeId::UNIT)
 	}
 
 	pub fn check_const_bind(&mut self, const_bind: &mut ast::Binding) -> TyResult<TypeId> {

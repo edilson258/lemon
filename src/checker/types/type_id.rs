@@ -29,7 +29,7 @@ impl TypeId {
 	pub const F64: TypeId = TypeId(16);
 
 	// internal
-	pub const NOTHING: TypeId = TypeId(17);
+	pub const UNIT: TypeId = TypeId(17);
 
 	pub const LENGTH: usize = 18; // internal
 
@@ -41,8 +41,8 @@ impl TypeId {
 		self.0 < TypeId::LENGTH as u64
 	}
 
-	pub fn is_nothing(&self) -> bool {
-		self.0 == TypeId::NOTHING.0
+	pub fn is_unit(&self) -> bool {
+		self.0 == TypeId::UNIT.0
 	}
 
 	pub fn is_void(&self) -> bool {

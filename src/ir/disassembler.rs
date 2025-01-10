@@ -171,7 +171,7 @@ impl<'ir> Disassembler<'ir> {
 	fn disassemble_ret(&self, ret: &ir::RetInstr, result: &mut String) {
 		result.push_str("ret");
 
-		if ret.type_id != TypeId::NOTHING {
+		if ret.type_id != TypeId::UNIT {
 			result.push(' ');
 			self.resolve_type_id(ret.type_id, result);
 		}
@@ -206,7 +206,7 @@ impl<'ir> Disassembler<'ir> {
 	}
 	fn disassemble_own(&self, own: &ir::OwnInstr, result: &mut String) {
 		result.push_str("own ");
-		if own.type_id != TypeId::NOTHING {
+		if own.type_id != TypeId::UNIT {
 			self.resolve_type_id(own.type_id, result);
 			result.push(' ');
 		}

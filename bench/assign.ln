@@ -1,15 +1,10 @@
 
+fn change_age_ptr(age_ref: &mut &mut i32) = {
+  *age_ref = &mut 20; // age now is 20
+}
 
 fn main() = {
-  let age = 10;
-  let age_ref = &mut age; // ref of mut age
-  *age_ref = 18;
-
-  //
-  age_ref = &18; // error: cannot assign immutable 'age'
-
-  // let age_ref = & age;
-  // if (age < 18) {
-  //   age_ref = &18;
-  // }
+  let mut age = 10;
+  let mut age_ref = &mut age; // ref of mut age
+  change_age_ptr(&mut age_ref);
 }

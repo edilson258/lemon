@@ -141,7 +141,7 @@ pub struct RetInstr {
 
 impl RetInstr {
 	pub fn new(type_id: Option<TypeId>, value: Option<Register>) -> Self {
-		Self { type_id: type_id.unwrap_or(TypeId::NOTHING), value }
+		Self { type_id: type_id.unwrap_or(TypeId::UNIT), value }
 	}
 }
 

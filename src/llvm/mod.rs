@@ -127,7 +127,7 @@ impl<'ll> Llvm<'ll> {
 			TypeId::BOOL => Some(self.ctx.bool_type().into()),
 			TypeId::CHAR => Some(self.ctx.i8_type().into()),
 			TypeId::STRING => Some(self.ctx.i8_type().into()),
-			TypeId::NOTHING => None, // void
+			TypeId::UNIT => None, // void
 			_ => match self.type_store.get_type(type_id).unwrap() {
 				// Type::ConstFn(const_type) => self.compile_type_id(const_type.value),
 				// Type::Par { target } => self.compile_type_id(*target),

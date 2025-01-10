@@ -4,7 +4,7 @@ mod type_id;
 pub use store::*;
 pub use type_id::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
 	Void,
 	Bool,
@@ -19,7 +19,7 @@ pub enum Type {
 	Fn(FnType),
 
 	// internal
-	Nothing,
+	Unit,
 }
 
 impl Type {
@@ -168,16 +168,27 @@ impl Number {
 	}
 }
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, Hash)]
+#[allow(renamed_and_removed_lints)]
+#[allow(clippy::derive_hash_xor_eq)]
 pub struct BorrowType {
 	pub value: TypeId,
 	pub mutable: bool,
 	pub external: bool,
 }
+impl PartialEq for BorrowType {
+	fn eq(&self, other: &Self) -> bool {
+		self.value == other.value && self.mutable == other.mutable
+	}
+}
 
 impl BorrowType {
 	pub fn new(value: TypeId, mutable: bool, external: bool) -> Self {
 		Self { value, mutable, external }
+	}
+
+	pub fn change_value(&mut self, value: TypeId) {
+		self.value = value;
 	}
 
 	pub fn new_external(value: TypeId, mutable: bool) -> Self {
@@ -186,12 +197,6 @@ impl BorrowType {
 
 	pub fn new_internal(value: TypeId, mutable: bool) -> Self {
 		Self::new(value, mutable, false)
-	}
-}
-
-impl PartialEq for BorrowType {
-	fn eq(&self, other: &Self) -> bool {
-		self.value == other.value && self.mutable == other.mutable
 	}
 }
 

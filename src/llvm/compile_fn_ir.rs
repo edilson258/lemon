@@ -29,8 +29,8 @@ impl<'ll> Llvm<'ll> {
 		// for block in &fn_native.blocks {
 		// 	self.compile_block(&llvm_fn, block);
 		// }
-		// if fn_native.ret.is_nothing() {
-		// 	// return 0 if nothing
+		// if fn_native.ret.is_UNIT() {
+		// 	// return 0 if UNIT
 		// 	let zero = self.ctx.i32_type().const_zero();
 		// 	match self.builder.build_return(Some(&zero)) {
 		// 		Ok(_) => {}
@@ -43,13 +43,13 @@ impl<'ll> Llvm<'ll> {
 		for param in &fn_native.params {
 			let param_type = match self.compile_type_id(param.type_id) {
 				Some(param_type) => param_type,
-				None => throw_llvm_error("error: found `nothing` type in param, isnt't allowed"),
+				None => throw_llvm_error("error: found `UNIT` type in param, isnt't allowed"),
 			};
 			param_types.push(param_type.into());
 		}
 
 		match fn_native.ret {
-			TypeId::NOTHING => {
+			TypeId::UNIT => {
 				let void_type = self.ctx.void_type();
 				void_type.fn_type(&param_types, false)
 			}

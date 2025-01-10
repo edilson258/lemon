@@ -8,6 +8,6 @@ impl Checker<'_> {
 		if !self.ctx.is_global_scope() {
 			return Err(SyntaxErr::const_outside_global_scope(const_fn.range.clone()));
 		}
-		Ok(TypeId::NOTHING)
+		Ok(TypeId::UNIT)
 	}
 }

@@ -14,7 +14,7 @@ impl Llvm<'_> {
 		let rhs = self.load_value(binary.rhs);
 		let llvm_type = match self.compile_type_id(binary.type_id) {
 			Some(llvm_type) => llvm_type,
-			None => throw_llvm_error("found `nothing` type in instr..."),
+			None => throw_llvm_error("found `UNIT` type in instr..."),
 		};
 		let dest = self.allocate_register(llvm_type, binary.dest);
 
@@ -50,7 +50,7 @@ impl Llvm<'_> {
 		let rhs = self.load_value(binary.rhs);
 		let llvm_type = match self.compile_type_id(binary.type_id) {
 			Some(llvm_type) => llvm_type,
-			None => throw_llvm_error("found `nothing` type in instr..."),
+			None => throw_llvm_error("found `UNIT` type in instr..."),
 		};
 		let dest = self.allocate_register(llvm_type, binary.dest);
 
@@ -86,7 +86,7 @@ impl Llvm<'_> {
 		let rhs = self.load_value(binary.rhs);
 		let llvm_type = match self.compile_type_id(binary.type_id) {
 			Some(llvm_type) => llvm_type,
-			None => throw_llvm_error("found `nothing` type in instr..."),
+			None => throw_llvm_error("found `UNIT` type in instr..."),
 		};
 		let dest = self.allocate_register(llvm_type, binary.dest);
 
@@ -120,7 +120,7 @@ impl Llvm<'_> {
 		let rhs = self.load_value(binary.rhs);
 		let llvm_type = match self.compile_type_id(binary.type_id) {
 			Some(llvm_type) => llvm_type,
-			None => throw_llvm_error("found `nothing` type in instr..."),
+			None => throw_llvm_error("found `UNIT` type in instr..."),
 		};
 		let dest = self.allocate_register(llvm_type, binary.dest);
 
@@ -154,7 +154,7 @@ impl Llvm<'_> {
 		let rhs = self.load_value(binary.rhs);
 		let llvm_type = match self.compile_type_id(binary.type_id) {
 			Some(llvm_type) => llvm_type,
-			None => throw_llvm_error("found `nothing` type in instr..."),
+			None => throw_llvm_error("found `UNIT` type in instr..."),
 		};
 		let dest = self.allocate_register(llvm_type, binary.dest);
 

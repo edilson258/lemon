@@ -33,6 +33,7 @@ pub enum SyntaxErr<'tce> {
 	BorrowedValueDropped { range: Range },
 	CannotDereference { type_name: String, range: Range },
 	CannotBorrowAsMutable { name: String, range: Range },
+	CannotBorrowAsMutableMoreThanOnce { name: String, range: Range },
 	BorrowExpected { range: Range },
 	CannotAssignImmutable { name: String, range: Range },
 
@@ -147,6 +148,10 @@ impl<'tce> SyntaxErr<'tce> {
 	pub fn cannot_borrow_as_mutable(name: &str, range: Range) -> Diag {
 		Self::CannotBorrowAsMutable { name: name.to_string(), range }.into()
 	}
+
+	pub fn cannot_borrow_as_mutable_more_than_once(name: &str, range: Range) -> Diag {
+		Self::CannotBorrowAsMutableMoreThanOnce { name: name.to_string(), range }.into()
+	}
 	pub fn connot_return_local_rerefence(range: Range) -> Diag {
 		Self::ConnotReturnLocalRerefence { range }.into()
 	}
@@ -202,7 +207,7 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 				diag::Diag::new(Severity::Err, text, operator.get_range())
 			}
 			SyntaxErr::ValueExpected { value, range } => {
-				let text = format!("expected '{}', found nothing", value);
+				let text = format!("expected '{}', found UNIT", value);
 				diag::Diag::new(Severity::Err, text, range)
 			}
 			SyntaxErr::UnexpectedValue { value, range } => {
@@ -297,9 +302,14 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 				diag::Diag::new(Severity::Err, text, range)
 			}
 
-			SyntaxErr::CannotBorrowAsMutable { name, range } => {
+			SyntaxErr::CannotBorrowAsMutableMoreThanOnce { name, range } => {
 				let text = format!("cannot borrow '{}' as mutable more than once at a time", name);
 				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::CannotBorrowAsMutable { name, range } => {
+				let text = format!("cannot borrow '{}' as mutable", name);
+				diag::Diag::new(Severity::Err, text, range)
+					.with_note(format!("consider change '{}' to mutable", name))
 			}
 			SyntaxErr::CannotAssignImmutable { name, range } => {
 				let text = format!("cannot assign immutable '{}'", name);

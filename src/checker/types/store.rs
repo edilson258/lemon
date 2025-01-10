@@ -1,19 +1,39 @@
+use std::{
+	collections::HashMap,
+	hash::{DefaultHasher, Hash, Hasher},
+};
+
 use super::{type_id::TypeId, Number, Type};
 
 #[derive(Debug)]
 pub struct TypeStore {
 	types: Vec<Type>,
+	// is good?
+	cache: HashMap<u64, TypeId>,
 }
 
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
-		Self { types }
+		Self { types, cache: HashMap::new() }
 	}
+
 	pub fn add_type(&mut self, ty: Type) -> TypeId {
-		// todo: cache other type_id.. e.g. NumRage... or ConstType...
+		// todo: is faster to generate hash and compare?
+		let hash = self.type_hash(&ty);
+		if let Some(type_id) = self.cache.get(&hash) {
+			return *type_id;
+		}
 		let next_id = self.types.len();
+		let type_id = TypeId(next_id as u64);
+		self.cache.insert(hash, type_id);
 		self.types.push(ty);
-		TypeId(next_id as u64)
+		type_id
+	}
+
+	pub fn type_hash(&self, ty: &Type) -> u64 {
+		let mut hasher = DefaultHasher::new();
+		ty.hash::<DefaultHasher>(&mut hasher);
+		hasher.finish()
 	}
 
 	pub fn get_type(&self, type_id: TypeId) -> Option<&Type> {
@@ -45,7 +65,7 @@ impl Default for TypeStore {
 			Number::F32.as_type(), // 15
 			Number::F64.as_type(), // 16
 			// internal
-			Type::Nothing, // 17
+			Type::Unit, // 17
 		];
 		assert_eq!(types.len(), TypeId::LENGTH);
 		Self::new(types)

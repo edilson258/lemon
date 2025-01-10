@@ -8,7 +8,7 @@ impl Type {
 			Type::Str => *text += "str",
 			Type::String => *text += "string",
 			Type::Char => *text += "char",
-			Type::Nothing => *text += "nothing",
+			Type::Unit => *text += "unit",
 			Type::Number(number) => number.display_type(text),
 			Type::NumRange(num_range) => num_range.display_type(text),
 			Type::Borrow(borrow) => borrow.display_type(text, type_store),

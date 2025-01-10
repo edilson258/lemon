@@ -46,7 +46,7 @@ impl<'ckr> Checker<'ckr> {
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}
-		Ok(TypeId::NOTHING)
+		Ok(TypeId::UNIT)
 	}
 
 	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> TyResult<TypeId> {

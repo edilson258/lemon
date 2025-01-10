@@ -14,6 +14,7 @@ impl Checker<'_> {
 		// 		// return Err(SyntaxErr::borrow_conflict(range));
 		// 	}
 		// }
+		let found_id = self.infer_no_type_anotation(found_id)?;
 		let borrow_value = BorrowType::new_internal(found_id, borrow_expr.mutable.is_some());
 		let borrow_id = self.ctx.type_store.add_type(borrow_value.into());
 		borrow_expr.set_type_id(borrow_id);
@@ -28,18 +29,17 @@ impl Checker<'_> {
 			if !self.ctx.can_borrow_as(ident.lexeme(), muttable) {
 				return Err(SyntaxErr::cannot_borrow_as_mutable(ident.lexeme(), range));
 			}
-			return self.check_ident_brorow(ident, muttable);
-		}
-		println!(" {:?}", borrow_expr.expr);
-		todo!()
-	}
 
-	fn check_ident_brorow(&mut self, ident: &mut ast::Ident, is_mut: bool) -> TyResult<TypeId> {
-		let type_id = self.check_ident_expr(ident)?;
-		if let Some(value) = self.ctx.get_value(ident.lexeme()) {
-			let brrow_id = self.ctx.add_borrow(value.id, is_mut);
+			if let Some(value) = self.ctx.get_value(ident.lexeme()) {
+				if !value.is_mutable() & muttable {
+					return Err(SyntaxErr::cannot_borrow_as_mutable(ident.lexeme(), range));
+				}
+				let brrow_id = self.ctx.add_borrow(value.id, muttable);
+			}
+
+			return self.check_ident_expr(ident);
 		}
-		Ok(type_id)
+		self.check_expr(&mut borrow_expr.expr)
 	}
 
 	fn can_borrow_as(&self, name: &str, is_mut: bool) -> TyResult<()> {
