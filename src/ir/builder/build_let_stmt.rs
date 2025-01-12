@@ -1,21 +1,15 @@
-use crate::{ast, checker::types::TypeId, ir::ir};
+use crate::{ast, ir::ir};
 
 use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_let_stmt(&mut self, let_stmt: &ast::LetStmt) {
-		todo!()
-		// let bind = self.build_binding(&let_stmt.name);
-		// let value = self.build_expr(&let_stmt.expr);
-		// let instr = ir::OwnInstr { value, type_id: bind.type_id, dest: bind.register };
-		// self.add_instr(ir::Instr::Own(instr));
-	}
-
-	pub fn build_binding(&mut self, bind: &ast::Binding) -> ir::Bind {
-		let register = self.ctx.get_register();
-		self.ctx.add_value(bind.lexeme(), register);
-		let type_id = self.get_type_id(bind.type_id);
-		self.can_free_value(register, type_id);
-		ir::Bind { register, type_id }
+		// todo: own on heap
+		let type_id = self.get_type_id(let_stmt.get_type_id());
+		let value = self.build_expr(&let_stmt.expr);
+		let register = self.ir_ctx.new_register();
+		let instr = ir::OwnInstr { type_id, value, dest: register };
+		self.ir_ctx.add_instr(instr.into());
+		self.ir_ctx.add_value(let_stmt.lexeme(), register);
 	}
 }

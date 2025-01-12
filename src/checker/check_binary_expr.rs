@@ -17,7 +17,6 @@ impl Checker<'_> {
 			OperatorKind::GE | OperatorKind::EQ => {
 				self.check_cmp_operation(left, right, &binary_expr.operator)?
 			}
-
 			OperatorKind::RANGE => self.check_range_operation(left, right, &binary_expr.operator)?,
 			OperatorKind::MOD => self.check_mod_operation(left, right, &binary_expr.operator)?,
 			_ => todo!(),

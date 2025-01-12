@@ -127,7 +127,7 @@ impl ConstDelStmt {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -158,7 +158,7 @@ impl LetStmt {
 		self.type_id = Some(type_id);
 		self.bind.set_type_id(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -247,7 +247,7 @@ impl Ident {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -274,7 +274,7 @@ impl Binding {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -356,7 +356,7 @@ impl FnExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -376,7 +376,8 @@ impl AssignExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -456,7 +457,7 @@ impl CallExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 	pub fn set_args_type(&mut self, args_type: Vec<TypeId>) {
@@ -543,7 +544,7 @@ impl BorrowExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -562,7 +563,7 @@ impl DerefExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }

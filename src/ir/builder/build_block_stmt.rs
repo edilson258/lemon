@@ -3,11 +3,11 @@ use crate::ast;
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_block_stmt(&mut self, block_stmt: &ast::BlockStmt) {
-		self.ctx.enter_scope();
-		for stmt in block_stmt.stmts.iter() {
+	pub fn build_block_stmt(&mut self, block: &ast::BlockStmt) {
+		self.ir_ctx.enter_scope();
+		for stmt in block.stmts.iter() {
 			self.build_stmt(stmt);
 		}
-		self.ctx.exit_scope();
+		self.ir_ctx.exit_scope();
 	}
 }

@@ -1,3 +1,4 @@
+#![allow(unused_imports, dead_code, unused_variables)]
 use std::mem;
 
 use super::ir::{self};
@@ -6,6 +7,9 @@ use crate::{
 	checker::types::{self, TypeId},
 	report::throw_ir_build_error,
 };
+
+use ircontext::IrContext;
+mod build_assign_expr;
 mod build_binary_expr;
 mod build_block_stmt;
 mod build_borrow_expr;
@@ -17,65 +21,37 @@ mod build_expr;
 mod build_fn_stmt;
 mod build_ident_expr;
 mod build_if_expr;
-mod build_import_expr;
 mod build_let_stmt;
 mod build_literal;
 mod build_ret_stmt;
-pub(crate) mod context;
-mod drop_values;
+pub mod ircontext;
 
 pub struct Builder<'br> {
-	#[allow(dead_code)]
 	pub type_store: &'br types::TypeStore,
-	pub ctx: context::Context,
+	pub ir_ctx: IrContext,
 	pub root: ir::Root,
 }
 
 impl<'br> Builder<'br> {
 	pub fn new(type_store: &'br types::TypeStore) -> Self {
-		let ctx = context::Context::new();
-		Self { ctx, root: ir::Root::new(), type_store }
-	}
-
-	pub fn add_global(&mut self, instr: ir::Instr) {
-		self.root.add_global(instr);
-	}
-
-	pub fn add_instr(&mut self, instr: ir::Instr) {
-		if self.ctx.is_comptime() {
-			self.root.add_global(instr);
-		} else {
-			self.ctx.add_instr(instr);
-		}
+		let ir_ctx = IrContext::new();
+		Self { ir_ctx, root: ir::Root::new(), type_store }
 	}
 
 	pub fn add_fn(&mut self, fn_ir: ir::Fn) {
-		if self.ctx.is_fn_comptime() {
-			self.root.add_fn_global(fn_ir);
-		} else {
-			self.root.add_fn(fn_ir);
-		}
+		self.root.add_fn(fn_ir);
 	}
 
 	pub fn add_blocks(&mut self, blocks: Vec<ir::Block>) {
-		if self.ctx.is_fn_comptime() {
-			self.root.add_global_blocks(blocks);
-		} else {
-			self.root.add_blocks(blocks);
-		}
+		self.root.add_blocks(blocks);
 	}
 
-	pub fn exit_fn_scope(&mut self) {
-		self.drop_values();
-		let blocks = self.ctx.exit_fn_scope();
-		self.add_blocks(blocks);
-	}
+	pub fn exit_fn_scope(&mut self) {}
 
-	pub fn build(&mut self, program: &ast::Program) -> ir::Root {
-		for stmt in program.stmts.iter() {
+	pub fn build(&mut self, program: &mut ast::Program) -> ir::Root {
+		for stmt in program.stmts.iter_mut() {
 			self.build_stmt(stmt);
 		}
-		self.root.set_size(self.ctx.register);
 		mem::take(&mut self.root)
 	}
 
@@ -86,13 +62,20 @@ impl<'br> Builder<'br> {
 		}
 	}
 
+	fn end_fn_scope(&mut self) {
+		let blocks = self.ir_ctx.reset_fn_scope();
+		self.root.add_blocks(blocks);
+		self.ir_ctx.exit_scope();
+	}
+
 	fn build_stmt(&mut self, stmt: &ast::Stmt) {
 		match stmt {
 			ast::Stmt::Let(let_stmt) => self.build_let_stmt(let_stmt),
 			ast::Stmt::Fn(fn_stmt) => self.build_fn_stmt(fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
 			ast::Stmt::Expr(expr) => {
-				self.build_expr(expr);
+				let register = self.build_expr(expr);
+				println!("'{}'", register.as_string());
 			}
 			ast::Stmt::ConstDel(const_del) => self.build_const_del_stmt(const_del),
 			ast::Stmt::ConstFn(const_fn) => self.build_const_fn_stmt(const_fn),

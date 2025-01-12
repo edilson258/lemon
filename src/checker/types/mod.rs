@@ -36,6 +36,10 @@ impl Type {
 	pub fn is_borrow(&self) -> bool {
 		matches!(self, Type::Borrow(_))
 	}
+
+	pub fn is_borrow_mut(&self) -> bool {
+		matches!(self, Type::Borrow(BorrowType { mutable: true, .. }))
+	}
 	pub fn is_local_borrow(&self) -> bool {
 		matches!(self, Type::Borrow(BorrowType { external: false, .. }))
 	}

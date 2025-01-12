@@ -18,6 +18,7 @@ impl Checker<'_> {
 				return Err(SyntaxErr::return_local_borrow(ret_stmt.get_range()));
 			}
 			self.equal_type_expected(ret_id, found_id, ret_stmt.get_range())?;
+			ret_stmt.set_type_id(ret_id);
 			return Ok(ret_id);
 		}
 
@@ -26,6 +27,7 @@ impl Checker<'_> {
 			let ret = self.display_type(ret_id);
 			return Err(SyntaxErr::type_mismatch(ret, found, ret_stmt.get_range()));
 		}
+		ret_stmt.set_type_id(ret_id);
 		Ok(ret_id)
 	}
 }

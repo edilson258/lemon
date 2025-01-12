@@ -14,10 +14,10 @@ impl Checker<'_> {
 		// 		// return Err(SyntaxErr::borrow_conflict(range));
 		// 	}
 		// }
+		borrow_expr.set_type_id(found_id);
 		let found_id = self.infer_no_type_anotation(found_id)?;
 		let borrow_value = BorrowType::new_internal(found_id, borrow_expr.mutable.is_some());
 		let borrow_id = self.ctx.type_store.add_type(borrow_value.into());
-		borrow_expr.set_type_id(borrow_id);
 		Ok(borrow_id)
 	}
 

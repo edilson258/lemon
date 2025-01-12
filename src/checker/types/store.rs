@@ -23,8 +23,7 @@ impl TypeStore {
 		if let Some(type_id) = self.cache.get(&hash) {
 			return *type_id;
 		}
-		let next_id = self.types.len();
-		let type_id = TypeId(next_id as u64);
+		let type_id = TypeId(self.types.len() as u64);
 		self.cache.insert(hash, type_id);
 		self.types.push(ty);
 		type_id
@@ -38,6 +37,24 @@ impl TypeStore {
 
 	pub fn get_type(&self, type_id: TypeId) -> Option<&Type> {
 		self.types.get(type_id.as_usize())
+	}
+
+	pub fn resolve_borrow_type(&self, type_id: TypeId) -> TypeId {
+		if type_id.is_known() {
+			return type_id;
+		}
+		let type_value = self.get_type(type_id).unwrap();
+		match type_value {
+			Type::Borrow(borrow) => self.resolve_borrow_type(borrow.value),
+			_ => type_id,
+		}
+	}
+
+	pub fn get_display_type(&self, type_id: TypeId) -> String {
+		let mut text = String::new();
+		let type_value = self.get_type(type_id).unwrap();
+		type_value.display_type(&mut text, self);
+		text
 	}
 }
 

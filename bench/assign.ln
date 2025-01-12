@@ -1,10 +1,11 @@
 
-fn change_age_ptr(age_ref: &mut &mut i32) = {
-  *age_ref = &mut 20; // age now is 20
+fn add(a: i32, b: i32): i32 = {
+  return a + b;
 }
 
+
 fn main() = {
-  let mut age = 10;
-  let mut age_ref = &mut age; // ref of mut age
-  change_age_ptr(&mut age_ref);
+  let a = 10;
+  let b = 20;
+  let c = add(a, b);
 }

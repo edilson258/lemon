@@ -14,6 +14,7 @@ impl Checker<'_> {
 			None => {
 				let found_id = self.infer_no_type_anotation(found_id)?;
 				self.ctx.add_value(lexeme, found_id, let_stmt.mutable.is_some());
+				let_stmt.set_type_id(found_id);
 				return Ok(TypeId::UNIT);
 			}
 		};

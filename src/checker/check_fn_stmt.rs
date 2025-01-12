@@ -18,12 +18,12 @@ impl Checker<'_> {
 		let fn_type_id = self.ctx.type_store.add_type(fn_type.into());
 
 		self.ctx.add_fn_value(lexeme, fn_type_id, false);
-
+		fn_stmt.set_ret_id(ret_id);
 		self.ctx.enter_scope(ScopeType::new_fn(ret_id));
 
 		for (bind, bind_type_id) in fn_stmt.params.iter().zip(fn_arg_types.iter()) {
 			let type_value = self.get_stored_type(*bind_type_id);
-			self.ctx.add_value(bind.lexeme(), *bind_type_id, false);
+			self.ctx.add_value(bind.lexeme(), *bind_type_id, type_value.is_borrow_mut());
 		}
 
 		let ret_found = self.check_fn_body(&mut fn_stmt.body)?;

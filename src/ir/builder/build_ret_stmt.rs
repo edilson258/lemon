@@ -7,14 +7,9 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_ret_stmt(&mut self, ret_stmt: &ast::RetStmt) {
-		if let Some(expr) = &ret_stmt.expr {
-			let value = self.build_expr(expr);
-			let register = value.get_register();
-			let instr = ir::RetInstr::new(ret_stmt.type_id, register);
-			self.add_instr(ir::Instr::Ret(instr));
-		} else {
-			let instr = ir::RetInstr::new(ret_stmt.type_id, None);
-			self.add_instr(ir::Instr::Ret(instr));
-		}
+		let value = ret_stmt.expr.as_ref().map(|expr| self.build_expr(expr));
+		let type_id = self.get_type_id(ret_stmt.get_type_id());
+		let instr = ir::RetInstr { value, type_id };
+		self.ir_ctx.add_instr(instr.into());
 	}
 }

@@ -30,7 +30,9 @@ fn synthesise_fn_params(params: &mut [ast::Binding], ctx: &mut Context) -> TyRes
 
 fn synthesise_binding(binding: &mut ast::Binding, ctx: &mut Context) -> TyResult<TypeId> {
 	if let Some(ty) = &mut binding.ty {
-		return synthesise_ast_type(ty, true, ctx);
+		let type_id = synthesise_ast_type(ty, true, ctx)?;
+		binding.set_type_id(type_id);
+		return Ok(type_id);
 	};
 	let diag = SyntaxErr::required_type_notation(binding.get_range());
 	Err(diag)

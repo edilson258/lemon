@@ -12,6 +12,7 @@ impl Checker<'_> {
 		}
 		let ret_type = self.get_stored_type(ref_id);
 		if let Type::Borrow(borrow) = ret_type {
+			deref_expr.set_type_id(borrow.value);
 			return Ok(borrow.value);
 		}
 		let ref_type = self.display_type(ref_id);
