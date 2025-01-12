@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use crate::checker::types::TypeId;
 
-use super::value::Value;
+use super::{
+	borrow::{Borrow, BorrowId, BorrowStore},
+	value::{Value, ValueId},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScopeType {
@@ -67,19 +70,56 @@ impl ScopeId {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Scope {
 	pub values: HashMap<String, Value>,
+	pub fn_values: HashMap<String, Value>,
+	pub borrow_store: BorrowStore,
 	pub scope_type: ScopeType,
 }
 
 impl Scope {
 	pub fn new(scope_type: ScopeType) -> Self {
-		Self { values: HashMap::new(), scope_type }
+		let values = HashMap::new();
+		let fn_values = HashMap::new();
+		let borrow_store = BorrowStore::default();
+		Self { values, fn_values, scope_type, borrow_store }
+	}
+
+	pub fn add_borrow_value(&mut self, vaiue_id: ValueId, is_mut: bool) -> BorrowId {
+		self.borrow_store.add_borrow(vaiue_id, is_mut)
+	}
+
+	pub fn get_borrow_value(&self, borrow_id: BorrowId) -> Option<&Borrow> {
+		self.borrow_store.get_borrow(borrow_id)
+	}
+
+	pub fn drop_borrows(&mut self, borrow_id: BorrowId) {
+		self.borrow_store.drop_borrows(borrow_id)
+	}
+
+	pub fn can_borrow_as(&self, value_id: ValueId, is_mut: bool) -> bool {
+		self.borrow_store.can_borrow_as(value_id, is_mut)
+	}
+
+	pub fn has_value(&self, name: &str) -> bool {
+		self.values.contains_key(name)
+	}
+
+	pub fn has_fn_value(&self, name: &str) -> bool {
+		self.fn_values.contains_key(name)
 	}
 
 	pub fn add_value(&mut self, name: String, value: Value) {
 		self.values.insert(name, value);
+	}
+
+	pub fn add_fn_value(&mut self, name: String, value: Value) {
+		self.fn_values.insert(name, value);
+	}
+
+	pub fn get_fn_value(&self, name: &str) -> Option<&Value> {
+		self.fn_values.get(name)
 	}
 
 	pub fn get_value(&self, name: &str) -> Option<&Value> {

@@ -9,6 +9,11 @@ pub fn command_line() -> clap::ArgMatches {
 		.arg_required_else_help(true)
 		.subcommand(Command::new("check").about("check lemon.").arg(Arg::new("file").required(true)))
 		.subcommand(
+			Command::new("run")
+				.about("run lemon.")
+				.arg(Arg::new("file").help("path to the lemon file").required(true)),
+		)
+		.subcommand(
 			Command::new("compile")
 				.about("compile lemon to machine code.")
 				.arg(Arg::new("file").help("path to the lemon file").required(true))

@@ -1,4 +1,4 @@
-use borrow::{BorrowId, BorrowStore};
+use borrow::BorrowId;
 use flow::Flow;
 use scope::{Scope, ScopeType};
 use store::Store;
@@ -16,7 +16,6 @@ pub mod value;
 pub struct Context {
 	pub scopes: Vec<Scope>,
 	pub flow: Flow,
-	pub borrow_store: BorrowStore,
 	pub type_store: TypeStore,
 	pub store: Store,
 	pub value_id: ValueId,
@@ -26,13 +25,12 @@ pub struct Context {
 impl Context {
 	pub fn new() -> Self {
 		let scopes = Vec::from_iter(vec![Scope::default()]);
-		let borrow_store = BorrowStore::default();
 		let type_store = TypeStore::default();
 		let store = Store::new();
 		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		Self { scopes, flow, borrow_store, type_store, store, value_id, store_id }
+		Self { scopes, flow, type_store, store, value_id, store_id }
 	}
 
 	pub fn get_type_store(&self) -> &TypeStore {
@@ -68,38 +66,54 @@ impl Context {
 		self.scopes.iter().rev().any(|scope| scope.is_loop_scope())
 	}
 
-	pub fn get_fn_scope_ret_type(&self) -> Option<TypeId> {
+	pub fn ret_scope_type(&self) -> Option<TypeId> {
 		self.scopes.iter().rev().find_map(|scope| scope.ret_scope())
 	}
 	// values
 	pub fn add_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
 		let value = Value::new_scoped(self.value_id, type_id, is_mut);
-		self.store.add_value(self.store_id, name.to_string(), type_id);
+		self.store.add_value_type(self.store_id, name.to_string(), type_id);
 		self.get_scope_mut().add_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
-
 	pub fn get_value(&self, name: &str) -> Option<&Value> {
 		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
+	}
+	// fns
+	pub fn add_fn_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
+		let value = Value::new_scoped(self.value_id, type_id, is_mut);
+		self.store.add_value_type(self.store_id, name.to_string(), type_id);
+		self.get_scope_mut().add_fn_value(name.to_string(), value);
+		self.value_id.next_id()
+	}
+
+	pub fn get_fn_value(&self, name: &str) -> Option<&Value> {
+		self.scopes.iter().rev().find_map(|scope| scope.get_fn_value(name))
+	}
+
+	pub fn contains_fn_value_in_current_scope(&self, name: &str) -> bool {
+		self.get_scope().has_fn_value(name)
 	}
 
 	// borrows
 	//
 	//
 	pub fn add_borrow(&mut self, value_id: ValueId, is_mut: bool) -> Option<BorrowId> {
-		if self.borrow_store.conflicts_with_borrow(value_id, is_mut) {
+		if !self.get_scope().can_borrow_as(value_id, is_mut) {
 			return None;
 		}
-		// let scope_id = ScopeId(self.scopes.len() - 1);
-		Some(self.borrow_store.add_borrow(value_id, is_mut))
+		Some(self.get_scope_mut().add_borrow_value(value_id, is_mut))
 	}
 
 	pub fn release_borrow(&mut self, borrow_id: BorrowId) {
-		self.borrow_store.drop_borrows(borrow_id)
+		self.get_scope_mut().drop_borrows(borrow_id)
 	}
-
-	pub fn conflicts_with_borrow(&self, value_id: ValueId, is_mut: bool) -> bool {
-		self.borrow_store.conflicts_with_borrow(value_id, is_mut)
+	pub fn can_borrow_as(&self, name: &str, is_mut: bool) -> bool {
+		if let Some(value_id) = self.get_value(name).map(|value| value.id) {
+			return self.get_scope().can_borrow_as(value_id, is_mut);
+		}
+		// thorow error?
+		true
 	}
 }
 

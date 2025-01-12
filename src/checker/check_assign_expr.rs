@@ -1,27 +1,39 @@
 use crate::ast::{self};
 
-use super::{context::value::Value, diags::TypeCheckError, Checker, TypeResult};
+use super::{diags::SyntaxErr, types::TypeId, Checker, TyResult};
 
 impl Checker<'_> {
-	pub fn check_assign_expr(&mut self, assign_expr: &ast::AssignExpr) -> TypeResult {
-		let left = self.check_expr(&assign_expr.left)?;
-		let value = self.check_expr(&assign_expr.right)?;
-		if !left.is_mutable() {
-			return Err(TypeCheckError::immutable("unknown", assign_expr.left.get_range()));
+	pub fn check_assign_expr(&mut self, assign_expr: &mut ast::AssignExpr) -> TyResult<TypeId> {
+		let found = self.check_expr(&mut assign_expr.right)?;
+		let found = self.infer_no_type_anotation(found)?;
+		let expected = self.assign_left_expr(&mut assign_expr.left, found)?;
+		assign_expr.set_type_id(expected);
+		Ok(TypeId::UNIT)
+	}
+
+	fn assign_left_expr(&mut self, expr: &mut ast::Expr, found_id: TypeId) -> TyResult<TypeId> {
+		match expr {
+			ast::Expr::Ident(ident) => self.assign_ident_expr(ident, found_id),
+			ast::Expr::Deref(deref) => self.assign_deref_expr(deref, found_id),
+			_ => todo!(),
 		}
-		if value.type_id == left.type_id {
-			return Ok(Value::nothing());
+	}
+
+	fn assign_ident_expr(&mut self, ident: &mut ast::Ident, found: TypeId) -> TyResult<TypeId> {
+		let lexeme = ident.lexeme();
+		if let Some(value) = self.ctx.get_value(lexeme) {
+			if !value.is_mutable() {
+				return Err(SyntaxErr::cannot_assign_immutable(lexeme, ident.get_range()));
+			}
+			self.equal_type_expected(value.type_id, found, ident.get_range())?;
+			return Ok(value.type_id);
 		}
-		let left_type = self.ctx.get_type(left.type_id).unwrap();
-		let value_type = self.ctx.get_type(value.type_id).unwrap();
-		if !left_type.is_eq(value_type, &self.ctx.type_store) {
-			return Err(TypeCheckError::type_mismatch(
-				&self.ctx.type_store,
-				left_type,
-				value_type,
-				assign_expr.get_range(),
-			));
-		}
-		Ok(Value::nothing())
+		Err(SyntaxErr::not_found_value(lexeme, ident.get_range()))
+	}
+
+	fn assign_deref_expr(&mut self, deref: &mut ast::DerefExpr, found: TypeId) -> TyResult<TypeId> {
+		let expected = self.check_deref_expr(deref)?;
+		self.equal_type_expected(expected, found, deref.get_range())?;
+		Ok(expected)
 	}
 }

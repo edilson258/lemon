@@ -33,7 +33,7 @@ impl Borrow {
 		self.is_mut
 	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BorrowStore {
 	borrows: Vec<Borrow>,
 }
@@ -55,17 +55,13 @@ impl BorrowStore {
 	pub fn drop_borrows(&mut self, borrow_id: BorrowId) {
 		self.borrows.retain(|borrow| borrow.id != borrow_id);
 	}
-	pub fn conflicts_with_borrow(&self, value_id: ValueId, is_mut: bool) -> bool {
-		// only  one mutable boorrow is allowed
-		self.borrows.iter().any(|borrow| borrow.value_id == value_id && borrow.is_mutable() && is_mut)
-	}
-
-	pub fn borrows(&self) -> impl Iterator<Item = &Borrow> {
-		self.borrows.iter()
-	}
-
-	pub fn borrows_mut(&mut self) -> impl Iterator<Item = &mut Borrow> {
-		self.borrows.iter_mut()
+	pub fn can_borrow_as(&self, value_id: ValueId, is_mut: bool) -> bool {
+		if let Some(borrow) = self.borrows.iter().find(|b| b.value_id == value_id) {
+			if is_mut && borrow.is_mutable() {
+				return false;
+			}
+		}
+		true
 	}
 }
 

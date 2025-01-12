@@ -154,40 +154,50 @@ pub enum Token {
 
 	// types
 	//
-	//
-	//
-	//
-	//
+
+	// usize
 	#[token("usize")]
 	UsizeType,
-	#[token("isize")]
-	IsizeType,
-	#[token("bool")]
-	BoolType,
-	#[token("i8")]
-	I8Type,
 	#[token("u8")]
 	U8Type,
-	#[token("i16")]
-	I16Type,
 	#[token("u16")]
 	U16Type,
-	#[token("i32")]
-	I32Type,
 	#[token("u32")]
 	U32Type,
-	#[token("i64")]
-	I64Type,
 	#[token("u64")]
 	U64Type,
+
+	// isize
+	#[token("isize")]
+	IsizeType,
+	#[token("i8")]
+	I8Type,
+	#[token("i16")]
+	I16Type,
+	#[token("i32")]
+	I32Type,
+	#[token("i64")]
+	I64Type,
+
+	// float
 	#[token("f32")]
 	F32Type,
 	#[token("f64")]
 	F64Type,
+
+	#[token("bool")]
+	BoolType,
+
 	#[token("char")]
 	CharType,
 	#[token("string")]
 	StringType,
+
+	// other
+	//
+	#[token("void")]
+	VoidType,
+
 	// Comments //
 	#[regex(r"//[^\n]*", logos::skip)]
 	SkipLine,
@@ -286,6 +296,7 @@ impl fmt::Display for Token {
 			Token::DotDotEq => write!(f, "..="),
 			Token::Tilde => write!(f, "~"),
 			Token::Const => write!(f, "const"),
+			Token::VoidType => write!(f, "void"),
 		}
 	}
 }

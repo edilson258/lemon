@@ -1,35 +1,26 @@
 use crate::{
 	ast,
-	ir::{
-		get_std_fn_id,
-		ir::{self, Value},
-	},
+	checker::types::TypeId,
+	ir::{ir::IrValue, Instr, Register, StoreInstr, UnaryInstr},
 	report::throw_ir_build_error,
 };
 
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_ident_expr(&mut self, expr: &ast::Ident) -> Value {
-		let ident = expr.lexeme();
-		// todo: remove this
-		if let Some(fn_id) = get_std_fn_id(ident) {
-			return Value::Fn(fn_id);
+	pub fn build_ident_expr(&mut self, expr: &ast::Ident) -> Register {
+		let lexeme = expr.lexeme();
+		if let Some(register) = self.ir_ctx.get_value(lexeme) {
+			return *register;
 		}
 
-		if let Some(register) = self.ctx.get_value(ident) {
-			let type_id = self.get_type_id(expr.type_id);
-			let bind = ir::Bind { register: *register, type_id };
-			let value = Value::new_bind(bind);
-			// todo: this is the best way to acess type_id and register?
-			self.can_free_value(value.get_register().unwrap(), value.get_type_id().unwrap());
-			return value;
+		let dest = self.ir_ctx.new_register();
+		if let Some(fn_id) = self.ir_ctx.get_fn_id(lexeme) {
+			let value = IrValue::Fn(fn_id.clone());
+			let instr = StoreInstr { type_id: TypeId::UNIT, value, dest };
+			self.ir_ctx.add_instr(instr.into());
+			return dest;
 		}
-
-		if let Some(fn_id) = self.ctx.get_fn_id(ident) {
-			return Value::Fn(fn_id);
-		}
-
-		throw_ir_build_error(format!("'{}' not found", ident));
+		throw_ir_build_error(format!("'{}' not found", lexeme));
 	}
 }

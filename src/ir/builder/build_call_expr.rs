@@ -1,37 +1,37 @@
 use crate::{
 	ast,
 	checker::types::TypeId,
-	ir::ir::{self, Value},
-	report::throw_ir_build_error,
+	ir::{
+		ir::{self, IrValue},
+		FnId, Register,
+	},
 };
 
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_call_expr(&mut self, expr: &ast::CallExpr) -> Value {
-		let fn_id = match self.build_expr(&expr.callee) {
-			Value::Fn(fn_id) => fn_id,
-			_ => throw_ir_build_error(format!("not found '{:?}'", expr.callee)),
-		};
-		let dest = self.ctx.get_register();
-		let args = self.load_args(&expr.args, &expr.args_type);
-		let type_id = self.get_type_id(expr.type_id);
-		let instr = ir::CallInstr { fn_id, type_id, args, dest };
-		self.add_instr(ir::Instr::Call(instr));
-		Value::new_register(dest)
+	pub fn build_call_expr(&mut self, expr: &ast::CallExpr) -> Register {
+		let fn_id = self.build_callee(&expr.callee);
+		let args = self.build_args(&expr.args, &expr.args_type);
+		let dest = self.ir_ctx.new_register();
+		let type_id = self.get_type_id(expr.get_type_id());
+		let instr = ir::CallInstr { type_id, fn_id, args, dest };
+		self.ir_ctx.add_instr(ir::Instr::Call(instr));
+		dest
 	}
 
-	fn load_args(&mut self, args: &[ast::Expr], args_type: &[TypeId]) -> Vec<ir::Register> {
+	fn build_callee(&mut self, expr: &ast::Expr) -> FnId {
+		match expr {
+			ast::Expr::Ident(ident) => ir::FnId::new(ident.lexeme()),
+			_ => todo!(),
+		}
+	}
+
+	fn build_args(&mut self, args: &[ast::Expr], args_type: &[TypeId]) -> Vec<Register> {
 		let mut registers = Vec::with_capacity(args.len());
 		for (arg, arg_type) in args.iter().zip(args_type) {
 			let value = self.build_expr(arg);
-			let instr = ir::UnaryInstr {
-				type_id: *arg_type,
-				value: value.get_register().unwrap(),
-				dest: self.ctx.get_register(),
-			};
-			registers.push(instr.dest);
-			self.add_instr(ir::Instr::Load(instr));
+			registers.push(value);
 		}
 		registers
 	}

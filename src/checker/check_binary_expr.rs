@@ -1,106 +1,68 @@
-use crate::{
-	ast::{self},
-	diag::Diag,
-	range::Range,
-};
-use ast::Operator;
-
-use super::{diags::TypeCheckError, types::TypeId, Checker, TypeResult};
+use super::{diags::SyntaxErr, types::TypeId, Checker, TyResult};
+use crate::ast::{self, Operator, OperatorKind};
 
 impl Checker<'_> {
-	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> TypeResult<TypeId> {
+	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> TyResult<TypeId> {
 		let left = self.check_expr(&mut binary_expr.left)?;
 		let right = self.check_expr(&mut binary_expr.right)?;
 		let range = binary_expr.get_range();
-		let typed_id = self.apply_operator(&binary_expr.operator, left, right, range)?;
-		binary_expr.set_type_id(typed_id);
-		Ok(typed_id)
-	}
 
-	fn apply_operator(
-		&mut self,
-		operator: &Operator,
-		left: TypeId,
-		right: TypeId,
-		range: Range,
-	) -> TypeResult<TypeId> {
-		match operator {
-			Operator::ADD | Operator::SUB | Operator::MUL | Operator::DIV => {
-				self.numeric_operation(left, right, operator, range)
+		let type_id = match binary_expr.operator.kind {
+			OperatorKind::ADD | OperatorKind::SUB | OperatorKind::MUL | OperatorKind::DIV => {
+				self.check_math_operation(left, right, &binary_expr.operator)?
 			}
-			Operator::LT | Operator::GT | Operator::LE | Operator::GE | Operator::EQ => {
-				self.comparison_operation(left, right, operator, range)
+			OperatorKind::LT | OperatorKind::GT | OperatorKind::LE => {
+				self.check_cmp_operation(left, right, &binary_expr.operator)?
 			}
-			Operator::MOD => self.mod_operation(left, right, range),
-			_ => Err(self.unsupported_operator(left, right, operator, range)),
-		}
+			OperatorKind::GE | OperatorKind::EQ => {
+				self.check_cmp_operation(left, right, &binary_expr.operator)?
+			}
+			OperatorKind::RANGE => self.check_range_operation(left, right, &binary_expr.operator)?,
+			OperatorKind::MOD => self.check_mod_operation(left, right, &binary_expr.operator)?,
+			_ => todo!(),
+		};
+
+		binary_expr.set_type_id(type_id);
+		Ok(type_id)
 	}
 
-	fn mod_operation(&self, left: TypeId, right: TypeId, range: Range) -> TypeResult<TypeId> {
-		let left_infered = self.infer_type(right, left)?;
-		let right_infered = self.infer_type(left, right)?;
-
-		let resolved_left = self.resolve_par(left_infered)?;
-		let resolved_right = self.resolve_par(right_infered)?;
-
-		println!("left: {:?}", left_infered);
-		println!("right: {:?}", right_infered);
-
-		if !resolved_left.is_numeric() || !resolved_right.is_numeric() {
-			return Err(self.unsupported_operator(left, right, &Operator::MOD, range));
-		}
-
-		Ok(left_infered)
+	fn check_range_operation(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+		todo!("check range operator")
 	}
 
-	fn numeric_operation(
-		&self,
-		left: TypeId,
-		right: TypeId,
-		operator: &Operator,
-		range: Range,
-	) -> TypeResult<TypeId> {
-		let left_infered = self.infer_type(right, left)?;
-		let right_infered = self.infer_type(left, right)?;
-
-		// self.equal_type_id(left_infered, right_infered, range.clone())?;
-		let resolved_left = self.resolve_par(left_infered)?;
-		let resolved_right = self.resolve_par(right_infered)?;
-
-		if !resolved_left.is_numeric() || !resolved_right.is_numeric() {
-			return Err(self.unsupported_operator(left, right, operator, range));
+	fn check_cmp_operation(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+		let left = self.infer_type(rt, lt)?;
+		let right = self.infer_type(lt, rt)?;
+		if !self.equal_type_id(left, right) {
+			let (left, right) = self.display_double_type(left, right);
+			return Err(SyntaxErr::unsupported_operator(left, right, operator));
 		}
-
-		Ok(right_infered)
-	}
-
-	fn comparison_operation(
-		&self,
-		left: TypeId,
-		right: TypeId,
-		operator: &Operator,
-		range: Range,
-	) -> TypeResult<TypeId> {
-		let left_infered = self.infer_type(right, left)?;
-		let right_infered = self.infer_type(left, right)?;
-
-		let resolved_left = self.resolve_par(left_infered)?;
-		let resolved_right = self.resolve_par(right_infered)?;
-
-		if resolved_left != resolved_right {
-			return Err(self.unsupported_operator(left, right, operator, range));
-		}
-
 		Ok(TypeId::BOOL)
 	}
 
-	fn unsupported_operator(
-		&self,
-		left: TypeId,
-		right: TypeId,
-		operator: &Operator,
-		range: Range,
-	) -> Diag {
-		TypeCheckError::unsupported_operator(self.format(left), self.format(right), operator, range)
+	fn check_math_operation(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+		let left = self.infer_type(rt, lt)?;
+		let right = self.infer_type(left, rt)?;
+		if !self.equal_type_id(left, right) {
+			let (left, right) = self.display_double_type(left, right);
+			return Err(SyntaxErr::unsupported_operator(left, right, operator));
+		}
+		Ok(left)
+	}
+
+	fn check_mod_operation(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+		let left = self.infer_type(rt, lt)?;
+		let right = self.infer_type(lt, rt)?;
+
+		if left.is_float() || right.is_float() {
+			let (left, right) = self.display_double_type(left, right);
+			return Err(SyntaxErr::unsupported_operator(left, right, operator));
+		}
+
+		if !self.equal_type_id(left, right) {
+			let (left, right) = self.display_double_type(left, right);
+			return Err(SyntaxErr::unsupported_operator(left, right, operator));
+		}
+		Ok(left)
 	}
 }

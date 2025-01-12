@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use crate::checker::types::TypeId;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -11,27 +12,15 @@ impl BlockId {
 		self.0
 	}
 	pub fn as_string(&self) -> String {
-		// l0 or b0 (ake label_0 or block_0)
 		format!("l{}", self.0)
 	}
-
-	pub fn next_id(&mut self) -> Self {
+	pub fn next_block(&mut self) -> Self {
 		Self(self.0 + 1)
 	}
 }
+
 #[derive(Debug, Clone)]
 pub struct FnId(pub String);
-
-pub fn get_std_fn_id(name: &str) -> Option<FnId> {
-	match name {
-		"print" => Some(FnId::new("print")),
-		"println" => Some(FnId::new("println")),
-		"panic" => Some(FnId::new("panic")),
-		"exit" => Some(FnId::new("exit")),
-		_ => None,
-	}
-}
-
 impl FnId {
 	pub fn new(name: &str) -> Self {
 		Self(name.to_owned())
@@ -43,7 +32,6 @@ impl FnId {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Register(pub usize);
-
 impl Register {
 	pub fn new(id: usize) -> Self {
 		Self(id)
@@ -51,100 +39,85 @@ impl Register {
 	pub fn as_usize(&self) -> usize {
 		self.0
 	}
+	pub fn next_register(&mut self) -> Self {
+		Self(self.0 + 1)
+	}
 	pub fn as_string(&self) -> String {
 		format!("r{}", self.0)
 	}
 }
 
-// instr
+impl From<u64> for Register {
+	fn from(value: u64) -> Self {
+		Self(value as usize)
+	}
+}
+
+impl From<Register> for u64 {
+	fn from(value: Register) -> Self {
+		value.0 as u64
+	}
+}
+
+impl From<Register> for IrValue {
+	fn from(value: Register) -> Self {
+		IrValue::Reg(value)
+	}
+}
+
+// == Intructions ==
 #[derive(Debug, Clone)]
 pub enum Instr {
-	//
-	// binary instr
-
-	// add lhs, rhs -> dest
+	// Binary
+	// add i32 lhs, rhs -> dest
 	Add(BinaryInstr),
-	// sub lhs, rhs -> dest
+	// sub i32 lhs, rhs -> dest
 	Sub(BinaryInstr),
-	// div lhs, rhs -> dest
 	Div(BinaryInstr),
-	// mul lhs, rhs -> dest
 	Mul(BinaryInstr),
-	// mod lhs, rhs -> dest
 	Mod(BinaryInstr),
-	// cmp_gt lhs, rhs -> dest
 	CmpGt(BinaryInstr),
-	// cmp_eq lhs, rhs -> dest
 	CmpEq(BinaryInstr),
-	// cmp_lt lhs, rhs -> dest
 	CmpLt(BinaryInstr),
-	// cmp_le lhs, rhs -> dest
 	CmpLe(BinaryInstr),
-	// cmp_ge lhs, rhs -> dest
 	CmpGe(BinaryInstr),
-
-	//
-	// unary instr
-
-	//
-	// control flow instr
-
-	// jmp_if cond, l1, l0
+	// Control flow
+	// jumpif lhs, l0, l1
 	JmpIf(JmpIfInstr),
-
-	//
-	// memory instr
-
-	// load value -> dest
-	Load(UnaryInstr),
-	// store value -> dest
-	Store(UnaryInstr),
-	// free value
-	Free(Register),
-	// own value -> dest
-	Own(OwnInstr),
-	// borrow value -> dest
-	Borrow(UnaryInstr),
-	// borrow_mut value -> dest
-	BorrowMut(UnaryInstr),
-
-	//
-	// other instr
-
-	// goto label
 	Goto(GotoInstr),
-	// ret value;
+	// Memory
+	// load i32 value -> dest
+	Load(UnaryInstr),
+	// store i32 value -> dest
+	Store(StoreInstr),
+	// heap i32 value -> dest size=4
+	Heap(HeapInstr),
+	// free register
+	Free(FreeInstr),
+	// own_ i32 register -> dest
+	Own(OwnInstr),
+	// own_heap register -> dest
+	OwnHeap(OwnHeapInstr),
+	// borrow i32 register -> dest
+	Borrow(UnaryInstr),
+	// borrow_mut i32 register -> dest
+	BorrowMut(UnaryInstr),
+	// deref i32 register -> dest
+	Deref(UnaryInstr),
+
+	// set_cache i32 register -> dest
+	SetCache(SetCacheInstr),
+	// load_cache i32 register -> dest
+	LoadCache(LoadCacheInstr),
+
+	// Other
+	// ret i32 register
 	Ret(RetInstr),
-	// call fn(args) -> dest;
+	// call fn_id(args) -> dest
 	Call(CallInstr),
-
-	// import c fn like print, etc
-	Import(ImportInstr),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ImportInstr {
-	pub module: String,
-}
-
-impl ImportInstr {
-	pub fn new(module: String) -> Self {
-		Self { module }
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct RetInstr {
-	pub value: Option<Register>,
-	pub type_id: TypeId,
-}
-
-impl RetInstr {
-	pub fn new(type_id: Option<TypeId>, value: Option<Register>) -> Self {
-		Self { type_id: type_id.unwrap_or(TypeId::NOTHING), value }
-	}
-}
-
+// == structures ==
 #[derive(Debug, Clone)]
 pub struct BinaryInstr {
 	pub type_id: TypeId,
@@ -152,7 +125,6 @@ pub struct BinaryInstr {
 	pub rhs: Register,
 	pub dest: Register,
 }
-
 impl BinaryInstr {
 	pub fn new(type_id: TypeId, lhs: Register, rhs: Register, dest: Register) -> Self {
 		Self { type_id, lhs, rhs, dest }
@@ -165,24 +137,78 @@ pub struct UnaryInstr {
 	pub value: Register,
 	pub dest: Register,
 }
-
 impl UnaryInstr {
 	pub fn new(type_id: TypeId, value: Register, dest: Register) -> Self {
 		Self { type_id, value, dest }
 	}
 }
 
-// control flow instr
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FreeInstr {
+	pub register: Register,
+}
+impl FreeInstr {
+	pub fn new(register: Register) -> Self {
+		Self { register }
+	}
+}
+
+impl From<FreeInstr> for Instr {
+	fn from(free: FreeInstr) -> Self {
+		Self::Free(free)
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SetCacheInstr {
+	pub register: Register,
+}
+impl SetCacheInstr {
+	pub fn new(register: Register) -> Self {
+		Self { register }
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct LoadCacheInstr {
+	pub register: Register,
+}
+impl LoadCacheInstr {
+	pub fn new(register: Register) -> Self {
+		Self { register }
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct RetInstr {
+	pub value: Option<Register>,
+	pub type_id: TypeId,
+}
+
+impl From<RetInstr> for Instr {
+	fn from(ret: RetInstr) -> Self {
+		Self::Ret(ret)
+	}
+}
+
+impl RetInstr {
+	pub fn new(type_id: Option<TypeId>, value: Option<Register>) -> Self {
+		Self { type_id: type_id.unwrap_or(TypeId::UNIT), value }
+	}
+}
 
 #[derive(Debug, Clone)]
 pub struct JmpIfInstr {
-	// pub type_id: TypeId,
 	pub cond: Register,
 	pub l0: BlockId,
 	pub l1: BlockId,
 }
 
-// memory instr
+impl From<JmpIfInstr> for Instr {
+	fn from(jmp_if: JmpIfInstr) -> Self {
+		Self::JmpIf(jmp_if)
+	}
+}
 
 #[derive(Debug, Clone)]
 pub struct CallInstr {
@@ -192,34 +218,89 @@ pub struct CallInstr {
 	pub dest: Register,
 }
 
+impl From<CallInstr> for Instr {
+	fn from(call: CallInstr) -> Self {
+		Self::Call(call)
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct GotoInstr {
 	pub block_id: BlockId,
 }
 
+impl From<GotoInstr> for Instr {
+	fn from(goto: GotoInstr) -> Self {
+		Self::Goto(goto)
+	}
+}
+
 #[derive(Debug, Clone)]
-pub struct OwnInstr {
+pub struct StoreInstr {
 	pub type_id: TypeId,
-	pub value: Value,
+	pub value: IrValue,
 	pub dest: Register,
 }
 
-// suport values like 10, 10.0, true, false, "hello", 'c'
+impl From<StoreInstr> for Instr {
+	fn from(store: StoreInstr) -> Self {
+		Self::Store(store)
+	}
+}
+#[derive(Debug, Clone)]
+pub struct HeapInstr {
+	pub type_id: TypeId,
+	pub value: IrValue,
+	pub dest: Register,
+	pub size: usize,
+}
+
+impl From<HeapInstr> for Instr {
+	fn from(store: HeapInstr) -> Self {
+		Self::Heap(store)
+	}
+}
 
 #[derive(Debug, Clone)]
-pub enum Value {
+pub struct OwnInstr {
+	pub type_id: TypeId,
+	pub value: Register,
+	pub dest: Register,
+}
+
+impl From<OwnInstr> for Instr {
+	fn from(own_stack: OwnInstr) -> Self {
+		Self::Own(own_stack)
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct OwnHeapInstr {
+	pub type_id: TypeId,
+	pub value: Register,
+	pub dest: Register,
+	pub size: usize,
+}
+
+impl From<OwnHeapInstr> for Instr {
+	fn from(own_heap: OwnHeapInstr) -> Self {
+		Self::OwnHeap(own_heap)
+	}
+}
+
+// == ir values ==
+#[derive(Debug, Clone)]
+pub enum IrValue {
 	Int(i64),
 	Float(f64),
 	Bool(bool),
 	String(String),
 	Char(char),
-	Bind(Bind),
-	Register(Register),
+	Reg(Register),
 	Fn(FnId),
-	Null,
 }
 
-impl Value {
+impl IrValue {
 	pub fn new_int(value: i64) -> Self {
 		Self::Int(value)
 	}
@@ -235,90 +316,36 @@ impl Value {
 	pub fn new_char(value: char) -> Self {
 		Self::Char(value)
 	}
-	pub fn new_bind(value: Bind) -> Self {
-		Self::Bind(value)
-	}
 	pub fn new_fn(value: FnId) -> Self {
 		Self::Fn(value)
 	}
-
-	pub fn new_register(value: Register) -> Self {
-		Self::Register(value)
-	}
-
-	pub fn get_value(&self) -> Option<&Value> {
-		match self {
-			Self::Bind(_) => None,
-			Self::Fn(_) => None,
-			_ => Some(self),
-		}
-	}
-
-	pub fn get_register(&self) -> Option<Register> {
-		match self {
-			Self::Bind(bind) => Some(bind.register),
-			Self::Register(reg) => Some(*reg),
-			_ => None,
-		}
-	}
-	pub fn get_type_id(&self) -> Option<TypeId> {
-		match self {
-			Self::Bind(bind) => Some(bind.type_id),
-			_ => None,
-		}
-	}
-	pub fn get_fn_id(&self) -> Option<FnId> {
-		match self {
-			Self::Fn(fn_id) => Some(fn_id.clone()),
-			_ => None,
-		}
-	}
-	pub fn is_register(&self) -> bool {
-		matches!(self, Self::Register(_))
-	}
-	pub fn get_bind(&self) -> Option<&Bind> {
-		match self {
-			Self::Bind(bind) => Some(bind),
-			_ => None,
-		}
-	}
 }
 
-// bind(reg and type_id)
-#[derive(Debug, Clone)]
-pub struct Bind {
-	pub register: Register, // register
-	pub type_id: TypeId,    // type_id
-}
-
+// == blocks ==
 #[derive(Debug, Clone)]
 pub struct Block {
-	pub block_id: BlockId, // (aka label)
+	pub block_id: BlockId,
 	pub instrs: Vec<Instr>,
-	pub preds_ids: Vec<BlockId>, // predecessors
-	pub succs_ids: Vec<BlockId>, // successors
+	pub preds_ids: Vec<BlockId>,
+	pub succs_ids: Vec<BlockId>,
 }
-
 impl Block {
 	pub fn new(block_id: BlockId) -> Self {
 		Self { block_id, instrs: vec![], preds_ids: vec![], succs_ids: vec![] }
 	}
-
 	pub fn add_instr(&mut self, instr: Instr) {
 		self.instrs.push(instr);
 	}
 }
 
-// fn
 #[derive(Debug, Clone)]
-pub struct FnNative {
+pub struct Fn {
 	pub fn_id: FnId,
 	pub params: Vec<Bind>,
 	pub ret: TypeId,
 	pub blocks: Vec<Block>,
 }
-
-impl FnNative {
+impl Fn {
 	pub fn new(fn_id: FnId, params: Vec<Bind>, ret: TypeId) -> Self {
 		Self { fn_id, params, ret, blocks: vec![] }
 	}
@@ -326,156 +353,48 @@ impl FnNative {
 	pub fn add_block(&mut self, block: Block) {
 		self.blocks.push(block);
 	}
+
 	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
 		self.blocks.extend(blocks);
 	}
 }
 
-// fn! (aka comptime fn)
 #[derive(Debug, Clone)]
-pub struct FnComptime {
-	pub fn_id: FnId,
-	pub max_call_depth: u32,
-	pub effect: bool, // enum here?... also we will really support side effects? :(
-	pub params: Vec<Bind>,
-	pub ret: TypeId,
-	pub blocks: Vec<Block>,
+pub struct Bind {
+	pub register: Register,
+	pub type_id: TypeId,
 }
 
-impl FnComptime {
-	pub fn new(fn_id: FnId, params: Vec<Bind>, ret: TypeId) -> Self {
-		Self { fn_id, max_call_depth: 0, effect: false, params, ret, blocks: vec![] }
-	}
-
-	pub fn add_block(&mut self, block: Block) {
-		self.blocks.push(block);
-	}
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		self.blocks.extend(blocks);
-	}
-}
-
-// extern fn (aka external fn aka abi fn)
-#[derive(Debug, Clone)]
-pub struct FnExtern {
-	pub fn_id: FnId,
-	pub abi: String,    // enum here?
-	pub symbol: String, // enum here?
-	pub params: Vec<Bind>,
-	pub ret: TypeId,
-	pub blocks: Vec<Block>,
-}
-
-impl FnExtern {
-	pub fn new(fn_id: FnId, abi: String, symbol: String, params: Vec<Bind>, ret: TypeId) -> Self {
-		Self { fn_id, abi, symbol, params, ret, blocks: vec![] }
-	}
-
-	pub fn add_block(&mut self, block: Block) {
-		self.blocks.push(block);
-	}
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		self.blocks.extend(blocks);
-	}
-}
-
-// we can join all fn's into one struct? hum i like this :)
-#[derive(Debug, Clone)]
-pub enum Fn {
-	Native(FnNative),
-	Comptime(FnComptime),
-	Extern(FnExtern),
-}
-impl Fn {
-	pub fn add_block(&mut self, block: Block) {
-		match self {
-			Self::Native(fn_native) => fn_native.add_block(block),
-			Self::Comptime(fn_comptime) => fn_comptime.add_block(block),
-			Self::Extern(fn_extern) => fn_extern.add_block(block),
-		}
-	}
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		match self {
-			Self::Native(fn_native) => fn_native.add_blocks(blocks),
-			Self::Comptime(fn_comptime) => fn_comptime.add_blocks(blocks),
-			Self::Extern(fn_extern) => fn_extern.add_blocks(blocks),
-		}
-	}
-}
-
-// global variables (aka static variables)
-#[derive(Debug, Clone)]
-pub struct Global {
-	pub instrs: Vec<Instr>,
-	pub fns: Vec<Fn>,
-}
-impl Global {
-	pub fn new() -> Self {
-		Self { instrs: vec![], fns: vec![] }
-	}
-
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		if let Some(fn_ir) = self.fns.last_mut() {
-			fn_ir.add_blocks(blocks);
-		}
-	}
-}
-
-impl Default for Global {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-// root ir
 #[derive(Debug, Clone)]
 pub struct Root {
-	pub size: usize,
+	reg_size: usize,
 	pub fns: Vec<Fn>,
-	pub globals: Global,
-}
-
-impl Root {
-	pub fn new() -> Self {
-		Self { fns: Vec::new(), globals: Global::new(), size: 0 }
-	}
-	pub fn add_fn(&mut self, fn_ir: Fn) {
-		self.fns.push(fn_ir);
-	}
-
-	pub fn set_size(&mut self, size: usize) {
-		self.size = size;
-	}
-
-	pub fn get_size(&self) -> usize {
-		self.size
-	}
-
-	pub fn add_fn_global(&mut self, fn_ir: Fn) {
-		self.globals.fns.push(fn_ir);
-	}
-
-	pub fn add_block(&mut self, block: Block) {
-		if let Some(fn_ir) = self.fns.last_mut() {
-			fn_ir.add_block(block);
-		}
-	}
-
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		if let Some(fn_ir) = self.fns.last_mut() {
-			fn_ir.add_blocks(blocks);
-		}
-	}
-	pub fn add_global_blocks(&mut self, blocks: Vec<Block>) {
-		self.globals.add_blocks(blocks);
-	}
-	pub fn add_global(&mut self, instr: Instr) {
-		self.globals.instrs.push(instr);
-	}
 }
 
 impl Default for Root {
 	fn default() -> Self {
 		Self::new()
+	}
+}
+
+impl Root {
+	pub fn new() -> Self {
+		Self { fns: Vec::new(), reg_size: 0 }
+	}
+	pub fn add_fn(&mut self, fn_ir: Fn) {
+		self.fns.push(fn_ir);
+	}
+
+	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
+		if let Some(fn_ir) = self.fns.last_mut() {
+			fn_ir.add_blocks(blocks);
+		}
+	}
+
+	pub fn set_reg_size(&mut self, size: usize) {
+		self.reg_size = size;
+	}
+	pub fn get_reg_size(&self) -> usize {
+		self.reg_size
 	}
 }

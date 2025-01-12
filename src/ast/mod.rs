@@ -2,7 +2,7 @@
 use core::fmt;
 use std::fmt::Display;
 
-use crate::{checker::types::TypeId, lexer::Token, range::Range};
+use crate::{checker::types::TypeId, range::Range};
 use serde::{Deserialize, Serialize};
 mod ast_type;
 pub use ast_type::*;
@@ -19,6 +19,7 @@ pub enum Stmt {
 	Expr(Expr),
 	Fn(FnStmt),
 	Ret(RetStmt),
+
 	ConstDel(ConstDelStmt),
 	ConstFn(ConstFnStmt),
 	Block(BlockStmt),
@@ -84,7 +85,7 @@ pub struct ConstFnStmt {
 	pub name: Ident,
 	pub params: Vec<Binding>,
 	pub ret_type: Option<ast_type::AstType>,
-	pub body: Box<Stmt>,
+	pub body: FnBody,
 	pub range: Range,    // const range
 	pub fn_range: Range, // fn range
 	pub ret_id: Option<TypeId>,
@@ -126,7 +127,7 @@ impl ConstDelStmt {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -134,7 +135,7 @@ impl ConstDelStmt {
 // let <pat> = <expr>
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LetStmt {
-	pub name: Binding,
+	pub bind: Binding,
 	pub expr: Expr,
 	pub mutable: Option<Range>,
 	pub range: Range, // let range
@@ -143,22 +144,37 @@ pub struct LetStmt {
 
 impl LetStmt {
 	pub fn lexeme(&self) -> &str {
-		&self.name.ident.text
+		&self.bind.ident.text
 	}
 
 	pub fn is_mut(&self) -> bool {
 		self.mutable.is_some()
 	}
 	pub fn get_range(&self) -> Range {
-		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
+		self.range.merged_with(&self.bind.get_range().merged_with(&self.expr.get_range()))
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
-		self.name.set_type_id(type_id);
+		self.bind.set_type_id(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum FnBody {
+	Block(BlockStmt),
+	Expr(Expr),
+}
+
+impl FnBody {
+	pub fn get_range(&self) -> Range {
+		match self {
+			FnBody::Block(block) => block.get_range(),
+			FnBody::Expr(expr) => expr.get_range(),
+		}
 	}
 }
 
@@ -168,7 +184,7 @@ pub struct FnStmt {
 	pub name: Ident,
 	pub params: Vec<Binding>,
 	pub ret_type: Option<ast_type::AstType>, // todo: implement this
-	pub body: Box<Stmt>,
+	pub body: FnBody,
 	pub range: Range, // fn range
 	pub ret_id: Option<TypeId>,
 }
@@ -231,7 +247,7 @@ impl Ident {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -258,7 +274,7 @@ impl Binding {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -281,7 +297,7 @@ pub enum Expr {
 	Import(ImportExpr),
 	Ident(Ident),
 	Literal(Literal),
-	Ref(RefExpr),
+	Borrow(BorrowExpr),
 	Deref(DerefExpr),
 }
 
@@ -304,7 +320,7 @@ impl Expr {
 			Expr::While(while_expr) => while_expr.get_range(),
 			Expr::Break(break_) => break_.get_range(),
 			Expr::Skip(skip) => skip.get_range(),
-			Expr::Ref(ref_expr) => ref_expr.get_range(),
+			Expr::Borrow(ref_expr) => ref_expr.get_range(),
 			Expr::Deref(deref_expr) => deref_expr.get_range(),
 		}
 	}
@@ -312,13 +328,15 @@ impl Expr {
 	pub fn get_bind_type_id(&self) -> Option<TypeId> {
 		match self {
 			Expr::Ident(ident) => ident.type_id,
-			Expr::Ref(ref_expr) => ref_expr.type_id,
+			Expr::Borrow(ref_expr) => ref_expr.type_id,
 			Expr::Deref(deref_expr) => deref_expr.type_id,
 			_ => None,
 		}
 	}
 	pub fn valid_assign_expr(&self) -> bool {
-		matches!(self, Expr::Ident(_)) | matches!(self, Expr::Ref(_)) | matches!(self, Expr::Deref(_))
+		matches!(self, Expr::Ident(_))
+			| matches!(self, Expr::Borrow(_))
+			| matches!(self, Expr::Deref(_))
 	}
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -338,7 +356,7 @@ impl FnExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -358,7 +376,8 @@ impl AssignExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -393,13 +412,12 @@ pub struct BinaryExpr {
 	pub left: Box<Expr>,
 	pub right: Box<Expr>,
 	pub operator: Operator,
-	pub range: Range, //  operator range
 	pub type_id: Option<TypeId>,
 }
 
 impl BinaryExpr {
 	pub fn get_range(&self) -> Range {
-		self.left.get_range().merged_with(&self.range).merged_with(&self.right.get_range())
+		self.left.get_range().merged_with(&self.operator.range).merged_with(&self.right.get_range())
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
@@ -439,7 +457,7 @@ impl CallExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 	pub fn set_args_type(&mut self, args_type: Vec<TypeId>) {
@@ -512,21 +530,21 @@ impl WhileExpr {
 
 // &<expr>
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RefExpr {
+pub struct BorrowExpr {
 	pub expr: Box<Expr>,
 	pub range: Range,           // ref range
 	pub mutable: Option<Range>, // mutable range
 	pub type_id: Option<TypeId>,
 }
 
-impl RefExpr {
+impl BorrowExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.expr.get_range())
 	}
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -545,7 +563,7 @@ impl DerefExpr {
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
 	}
-	pub fn get_type_id(&mut self) -> Option<TypeId> {
+	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
 }
@@ -671,7 +689,7 @@ impl BaseExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[repr(u8)]
 #[allow(clippy::upper_case_acronyms)]
-pub enum Operator {
+pub enum OperatorKind {
 	ADD,   // +
 	SUB,   // -
 	MUL,   // *
@@ -699,87 +717,110 @@ pub enum Operator {
 	NOT,   // !
 	PIPE,  // |>
 }
-pub const MIN_PDE: u8 = 0; // e.g `|`, `..`
-pub const CMP_PDE: u8 = 1; // e.g `<`, `<=`, `>`, `>=`, `==`, `!=`
-pub const ADD_PDE: u8 = 2; // e.g `+`, `-`
-pub const MUL_PDE: u8 = 3; // e.g `*`, `/`, `%`
-pub const MAX_PDE: u8 = 4; // e.g `^`, `**`
-pub const UNA_PDE: u8 = 5; // e.g `!`, `-`
+pub(crate) const MIN_PDE: u8 = 0; // e.g `|`, `..`
+pub(crate) const CMP_PDE: u8 = 1; // e.g `<`, `<=`, `>`, `>=`, `==`, `!=`
+pub(crate) const ADD_PDE: u8 = 2; // e.g `+`, `-`
+pub(crate) const MUL_PDE: u8 = 3; // e.g `*`, `/`, `%`
+pub(crate) const MAX_PDE: u8 = 4; // e.g `^`, `**`
+pub(crate) const UNA_PDE: u8 = 5; // e.g `!`, `-`
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Operator {
+	pub kind: OperatorKind,
+	pub range: Range,
+}
 
 impl Operator {
-	pub fn from_token(token: &Token) -> Option<Self> {
-		match token {
-			Token::Plus => Some(Self::ADD),
-			Token::Minus => Some(Self::SUB),
-			Token::Star => Some(Self::MUL),
-			Token::Slash => Some(Self::DIV),
-			Token::Eq => Some(Self::EQ),
-			Token::NotEq => Some(Self::NOTEQ),
-			Token::LessEq => Some(Self::LE),
-			Token::GreaterEq => Some(Self::GE),
-			Token::Less => Some(Self::LT),
-			Token::Greater => Some(Self::GT),
-			Token::And => Some(Self::AND),
-			Token::BarBar => Some(Self::OR),
-			Token::DotDot => Some(Self::RANGE),
-			Token::Rem => Some(Self::MOD),
-			Token::RemEq => Some(Self::MODEQ),
-			Token::Bar => Some(Self::BOR),
-			Token::Pow => Some(Self::POW),
-			Token::Pipe => Some(Self::PIPE),
-			Token::PlusEq => Some(Self::ADDEQ),
-			Token::MinusEq => Some(Self::SUBEQ),
-			Token::StarEq => Some(Self::MODEQ),
-			Token::SlashEq => Some(Self::DIVEQ),
-			Token::Bang => Some(Self::NOT),
-			_ => None,
-		}
-	}
-
-  #[rustfmt::skip]
+	#[rustfmt::skip]
 	pub fn pde(&self) -> u8 {
-    match self {
-      Operator::LT | Operator::LE | Operator::GT |
-      Operator::GE | Operator::EQ | Operator::NOTEQ => CMP_PDE,
-      Operator::ADD | Operator::SUB => ADD_PDE,
-      Operator::MUL | Operator::DIV | Operator::MOD => MUL_PDE,
-      Operator::POW => MAX_PDE,
-      Operator::NOT => UNA_PDE,
-      Operator::PIPE | Operator::RANGE => MIN_PDE,
+    match self.kind {
+      OperatorKind::LT | OperatorKind::LE | OperatorKind::GT |
+      OperatorKind::GE | OperatorKind::EQ | OperatorKind::NOTEQ => CMP_PDE,
+      OperatorKind::ADD | OperatorKind::SUB => ADD_PDE,
+      OperatorKind::MUL | OperatorKind::DIV | OperatorKind::MOD => MUL_PDE,
+      OperatorKind::POW => MAX_PDE,
+      OperatorKind::NOT => UNA_PDE,
+      OperatorKind::PIPE | OperatorKind::RANGE => MIN_PDE,
       _ => MIN_PDE, // default as minimum
     }
   }
+
+	pub fn next_pde(&self) -> u8 {
+		if self.pde() >= MAX_PDE {
+			return MAX_PDE;
+		}
+		self.pde() + 1
+	}
+
+	pub fn is_right_associative(&self) -> bool {
+		matches!(self.kind, OperatorKind::POW)
+	}
+
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+
+	pub fn display(&self) -> &'static str {
+		match self.kind {
+			OperatorKind::ADD => "add",
+			OperatorKind::SUB => "sub",
+			OperatorKind::MUL => "mul",
+			OperatorKind::DIV => "div",
+			OperatorKind::MOD => "get mod",
+			OperatorKind::RANGE => "concat",
+			OperatorKind::EQ => "compare",
+			OperatorKind::NOTEQ => "compare",
+			OperatorKind::LT => "compare",
+			OperatorKind::GT => "compare",
+			OperatorKind::AND => "compare",
+			OperatorKind::LE => "compare",
+			OperatorKind::GE => "compare",
+			OperatorKind::NOT => "negate",
+			OperatorKind::ADDEQ => "add assign",
+			OperatorKind::SUBEQ => "sub assign",
+			OperatorKind::MULEQ => "mul assign",
+			OperatorKind::DIVEQ => "div assign",
+			OperatorKind::MODEQ => "mod assign",
+			OperatorKind::OR => "or",
+			OperatorKind::XOR => "xor",
+			OperatorKind::BOR => "bor",
+			OperatorKind::SHL => "shl",
+			OperatorKind::SHR => "shr",
+			OperatorKind::POW => "pow",
+			OperatorKind::PIPE => "pipe",
+		}
+	}
 }
 
 impl Display for Operator {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Operator::ADD => write!(f, "+"),
-			Operator::SUB => write!(f, "-"),
-			Operator::MUL => write!(f, "*"),
-			Operator::DIV => write!(f, "/"),
-			Operator::MOD => write!(f, "%"),
-			Operator::RANGE => write!(f, ".."),
-			Operator::EQ => write!(f, "=="),
-			Operator::NOTEQ => write!(f, "!="),
-			Operator::ADDEQ => write!(f, "+="),
-			Operator::SUBEQ => write!(f, "-="),
-			Operator::MULEQ => write!(f, "*="),
-			Operator::DIVEQ => write!(f, "/="),
-			Operator::MODEQ => write!(f, "%="),
-			Operator::LT => write!(f, "<"),
-			Operator::GT => write!(f, ">"),
-			Operator::AND => write!(f, "&&"),
-			Operator::OR => write!(f, "||"),
-			Operator::XOR => write!(f, "^"),
-			Operator::BOR => write!(f, "|"),
-			Operator::SHL => write!(f, "<<"),
-			Operator::SHR => write!(f, ">>"),
-			Operator::POW => write!(f, "**"),
-			Operator::LE => write!(f, "<="),
-			Operator::GE => write!(f, ">="),
-			Operator::NOT => write!(f, "!"),
-			Operator::PIPE => write!(f, "|>"),
+		match self.kind {
+			OperatorKind::ADD => write!(f, "+"),
+			OperatorKind::SUB => write!(f, "-"),
+			OperatorKind::MUL => write!(f, "*"),
+			OperatorKind::DIV => write!(f, "/"),
+			OperatorKind::MOD => write!(f, "%"),
+			OperatorKind::RANGE => write!(f, ".."),
+			OperatorKind::EQ => write!(f, "=="),
+			OperatorKind::NOTEQ => write!(f, "!="),
+			OperatorKind::ADDEQ => write!(f, "+="),
+			OperatorKind::SUBEQ => write!(f, "-="),
+			OperatorKind::MULEQ => write!(f, "*="),
+			OperatorKind::DIVEQ => write!(f, "/="),
+			OperatorKind::MODEQ => write!(f, "%="),
+			OperatorKind::LT => write!(f, "<"),
+			OperatorKind::GT => write!(f, ">"),
+			OperatorKind::AND => write!(f, "&&"),
+			OperatorKind::OR => write!(f, "||"),
+			OperatorKind::XOR => write!(f, "^"),
+			OperatorKind::BOR => write!(f, "|"),
+			OperatorKind::SHL => write!(f, "<<"),
+			OperatorKind::SHR => write!(f, ">>"),
+			OperatorKind::POW => write!(f, "**"),
+			OperatorKind::LE => write!(f, "<="),
+			OperatorKind::GE => write!(f, ">="),
+			OperatorKind::NOT => write!(f, "!"),
+			OperatorKind::PIPE => write!(f, "|>"),
 		}
 	}
 }

@@ -93,7 +93,7 @@ pub fn throw_cross_compile_error(text: impl Into<String>) -> ! {
 	std::process::exit(1);
 }
 pub fn throw_ir_build_error(text: impl Into<String>) -> ! {
-	println!("{} {}", text_red("ir build error:"), text_white(text.into().as_str()));
+	println!("{} {}", text_red("ir build error:"), text_gray(text.into().as_str()));
 	std::process::exit(1);
 }
 

@@ -2,23 +2,23 @@
 
 use core::fmt;
 
-use serde::{Deserialize, Serialize};
-
 use crate::{
+	loader::{FileId, Loader},
 	range::Range,
 	report::{self},
 	source::Source,
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Severity {
 	Err,
 	Warn,
 	Note,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Diag {
+	pub file_id: FileId,
 	pub severity: Severity,
 	pub message: String,
 	pub note: Option<String>,
@@ -27,7 +27,8 @@ pub struct Diag {
 
 impl Diag {
 	pub fn new(severity: Severity, message: String, range: Range) -> Self {
-		Self { severity, message, note: None, range }
+		let file_id = FileId::new(u64::MAX);
+		Self { file_id, severity, message, note: None, range }
 	}
 
 	pub fn error(message: impl Into<String>, range: Range) -> Self {
@@ -40,6 +41,11 @@ impl Diag {
 
 	pub fn note(message: impl Into<String>, range: Range) -> Self {
 		Self::new(Severity::Note, message.into(), range)
+	}
+
+	pub fn with_file_id(mut self, file_id: FileId) -> Self {
+		self.file_id = file_id;
+		self
 	}
 
 	pub fn with_note(mut self, note: impl Into<String>) -> Self {
@@ -85,18 +91,20 @@ impl Diag {
 
 pub struct DiagGroup<'ckr> {
 	pub diags: Vec<Diag>,
-	pub source: &'ckr Source,
+	pub loader: &'ckr Loader,
 }
 
 impl<'ckr> DiagGroup<'ckr> {
-	pub fn new(source: &'ckr Source) -> Self {
-		Self { diags: Vec::new(), source }
+	pub fn new(loader: &'ckr Loader) -> Self {
+		Self { diags: Vec::new(), loader }
 	}
 	pub fn add(&mut self, diag: Diag) {
 		self.diags.push(diag);
 	}
-	pub fn report(&self, source: &Source) {
+
+	pub fn report(&self) {
 		for diag in &self.diags {
+			let source = self.loader.get_source(diag.file_id);
 			diag.report_err(source);
 		}
 	}

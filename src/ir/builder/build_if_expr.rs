@@ -1,35 +1,37 @@
 use crate::{
 	ast,
-	ir::ir::{self, Value},
+	ir::{
+		ir::{self, IrValue},
+		Register,
+	},
 };
 
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_if_expr(&mut self, expr: &ast::IfExpr) -> Value {
-		let cond = self.build_expr(&expr.cond).get_register().unwrap();
-		let then_b_id = self.ctx.create_block();
-		let merge_b_id = self.ctx.create_block();
+	pub fn build_if_expr(&mut self, expr: &ast::IfExpr) -> Register {
+		let cond = self.build_expr(&expr.cond);
 
-		let other_b_id = if expr.otherwise.is_some() { self.ctx.create_block() } else { merge_b_id };
+		let then_block = self.ir_ctx.new_block();
+		let merge_block = self.ir_ctx.new_block();
 
-		let instr = ir::JmpIfInstr { cond, l0: then_b_id, l1: other_b_id };
+		let other_block = if expr.otherwise.is_some() { self.ir_ctx.new_block() } else { merge_block };
 
-		self.add_instr(ir::Instr::JmpIf(instr));
+		let instr = ir::JmpIfInstr { cond, l0: then_block, l1: other_block };
 
-		self.ctx.switch_to_block(then_b_id);
+		self.ir_ctx.add_instr(instr.into());
+
+		self.ir_ctx.switch_to_block(then_block);
+
 		self.build_stmt(&expr.then);
 
 		if let Some(otherwise) = &expr.otherwise {
-			if !otherwise.ends_with_ret() {
-				let goto_instr = ir::GotoInstr { block_id: merge_b_id };
-				self.add_instr(ir::Instr::Goto(goto_instr));
-			}
-			self.ctx.switch_to_block(other_b_id);
+			self.ir_ctx.switch_to_block(other_block);
 			self.build_stmt(otherwise);
-		};
-		self.ctx.switch_to_block(merge_b_id);
-		// todo: we dont need to return here... maybe move if expr to stmt?
-		Value::Null
+		}
+
+		self.ir_ctx.switch_to_block(merge_block);
+
+		Register::new(0)
 	}
 }

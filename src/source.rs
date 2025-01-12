@@ -21,6 +21,7 @@ impl Source {
 		self.path().display().to_string()
 	}
 
+	#[allow(dead_code)]
 	pub fn file_name(&self) -> &str {
 		self.path().file_name().unwrap().to_str().unwrap()
 	}
