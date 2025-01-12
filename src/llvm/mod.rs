@@ -11,6 +11,7 @@ use crate::{
 	report::throw_llvm_error,
 	source::Source,
 };
+mod bind;
 mod llvm_block;
 mod llvm_call;
 mod llvm_cmp;
