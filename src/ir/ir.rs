@@ -242,6 +242,12 @@ pub struct StoreInstr {
 	pub dest: Register,
 }
 
+impl StoreInstr {
+	pub fn new(value: IrValue, type_id: TypeId, dest: Register) -> Self {
+		Self { value, type_id, dest }
+	}
+}
+
 impl From<StoreInstr> for Instr {
 	fn from(store: StoreInstr) -> Self {
 		Self::Store(store)
@@ -310,8 +316,8 @@ impl IrValue {
 	pub fn new_bool(value: bool) -> Self {
 		Self::Bool(value)
 	}
-	pub fn new_string(value: String) -> Self {
-		Self::String(value)
+	pub fn new_string(value: &str) -> Self {
+		Self::String(value.trim_matches('"').to_string())
 	}
 	pub fn new_char(value: char) -> Self {
 		Self::Char(value)
@@ -339,15 +345,15 @@ impl Block {
 }
 
 #[derive(Debug, Clone)]
-pub struct Fn {
+pub struct LnFn {
 	pub fn_id: FnId,
-	pub params: Vec<Bind>,
+	pub args: Vec<Bind>,
 	pub ret: TypeId,
 	pub blocks: Vec<Block>,
 }
-impl Fn {
-	pub fn new(fn_id: FnId, params: Vec<Bind>, ret: TypeId) -> Self {
-		Self { fn_id, params, ret, blocks: vec![] }
+impl LnFn {
+	pub fn new(fn_id: FnId, args: Vec<Bind>, ret: TypeId) -> Self {
+		Self { fn_id, args, ret, blocks: vec![] }
 	}
 
 	pub fn add_block(&mut self, block: Block) {
@@ -356,6 +362,37 @@ impl Fn {
 
 	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
 		self.blocks.extend(blocks);
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct ExFn {
+	pub fn_id: FnId,
+	pub args: Vec<Bind>,
+	pub ret: TypeId,
+	pub var_packed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub enum Fn {
+	Ln(LnFn),
+	Ex(ExFn),
+}
+
+impl Fn {
+	pub fn new_ln(fn_id: FnId, args: Vec<Bind>, ret: TypeId) -> Self {
+		Self::Ln(LnFn { fn_id, args, ret, blocks: vec![] })
+	}
+	pub fn new_ex(fn_id: FnId, args: Vec<Bind>, ret: TypeId, var_packed: bool) -> Self {
+		Self::Ex(ExFn { fn_id, args, ret, var_packed })
+	}
+
+	pub fn is_extern_fn(&self) -> bool {
+		matches!(self, Self::Ex(_))
+	}
+
+	pub fn is_ln_fn(&self) -> bool {
+		matches!(self, Self::Ln(_))
 	}
 }
 
@@ -386,7 +423,7 @@ impl Root {
 	}
 
 	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		if let Some(fn_ir) = self.fns.last_mut() {
+		if let Some(Fn::Ln(fn_ir)) = self.fns.last_mut() {
 			fn_ir.add_blocks(blocks);
 		}
 	}

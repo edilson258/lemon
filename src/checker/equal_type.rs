@@ -10,6 +10,7 @@ impl Checker<'_> {
 		if expected == found {
 			return true;
 		}
+
 		if expected.is_unit() && found.is_void() || found.is_unit() && expected.is_void() {
 			return true;
 		}

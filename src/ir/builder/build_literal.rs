@@ -34,8 +34,8 @@ impl Builder<'_> {
 		dest
 	}
 	fn build_string_expr(&mut self, string: &ast::StringLiteral) -> Register {
-		let value = IrValue::new_string(string.text.clone());
-		let type_id = TypeId::STRING;
+		let value = IrValue::new_string(&string.text);
+		let type_id = TypeId::STR;
 		let dest = self.ir_ctx.new_register();
 		let instr = ir::StoreInstr { value, type_id, dest };
 		self.ir_ctx.add_instr(instr.into());

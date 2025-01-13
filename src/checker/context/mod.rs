@@ -1,3 +1,4 @@
+use bind::create_binds;
 use borrow::BorrowId;
 use flow::Flow;
 use scope::{Scope, ScopeType};
@@ -6,6 +7,7 @@ use value::{Value, ValueId};
 
 use super::types::{TypeId, TypeStore};
 
+mod bind;
 mod borrow;
 mod flow;
 pub mod scope;
@@ -30,7 +32,9 @@ impl Context {
 		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		Self { scopes, flow, type_store, store, value_id, store_id }
+		let mut ctx = Self { scopes, flow, type_store, store, value_id, store_id };
+		create_binds(&mut ctx);
+		ctx
 	}
 
 	pub fn get_type_store(&self) -> &TypeStore {
@@ -72,23 +76,35 @@ impl Context {
 	// values
 	pub fn add_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
 		let value = Value::new_scoped(self.value_id, type_id, is_mut);
-		self.store.add_value_type(self.store_id, name.to_string(), type_id);
+		self
+			.store
+			.add_value_type(self.store_id, name.to_string(), type_id);
 		self.get_scope_mut().add_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
 	pub fn get_value(&self, name: &str) -> Option<&Value> {
-		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
+		self
+			.scopes
+			.iter()
+			.rev()
+			.find_map(|scope| scope.get_value(name))
 	}
 	// fns
-	pub fn add_fn_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
-		let value = Value::new_scoped(self.value_id, type_id, is_mut);
-		self.store.add_value_type(self.store_id, name.to_string(), type_id);
+	pub fn add_fn_value(&mut self, name: &str, type_id: TypeId) -> ValueId {
+		let value = Value::new_scoped(self.value_id, type_id, false);
+		self
+			.store
+			.add_value_type(self.store_id, name.to_string(), type_id);
 		self.get_scope_mut().add_fn_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
 
 	pub fn get_fn_value(&self, name: &str) -> Option<&Value> {
-		self.scopes.iter().rev().find_map(|scope| scope.get_fn_value(name))
+		self
+			.scopes
+			.iter()
+			.rev()
+			.find_map(|scope| scope.get_fn_value(name))
 	}
 
 	pub fn contains_fn_value_in_current_scope(&self, name: &str) -> bool {

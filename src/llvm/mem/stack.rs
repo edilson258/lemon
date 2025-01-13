@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use inkwell::{
+	basic_block::BasicBlock,
 	builder::Builder,
 	types::{BasicType, BasicTypeEnum},
 	values::{self, BasicValueEnum},
@@ -13,11 +14,25 @@ use crate::{
 
 pub struct Stack<'ll> {
 	pub values: HashMap<ir::Register, values::BasicValueEnum<'ll>>,
+	pub blocks: HashMap<ir::BlockId, BasicBlock<'ll>>,
 }
 
 impl<'ll> Stack<'ll> {
 	pub fn new() -> Self {
-		Self { values: HashMap::new() }
+		Self { values: HashMap::new(), blocks: HashMap::new() }
+	}
+
+	//blcoks
+	pub fn set_block(&mut self, block_id: ir::BlockId, block: BasicBlock<'ll>) {
+		self.blocks.insert(block_id, block);
+	}
+
+	pub fn get_block(&self, block_id: ir::BlockId) -> Option<&BasicBlock<'ll>> {
+		self.blocks.get(&block_id)
+	}
+
+	pub fn block_clear(&mut self) {
+		self.blocks.clear();
 	}
 
 	pub fn set_value(&mut self, reg: ir::Register, value: values::BasicValueEnum<'ll>) {
@@ -48,30 +63,6 @@ impl<'ll> Stack<'ll> {
 		};
 
 		self.set_value(dest, loaded_value);
-	}
-
-	pub fn store(&mut self, ptr: ir::Register, value: ir::Register, builder: &mut Builder<'ll>) {
-		let ptr_value = self.get_value(ptr);
-		let value_to_store = self.get_value(value);
-
-		if !ptr_value.is_pointer_value() {
-			throw_llvm_error(format!("Cannot store to non-pointer '{}'", ptr.as_string()));
-		}
-
-		let llvm_ptr = ptr_value.into_pointer_value();
-
-		// Garante que os tipos sejam compatíveis antes de armazenar
-		if llvm_ptr.get_type().as_basic_type_enum() != value_to_store.get_type() {
-			throw_llvm_error(format!(
-				"type mismatch: cannot store value of type '{}' into pointer to '{}'",
-				value_to_store.get_type(),
-				llvm_ptr.get_type().as_basic_type_enum()
-			));
-		}
-		match builder.build_store(llvm_ptr, *value_to_store) {
-			Ok(_) => {}
-			Err(err) => throw_llvm_error(format!("stack store error: {}", err)),
-		}
 	}
 
 	pub fn allocate(
@@ -105,36 +96,4 @@ impl<'ll> Stack<'ll> {
 		// is ok?
 		self.set_value(dest, value);
 	}
-
-	// pub fn load(&mut self, ptr: ir::Register, dest: ir::Register, builder: &mut Builder<'ll>) {
-	// 	let value = self.get_value(ptr);
-	// 	if !value.is_pointer_value() {
-	// 		throw_llvm_error(format!("stack not found pointer '{}'", ptr.as_string()));
-	// 	}
-	// 	let llvm_type = value.get_type();
-	// 	let llvm_ptr = value.into_pointer_value();
-	// 	let value = match builder.build_load(llvm_type, llvm_ptr, &dest.as_string()) {
-	// 		Ok(value) => value,
-	// 		Err(err) => throw_llvm_error(format!("stack load error: {}", err)),
-	// 	};
-	// 	self.set_value(dest, value);
-	// }
-
-	// pub fn copy_value(&mut self, value: ir::Register, dest: ir::Register) {
-	// 	let value = *self.get_value(value);
-	// 	self.set_value(dest, value);
-	// }
-
-	// pub fn store(&mut self, ptr: ir::Register, value: ir::Register, builder: &mut Builder<'ll>) {
-	// 	let ptr_value = self.get_value(ptr);
-	// 	let value_to_store = self.get_value(value);
-	// 	if !ptr_value.is_pointer_value() {
-	// 		throw_llvm_error(format!("stack not found pointer '{}'", ptr.as_string()));
-	// 	}
-	// 	let llvm_ptr = ptr_value.into_pointer_value();
-	// 	match builder.build_store(llvm_ptr, *value_to_store) {
-	// 		Ok(_) => {}
-	// 		Err(err) => throw_llvm_error(format!("stack store error: {}", err)),
-	// 	}
-	// }
 }

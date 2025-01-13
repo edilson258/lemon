@@ -30,6 +30,8 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 		Err(diag) => diag.report_syntax_err_wrap(source),
 	};
 
+	// print ln!("{:#?}", ast);
+
 	let mut diag_group = DiagGroup::new(&loader);
 
 	let mut ctx = Context::new();
@@ -71,7 +73,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// cross compile
 	//
-	println!("emmit machine code...");
+	println!("emmit '{}' binary...", HOST.architecture);
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 
@@ -133,7 +135,7 @@ pub fn run(path_name: &str) {
 
 	// cross compile
 	//
-	println!("emmit binary...");
+	println!("emmit '{}' binary...", HOST.architecture);
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 
@@ -152,5 +154,9 @@ pub fn run(path_name: &str) {
 	let bin = linker.link();
 	let command = format!("./{}", bin);
 	println!("running...");
-	std::process::Command::new("sh").arg("-c").arg(command).status().unwrap();
+	std::process::Command::new("sh")
+		.arg("-c")
+		.arg(command)
+		.status()
+		.unwrap();
 }

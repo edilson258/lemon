@@ -18,6 +18,7 @@ mod build_const_del_stmt;
 mod build_const_fn_stmt;
 mod build_deref_expr;
 mod build_expr;
+mod build_extern_fn;
 mod build_fn_stmt;
 mod build_ident_expr;
 mod build_if_expr;
@@ -74,12 +75,12 @@ impl<'br> Builder<'br> {
 			ast::Stmt::Fn(fn_stmt) => self.build_fn_stmt(fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
 			ast::Stmt::Expr(expr) => {
-				let register = self.build_expr(expr);
-				println!("'{}'", register.as_string());
+				self.build_expr(expr);
 			}
 			ast::Stmt::ConstDel(const_del) => self.build_const_del_stmt(const_del),
 			ast::Stmt::ConstFn(const_fn) => self.build_const_fn_stmt(const_fn),
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
+			ast::Stmt::ExternFn(extern_fn) => self.build_extern_fn(extern_fn),
 		}
 	}
 }

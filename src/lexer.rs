@@ -8,38 +8,58 @@ pub enum Token {
 	// Keywords
 	#[token("fn")]
 	Fn,
+
+	#[token("extern")]
+	Extern,
+
 	#[token("let")]
 	Let,
+
 	#[token("const")]
 	Const,
+
 	#[token("mut")]
 	Mut,
+
 	#[token("if")]
 	If,
+
 	#[token("for")]
 	For,
+
 	#[token("in")]
 	In,
+
 	#[token("while")]
 	While,
+
 	#[token("loop")]
 	Loop,
+
 	#[token("break")]
 	Break,
+
 	#[token("skip")]
 	Skip,
+
 	#[token("else")]
 	Else,
+
 	#[token("return")]
 	Ret,
+
 	#[token("null")]
 	Null,
+
 	#[token("match")]
 	Match,
+
 	#[token("import")]
 	Import,
+
 	#[token("pub")]
 	Pub,
+
 	#[token("mod")]
 	Mod,
 
@@ -193,11 +213,16 @@ pub enum Token {
 	#[token("string")]
 	StringType,
 
+	#[token("str")]
+	StrType,
+
 	// other
 	//
 	#[token("void")]
 	VoidType,
 
+	#[token("...")]
+	DotDotDot,
 	// Comments //
 	#[regex(r"//[^\n]*", logos::skip)]
 	SkipLine,
@@ -211,6 +236,7 @@ impl fmt::Display for Token {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
 			Token::Fn => write!(f, "fn"),
+			Token::Extern => write!(f, "extern"),
 			Token::Let => write!(f, "let"),
 			Token::Mut => write!(f, "mut"),
 			Token::If => write!(f, "if"),
@@ -291,9 +317,11 @@ impl fmt::Display for Token {
 			Token::F64Type => write!(f, "f64"),
 			Token::CharType => write!(f, "char"),
 			Token::StringType => write!(f, "string"),
+			Token::StrType => write!(f, "str"),
 			Token::Pub => write!(f, "pub"),
 			Token::Mod => write!(f, "mod"),
 			Token::DotDotEq => write!(f, "..="),
+			Token::DotDotDot => write!(f, "..."),
 			Token::Tilde => write!(f, "~"),
 			Token::Const => write!(f, "const"),
 			Token::VoidType => write!(f, "void"),

@@ -1,0 +1,19 @@
+extern fn printf(fmt: str, ...): i32 = {};
+
+// fn println<T>(value: T) = {
+// 	printf("%d\n", value);
+// }
+
+fn println(value: i32) = {
+	printf("%d\n", value);
+}
+
+fn fib(n: i32): i32 = {
+	if (n <= 1) return n;
+	return fib(n - 1) + fib(n - 2);
+}
+
+fn main() = {
+	let a = fib(10);
+	println(a);
+}

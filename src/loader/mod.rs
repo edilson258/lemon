@@ -61,7 +61,9 @@ impl Loader {
 
 	pub fn add_file(&mut self, path: PathBuf) -> FileId {
 		let file_id = FileId::new(self.sources.len() as u64);
-		self.sources.insert(file_id, Source::new(String::new(), path));
+		self
+			.sources
+			.insert(file_id, Source::new(String::new(), path));
 		file_id
 	}
 

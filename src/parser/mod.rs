@@ -43,6 +43,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Fn) => self.parse_fn_stmt().map(ast::Stmt::Fn),
 			Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
 			Some(Token::Ret) => self.parse_ret_stmt().map(ast::Stmt::Ret),
+			Some(Token::Extern) => self.parse_extern_fn_stmt().map(ast::Stmt::ExternFn),
 			_ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
 		};
 		self.match_take(Token::Semi)?;
@@ -153,6 +154,40 @@ impl<'lex> Parser<'lex> {
 		range.merge(&self.expect(Token::RBrace)?);
 
 		Ok(ast::BlockStmt::new(stmts, range))
+	}
+
+	// extern fn <name>(<pats>): <type> = { }
+	fn parse_extern_fn_stmt(&mut self) -> PResult<'lex, ast::ExternFnStmt> {
+		let range = self.expect(Token::Extern)?;
+		let fn_range = self.expect(Token::Fn)?;
+		let name = self.parse_ident()?;
+		self.expect(Token::LParen)?;
+		let mut var_packed = None;
+		let mut params = vec![];
+		while !self.match_token(Token::RParen) {
+			if self.match_token(Token::DotDotDot) {
+				var_packed = Some(self.expect(Token::DotDotDot)?);
+				break;
+			}
+			params.push(self.parse_binding()?);
+			if !self.match_token(Token::RParen) {
+				self.expect(Token::Comma)?;
+			}
+		}
+		self.expect(Token::RParen)?;
+
+		let mut ret_type = None;
+		if self.match_token(Token::Colon) {
+			self.expect(Token::Colon)?;
+			ret_type = Some(self.parse_type()?);
+		}
+		self.expect(Token::Assign)?; // take '='
+
+		// we need to parse block stmt here?
+		self.expect(Token::LBrace)?;
+		self.expect(Token::RBrace)?;
+		let ret_id = None;
+		Ok(ast::ExternFnStmt { name, params, ret_type, range, fn_range, var_packed, ret_id })
 	}
 
 	fn parse_expr(&mut self, min_pde: u8) -> PResult<'lex, ast::Expr> {
@@ -306,8 +341,35 @@ impl<'lex> Parser<'lex> {
 		}
 		let range = self.take_range();
 		let text = self.take_text_and_next()?;
+		let text = self.resolve_escape_string(&text)?;
 		let string = ast::StringLiteral { text, range };
 		Ok(ast::Literal::String(string))
+	}
+
+	fn resolve_escape_string(&mut self, text: &str) -> PResult<'lex, String> {
+		let mut result = String::with_capacity(text.len());
+		let mut chars = text.chars().peekable();
+		while let Some(c) = chars.next() {
+			if c == '\\' {
+				match chars.next() {
+					Some('n') => result.push('\n'),
+					Some('t') => result.push('\t'),
+					Some('\\') => result.push('\\'),
+					Some('\"') => result.push('\"'),
+					Some(other) => {
+						result.push('\\');
+						result.push(other);
+					}
+					None => {
+						let diag = self.create_custom_diag("unexpected end of string");
+						return Err(diag.with_file_id(self.file_id));
+					}
+				}
+			} else {
+				result.push(c);
+			}
+		}
+		Ok(result)
 	}
 
 	fn parse_numb(&mut self) -> PResult<'lex, ast::Literal> {
@@ -485,7 +547,11 @@ impl<'lex> Parser<'lex> {
 
 	fn next(&mut self) -> PResult<'lex, Option<Token>> {
 		let temp = self.token.take();
-		self.token = self.lex.next().transpose().map_err(|_| self.unexpected_token())?;
+		self.token = self
+			.lex
+			.next()
+			.transpose()
+			.map_err(|_| self.unexpected_token())?;
 		self.range = Range::from_span(self.lex.span());
 		Ok(temp)
 	}
@@ -506,7 +572,10 @@ impl<'lex> Parser<'lex> {
 	fn expect(&mut self, token: Token) -> PResult<'lex, Range> {
 		if !self.match_token(token) {
 			// todo: add error message
-			let peeked = self.token.map(|t| t.to_string()).unwrap_or_else(|| "unkown".to_string());
+			let peeked = self
+				.token
+				.map(|t| t.to_string())
+				.unwrap_or_else(|| "unkown".to_string());
 			let diag = Diag::error(format!("expected {} but got {}", token, peeked), self.range.clone());
 			return Err(diag.with_file_id(self.file_id));
 		}

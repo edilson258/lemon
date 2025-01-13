@@ -16,7 +16,6 @@ codelighter = "1.0.2"
 inkwell = { version = "0.5.0", features = ["llvm18-0"] }
 which = "7.0.1"
 target-lexicon = "0.13.1"
-llvm-sys = "191.0.0"
 
 
 [dev-dependencies]

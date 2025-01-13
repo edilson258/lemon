@@ -1,4 +1,6 @@
-use super::{BorrowType, ConstType, FnType, NumRange, Number, Type, TypeId, TypeStore};
+use super::{
+	BorrowType, ConstType, ExternFnType, FnType, NumRange, Number, Type, TypeId, TypeStore,
+};
 
 impl Type {
 	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
@@ -9,11 +11,13 @@ impl Type {
 			Type::String => *text += "string",
 			Type::Char => *text += "char",
 			Type::Unit => *text += "unit",
+			Type::VarPack => *text += "...",
 			Type::Number(number) => number.display_type(text),
 			Type::NumRange(num_range) => num_range.display_type(text),
 			Type::Borrow(borrow) => borrow.display_type(text, type_store),
 			Type::Const(const_type) => const_type.display_type(text, type_store),
 			Type::Fn(fn_type) => fn_type.display_type(text, type_store),
+			Type::ExternFn(extern_fn_type) => extern_fn_type.display_type(text, type_store),
 		}
 	}
 }
@@ -67,6 +71,26 @@ impl FnType {
 			}
 			let type_value = type_store.get_type(*arg).unwrap();
 			type_value.display_type(text, type_store);
+		}
+		*text += ") -> ";
+		let type_value = type_store.get_type(self.ret).unwrap();
+		type_value.display_type(text, type_store);
+	}
+}
+
+impl ExternFnType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+		*text += "extern fn(";
+		for (i, arg) in self.args.iter().enumerate() {
+			if i > 0 {
+				*text += ", ";
+			}
+			let type_value = type_store.get_type(*arg).unwrap();
+			type_value.display_type(text, type_store);
+		}
+
+		if self.var_packed {
+			*text += ", ...";
 		}
 		*text += ") -> ";
 		let type_value = type_store.get_type(self.ret).unwrap();

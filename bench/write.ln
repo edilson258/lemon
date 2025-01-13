@@ -1,0 +1,5 @@
+extern fn printf(i: i8): i8 = {};
+
+fn main() = {
+  printf(10);
+}

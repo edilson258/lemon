@@ -67,6 +67,8 @@ impl Cross {
 
 	pub fn emit(&self, module: &Module, ty: FileType, path: &Path) -> Result<(), String> {
 		let machine = self.machine()?;
-		machine.write_to_file(module, ty, path).map_err(|e| e.to_string())
+		machine
+			.write_to_file(module, ty, path)
+			.map_err(|e| e.to_string())
 	}
 }

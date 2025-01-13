@@ -20,6 +20,7 @@ impl Builder<'_> {
 		dest
 	}
 
+	#[inline(always)]
 	fn build_callee(&mut self, expr: &ast::Expr) -> FnId {
 		match expr {
 			ast::Expr::Ident(ident) => ir::FnId::new(ident.lexeme()),
@@ -27,12 +28,12 @@ impl Builder<'_> {
 		}
 	}
 
+	#[inline(always)]
 	fn build_args(&mut self, args: &[ast::Expr], args_type: &[TypeId]) -> Vec<Register> {
-		let mut registers = Vec::with_capacity(args.len());
-		for (arg, arg_type) in args.iter().zip(args_type) {
-			let value = self.build_expr(arg);
-			registers.push(value);
-		}
+		let registers = args
+			.iter()
+			.map(|arg| self.build_expr(arg))
+			.collect::<Vec<_>>();
 		registers
 	}
 }

@@ -18,6 +18,7 @@ pub enum Stmt {
 	Let(LetStmt),
 	Expr(Expr),
 	Fn(FnStmt),
+	ExternFn(ExternFnStmt),
 	Ret(RetStmt),
 
 	ConstDel(ConstDelStmt),
@@ -38,6 +39,7 @@ impl Stmt {
 			Stmt::ConstDel(const_del) => const_del.get_range(),
 			Stmt::ConstFn(const_stmt) => const_stmt.get_range(),
 			Stmt::Ret(ret_stmt) => ret_stmt.get_range(),
+			Stmt::ExternFn(extern_fn_stmt) => extern_fn_stmt.get_range(),
 		}
 	}
 	pub fn ends_with_ret(&self) -> bool {
@@ -121,7 +123,9 @@ impl ConstDelStmt {
 		&self.name.ident.text
 	}
 	pub fn get_range(&self) -> Range {
-		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
+		self
+			.range
+			.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
@@ -151,7 +155,9 @@ impl LetStmt {
 		self.mutable.is_some()
 	}
 	pub fn get_range(&self) -> Range {
-		self.range.merged_with(&self.bind.get_range().merged_with(&self.expr.get_range()))
+		self
+			.range
+			.merged_with(&self.bind.get_range().merged_with(&self.expr.get_range()))
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
@@ -175,6 +181,32 @@ impl FnBody {
 			FnBody::Block(block) => block.get_range(),
 			FnBody::Expr(expr) => expr.get_range(),
 		}
+	}
+}
+
+// extern fn <name>(<pats>): <type> = { }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExternFnStmt {
+	pub name: Ident,
+	pub params: Vec<Binding>,
+	pub ret_type: Option<ast_type::AstType>,
+	pub range: Range,    // extern fn range
+	pub fn_range: Range, // fn range
+	pub var_packed: Option<Range>,
+	pub ret_id: Option<TypeId>,
+}
+
+impl ExternFnStmt {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+
+	pub fn get_ret_id(&self) -> Option<TypeId> {
+		self.ret_id
+	}
+
+	pub fn set_ret_id(&mut self, ret_id: TypeId) {
+		self.ret_id = Some(ret_id);
 	}
 }
 
@@ -222,11 +254,19 @@ impl BlockStmt {
 	}
 
 	pub fn ends_with_ret(&self) -> bool {
-		self.stmts.last().map(|stmt| stmt.ends_with_ret()).unwrap_or(false)
+		self
+			.stmts
+			.last()
+			.map(|stmt| stmt.ends_with_ret())
+			.unwrap_or(false)
 	}
 
 	pub fn last_stmt_range(&self) -> Range {
-		self.stmts.last().map(|stmt| stmt.get_range()).unwrap_or(self.range.clone())
+		self
+			.stmts
+			.last()
+			.map(|stmt| stmt.get_range())
+			.unwrap_or(self.range.clone())
 	}
 }
 
@@ -371,7 +411,10 @@ pub struct AssignExpr {
 
 impl AssignExpr {
 	pub fn get_range(&self) -> Range {
-		self.range.merged_with(&self.left.get_range()).merged_with(&self.right.get_range())
+		self
+			.range
+			.merged_with(&self.left.get_range())
+			.merged_with(&self.right.get_range())
 	}
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
@@ -403,7 +446,11 @@ pub struct PipeExpr {
 
 impl PipeExpr {
 	pub fn get_range(&self) -> Range {
-		self.left.get_range().merged_with(&self.range).merged_with(&self.right.get_range())
+		self
+			.left
+			.get_range()
+			.merged_with(&self.range)
+			.merged_with(&self.right.get_range())
 	}
 }
 
@@ -417,7 +464,11 @@ pub struct BinaryExpr {
 
 impl BinaryExpr {
 	pub fn get_range(&self) -> Range {
-		self.left.get_range().merged_with(&self.operator.range).merged_with(&self.right.get_range())
+		self
+			.left
+			.get_range()
+			.merged_with(&self.operator.range)
+			.merged_with(&self.right.get_range())
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
