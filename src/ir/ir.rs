@@ -317,7 +317,7 @@ impl IrValue {
 		Self::Bool(value)
 	}
 	pub fn new_string(value: &str) -> Self {
-		Self::String(value.trim_matches('"').to_string())
+		Self::String(value.to_string())
 	}
 	pub fn new_char(value: char) -> Self {
 		Self::Char(value)

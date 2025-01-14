@@ -1,9 +1,5 @@
 extern fn printf(fmt: str, ...): i32 = {};
 
-// fn println<T>(value: T) = {
-// 	printf("%d\n", value);
-// }
-
 fn println(value: i32) = {
 	printf("%d\n", value);
 }
@@ -15,5 +11,7 @@ fn fib(n: i32): i32 = {
 
 fn main() = {
 	let a = fib(10);
+
+	let _char = 'a';
 	println(a);
 }

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+use console::Style;
 
 use crate::{
 	diag::{Diag, Severity},
@@ -28,15 +28,11 @@ pub fn report_err(diag: &Diag, source: &Source) {
 pub fn report_type_err(diag: &Diag, source: &Source) {
 	report(diag, ReportKind::TypeErr, source)
 }
-pub fn report_wrap(diag: &Diag, source: &Source) {
-	report(diag, ReportKind::Err, source);
-	std::process::exit(1);
-}
 
 pub fn report_engine_err(diag: &Diag) {
 	let slug = text_red("comptime error");
 	println!("{}: {}", slug, diag.message); // -- message
-																				 // println!("---> {}", text_gray(source.path_str().as_str())); // -- filename
+
 	if let Some(note) = &diag.note {
 		println!("== {} {}", text_cyan("note:"), note);
 	}
@@ -55,7 +51,7 @@ fn report(diag: &Diag, kind: ReportKind, source: &Source) {
 		Severity::Note => text_green("info"),
 	};
 	println!("{}: {}", slug, diag.message); // -- message
-	println!("---> {}", text_gray(source.path_str().as_str())); // -- filename
+	println!("---> {}", text_white(source.path_str().as_str())); // -- filename
 	let start = diag.range.start;
 	let end = diag.range.end;
 	let code = match diag.severity {
@@ -93,38 +89,41 @@ pub fn throw_cross_compile_error(text: impl Into<String>) -> ! {
 	std::process::exit(1);
 }
 pub fn throw_ir_build_error(text: impl Into<String>) -> ! {
-	println!("{} {}", text_red("ir build error:"), text_gray(text.into().as_str()));
+	println!("{} {}", text_red("ir build error:"), text_white(text.into().as_str()));
 	std::process::exit(1);
 }
 
 fn text_red(text: &str) -> String {
-	format!("\x1b[31m{}\x1b[0m", text)
+	let red = Style::new().red();
+	red.apply_to(text).to_string()
 }
 
 fn text_yellow(text: &str) -> String {
-	format!("\x1b[33m{}\x1b[0m", text)
+	let yellow = Style::new().yellow();
+	yellow.apply_to(text).to_string()
 }
 
 fn text_green(text: &str) -> String {
-	format!("\x1b[32m{}\x1b[0m", text)
+	let green = Style::new().green();
+	green.apply_to(text).to_string()
 }
 
-fn text_blue(text: &str) -> String {
-	format!("\x1b[34m{}\x1b[0m", text)
-}
+// fn text_blue(text: &str) -> String {
+// 	let blue = Style::new().blue();
+// 	blue.apply_to(text).to_string()
+// }
 
-fn text_magenta(text: &str) -> String {
-	format!("\x1b[35m{}\x1b[0m", text)
-}
+// fn text_magenta(text: &str) -> String {
+// 	let magenta = Style::new().magenta();
+// 	magenta.apply_to(text).to_string()
+// }
 
 fn text_cyan(text: &str) -> String {
-	format!("\x1b[36m{}\x1b[0m", text)
+	let cyan = Style::new().cyan();
+	cyan.apply_to(text).to_string()
 }
 
 fn text_white(text: &str) -> String {
-	format!("\x1b[2m\x1b[37m{}\x1b[0m", text)
-}
-
-fn text_gray(text: &str) -> String {
-	format!("\x1b[90m{}\x1b[0m", text)
+	let white = Style::new().white();
+	white.apply_to(text).to_string()
 }

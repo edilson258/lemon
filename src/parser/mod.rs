@@ -310,27 +310,21 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::DerefExpr { expr: Box::new(expr), range, type_id: None })
 	}
 
-	// fn parse_ref_and_deref_value(&mut self) -> PResult<'lex, ast::Expr> {
-	// 	let exper = match self.token {
-	// 		Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident)?,
-	// 		Some(Token::And) => self.parse_borrow_expr().map(ast::Expr::Borrow)?,
-	// 		Some(Token::Star) => self.parse_deref_expr().map(ast::Expr::Deref)?,
-	// 		Some(token) => {
-	// 			let message = format!("expected identifier, ref or deref, but got '{}'", token);
-	// 			let diag = self.create_custom_diag(message);
-	// 			return Err(diag);
-	// 		}
-	// 		_ => return Err(self.unexpected_token()),
-	// 	};
-	// 	let expr = self.parse_right_hand_expr(exper)?;
-	// 	Ok(expr)
-	// }
-
 	fn parse_char(&mut self) -> PResult<'lex, ast::Literal> {
 		self.ensure_char()?;
 		let range = self.take_range();
-		let text = self.take_text_and_next()?;
-		let value = text.chars().nth(1).unwrap(); // skipe '
+		let inner = self.take_text_and_next()?;
+		let value = self.parse_string_like(&inner, &range)?;
+		let mut chars = value.chars();
+		let value = match chars.next() {
+			Some(char) => char,
+			None => return Err(self.custom_diag("expected char literal", &range)),
+		};
+
+		if chars.next().is_some() {
+			return Err(self.custom_diag("expected char literal", &range));
+		}
+
 		let char = ast::CharLiteral { value, range };
 		Ok(ast::Literal::Char(char))
 	}
@@ -340,36 +334,35 @@ impl<'lex> Parser<'lex> {
 			self.expect(Token::String)?;
 		}
 		let range = self.take_range();
-		let text = self.take_text_and_next()?;
-		let text = self.resolve_escape_string(&text)?;
+		let inner = self.take_text_and_next()?;
+		let text = self.parse_string_like(&inner, &range)?;
 		let string = ast::StringLiteral { text, range };
 		Ok(ast::Literal::String(string))
 	}
 
-	fn resolve_escape_string(&mut self, text: &str) -> PResult<'lex, String> {
-		let mut result = String::with_capacity(text.len());
-		let mut chars = text.chars().peekable();
-		while let Some(c) = chars.next() {
-			if c == '\\' {
-				match chars.next() {
-					Some('n') => result.push('\n'),
-					Some('t') => result.push('\t'),
-					Some('\\') => result.push('\\'),
-					Some('\"') => result.push('\"'),
-					Some(other) => {
-						result.push('\\');
-						result.push(other);
-					}
-					None => {
-						let diag = self.create_custom_diag("unexpected end of string");
-						return Err(diag.with_file_id(self.file_id));
-					}
+	fn parse_string_like(&mut self, inner: &str, range: &Range) -> PResult<'lex, String> {
+		let inner = &inner[1..inner.len() - 1];
+		let mut str = String::with_capacity(inner.len());
+		let mut chars = inner.chars();
+		while let Some(char) = chars.next() {
+			if char != '\\' {
+				str.push(char);
+				continue;
+			}
+			match chars.next() {
+				Some(c @ ('\'' | '"' | '\\')) => str.push(c),
+				Some('n') => str.push('\n'),
+				Some('r') => str.push('\r'),
+				Some('t') => str.push('\t'),
+				Some('0') => str.push('\0'),
+				_ => {
+					let message = format!("unknown escape sequence '\\{}'", char);
+					let diag = self.custom_diag(message, range);
+					return Err(diag.with_file_id(self.file_id));
 				}
-			} else {
-				result.push(c);
 			}
 		}
-		Ok(result)
+		Ok(str)
 	}
 
 	fn parse_numb(&mut self) -> PResult<'lex, ast::Literal> {
@@ -442,7 +435,7 @@ impl<'lex> Parser<'lex> {
 	fn parse_assign_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let range = self.expect(Token::Assign)?;
 		if !left.valid_assign_expr() {
-			let diag = self.create_custom_diag("left-hand side can't be assigned");
+			let diag = self.custom_diag("left-hand side can't be assigned", &self.range);
 			return Err(diag);
 		}
 		let right = self.parse_expr(MIN_PDE)?;
@@ -594,10 +587,10 @@ impl<'lex> Parser<'lex> {
 			let diag = Diag::error(message, self.range.clone());
 			return diag.with_file_id(self.file_id);
 		}
-		self.create_custom_diag("unexpected token, lexer error please report this")
+		self.custom_diag("unsupported token", &self.range)
 	}
 
-	pub fn create_custom_diag(&self, message: impl Into<String>) -> Diag {
-		Diag::error(message, self.range.clone()).with_file_id(self.file_id)
+	pub fn custom_diag(&self, message: impl Into<String>, range: &Range) -> Diag {
+		Diag::error(message, range.clone()).with_file_id(self.file_id)
 	}
 }
