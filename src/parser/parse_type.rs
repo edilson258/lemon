@@ -10,6 +10,7 @@ impl<'l> Parser<'l> {
 			Some(Token::VoidType) => self.parse_void_type().map(ast::AstType::Void),
 			Some(Token::CharType) => self.parse_char_type().map(ast::AstType::Char),
 			Some(Token::StringType) => self.parse_string_type().map(ast::AstType::String),
+			Some(Token::StrType) => self.parse_str_type().map(ast::AstType::Str),
 			Some(Token::Ident) => self.parse_ident_type().map(ast::AstType::Ident),
 			Some(Token::Fn) => self.parse_fn_type().map(ast::AstType::Fn),
 			Some(Token::And) => self.parse_borrow_type().map(ast::AstType::Borrow),
@@ -129,6 +130,12 @@ impl<'l> Parser<'l> {
 		let range = self.expect(Token::StringType)?.clone();
 		Ok(ast::BaseType { range })
 	}
+
+	fn parse_str_type(&mut self) -> PResult<'l, ast::BaseType> {
+		let range = self.expect(Token::StrType)?.clone();
+		Ok(ast::BaseType { range })
+	}
+
 	fn parse_ident_type(&mut self) -> PResult<'l, ast::IdentType> {
 		if !self.match_token(Token::Ident) {
 			self.expect(Token::Ident)?;

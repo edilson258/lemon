@@ -1,8 +1,7 @@
 use super::context::scope::ScopeType;
 use super::diags::SyntaxErr;
-use super::synthesis;
 use super::types::TypeId;
-use super::{Checker, TyResult};
+use super::{synthesis, Checker, TyResult};
 
 use crate::ast;
 use crate::range::Range;
@@ -17,7 +16,7 @@ impl Checker<'_> {
 
 		let fn_type_id = self.ctx.type_store.add_type(fn_type.into());
 
-		self.ctx.add_fn_value(lexeme, fn_type_id, false);
+		self.ctx.add_fn_value(lexeme, fn_type_id);
 		fn_stmt.set_ret_id(ret_id);
 		self.ctx.enter_scope(ScopeType::new_fn(ret_id));
 
@@ -26,8 +25,8 @@ impl Checker<'_> {
 			self.ctx.add_value(bind.lexeme(), *bind_type_id, type_value.is_borrow_mut());
 		}
 
-		let ret_found = self.check_fn_body(&mut fn_stmt.body)?;
-		self.equal_type_expected(ret_id, ret_found, fn_stmt.body.get_range())?;
+		let _ = self.check_fn_body(&mut fn_stmt.body)?;
+		// self.equal_type_expected(ret_id, ret_found, fn_stmt.body.get_range())?;
 
 		self.ctx.exit_scope();
 		Ok(TypeId::UNIT)

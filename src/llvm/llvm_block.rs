@@ -1,36 +1,33 @@
-use inkwell::{basic_block::BasicBlock, values::FunctionValue};
-
-use crate::ir::{self, Block};
+use crate::{
+	ir::{self, Block, BlockId},
+	report::throw_llvm_error,
+};
+use inkwell::values::FunctionValue;
 
 use super::Llvm;
 
 impl<'ll> Llvm<'ll> {
-	pub fn llvm_block(&mut self, llvm_fn: &FunctionValue<'ll>, block: &Block) {
-		let llvm_block = self.get_or_append_block(&block.block_id, llvm_fn);
-		self.builder.position_at_end(llvm_block);
+	pub fn llvm_instr_block(&mut self, block: &Block) {
+		let llvm_block = match self.stack.get_block(block.block_id) {
+			Some(block) => block,
+			None => throw_llvm_error(format!("block {} not found", block.block_id.0)),
+		};
+		self.builder.position_at_end(*llvm_block);
 		for instr in &block.instrs {
 			self.llvm_instr(instr);
 		}
 	}
 
-	pub fn llvm_block_id(&self, block_id: &ir::BlockId) -> String {
+	pub fn llvm_block_name(&self, block_id: &ir::BlockId) -> String {
 		if block_id.0 == 0 {
 			return "entry".to_string();
 		}
-		format!("l_{}", block_id.0)
+		format!("block_{}", block_id.0)
 	}
 
-	pub fn get_or_append_block(
-		&mut self,
-		block_id: &ir::BlockId,
-		llvm_fn: &FunctionValue<'ll>,
-	) -> BasicBlock<'ll> {
-		if let Some(&existing_block) = self.block_store.get(block_id) {
-			return existing_block;
-		}
-		let block_name = self.llvm_block_id(block_id);
-		let new_block = self.ctx.append_basic_block(*llvm_fn, &block_name);
-		self.block_store.insert(*block_id, new_block);
-		new_block
+	pub fn register_block(&mut self, block_id: BlockId, fun: &FunctionValue<'ll>) {
+		let block_name = self.llvm_block_name(&block_id);
+		let llvm_block = self.ctx.append_basic_block(*fun, &block_name);
+		self.stack.set_block(block_id, llvm_block);
 	}
 }

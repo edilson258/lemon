@@ -43,6 +43,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Fn) => self.parse_fn_stmt().map(ast::Stmt::Fn),
 			Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
 			Some(Token::Ret) => self.parse_ret_stmt().map(ast::Stmt::Ret),
+			Some(Token::Extern) => self.parse_extern_fn_stmt().map(ast::Stmt::ExternFn),
 			_ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
 		};
 		self.match_take(Token::Semi)?;
@@ -153,6 +154,40 @@ impl<'lex> Parser<'lex> {
 		range.merge(&self.expect(Token::RBrace)?);
 
 		Ok(ast::BlockStmt::new(stmts, range))
+	}
+
+	// extern fn <name>(<pats>): <type> = { }
+	fn parse_extern_fn_stmt(&mut self) -> PResult<'lex, ast::ExternFnStmt> {
+		let range = self.expect(Token::Extern)?;
+		let fn_range = self.expect(Token::Fn)?;
+		let name = self.parse_ident()?;
+		self.expect(Token::LParen)?;
+		let mut var_packed = None;
+		let mut params = vec![];
+		while !self.match_token(Token::RParen) {
+			if self.match_token(Token::DotDotDot) {
+				var_packed = Some(self.expect(Token::DotDotDot)?);
+				break;
+			}
+			params.push(self.parse_binding()?);
+			if !self.match_token(Token::RParen) {
+				self.expect(Token::Comma)?;
+			}
+		}
+		self.expect(Token::RParen)?;
+
+		let mut ret_type = None;
+		if self.match_token(Token::Colon) {
+			self.expect(Token::Colon)?;
+			ret_type = Some(self.parse_type()?);
+		}
+		self.expect(Token::Assign)?; // take '='
+
+		// we need to parse block stmt here?
+		self.expect(Token::LBrace)?;
+		self.expect(Token::RBrace)?;
+		let ret_id = None;
+		Ok(ast::ExternFnStmt { name, params, ret_type, range, fn_range, var_packed, ret_id })
 	}
 
 	fn parse_expr(&mut self, min_pde: u8) -> PResult<'lex, ast::Expr> {
@@ -275,27 +310,21 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::DerefExpr { expr: Box::new(expr), range, type_id: None })
 	}
 
-	// fn parse_ref_and_deref_value(&mut self) -> PResult<'lex, ast::Expr> {
-	// 	let exper = match self.token {
-	// 		Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident)?,
-	// 		Some(Token::And) => self.parse_borrow_expr().map(ast::Expr::Borrow)?,
-	// 		Some(Token::Star) => self.parse_deref_expr().map(ast::Expr::Deref)?,
-	// 		Some(token) => {
-	// 			let message = format!("expected identifier, ref or deref, but got '{}'", token);
-	// 			let diag = self.create_custom_diag(message);
-	// 			return Err(diag);
-	// 		}
-	// 		_ => return Err(self.unexpected_token()),
-	// 	};
-	// 	let expr = self.parse_right_hand_expr(exper)?;
-	// 	Ok(expr)
-	// }
-
 	fn parse_char(&mut self) -> PResult<'lex, ast::Literal> {
 		self.ensure_char()?;
 		let range = self.take_range();
-		let text = self.take_text_and_next()?;
-		let value = text.chars().nth(1).unwrap(); // skipe '
+		let inner = self.take_text_and_next()?;
+		let value = self.parse_string_like(&inner, &range)?;
+		let mut chars = value.chars();
+		let value = match chars.next() {
+			Some(char) => char,
+			None => return Err(self.custom_diag("expected char literal", &range)),
+		};
+
+		if chars.next().is_some() {
+			return Err(self.custom_diag("expected char literal", &range));
+		}
+
 		let char = ast::CharLiteral { value, range };
 		Ok(ast::Literal::Char(char))
 	}
@@ -305,9 +334,35 @@ impl<'lex> Parser<'lex> {
 			self.expect(Token::String)?;
 		}
 		let range = self.take_range();
-		let text = self.take_text_and_next()?;
+		let inner = self.take_text_and_next()?;
+		let text = self.parse_string_like(&inner, &range)?;
 		let string = ast::StringLiteral { text, range };
 		Ok(ast::Literal::String(string))
+	}
+
+	fn parse_string_like(&mut self, inner: &str, range: &Range) -> PResult<'lex, String> {
+		let inner = &inner[1..inner.len() - 1];
+		let mut str = String::with_capacity(inner.len());
+		let mut chars = inner.chars();
+		while let Some(char) = chars.next() {
+			if char != '\\' {
+				str.push(char);
+				continue;
+			}
+			match chars.next() {
+				Some(c @ ('\'' | '"' | '\\')) => str.push(c),
+				Some('n') => str.push('\n'),
+				Some('r') => str.push('\r'),
+				Some('t') => str.push('\t'),
+				Some('0') => str.push('\0'),
+				_ => {
+					let message = format!("unknown escape sequence '\\{}'", char);
+					let diag = self.custom_diag(message, range);
+					return Err(diag.with_file_id(self.file_id));
+				}
+			}
+		}
+		Ok(str)
 	}
 
 	fn parse_numb(&mut self) -> PResult<'lex, ast::Literal> {
@@ -380,7 +435,7 @@ impl<'lex> Parser<'lex> {
 	fn parse_assign_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let range = self.expect(Token::Assign)?;
 		if !left.valid_assign_expr() {
-			let diag = self.create_custom_diag("left-hand side can't be assigned");
+			let diag = self.custom_diag("left-hand side can't be assigned", &self.range);
 			return Err(diag);
 		}
 		let right = self.parse_expr(MIN_PDE)?;
@@ -525,10 +580,10 @@ impl<'lex> Parser<'lex> {
 			let diag = Diag::error(message, self.range.clone());
 			return diag.with_file_id(self.file_id);
 		}
-		self.create_custom_diag("unexpected token, lexer error please report this")
+		self.custom_diag("unsupported token", &self.range)
 	}
 
-	pub fn create_custom_diag(&self, message: impl Into<String>) -> Diag {
-		Diag::error(message, self.range.clone()).with_file_id(self.file_id)
+	pub fn custom_diag(&self, message: impl Into<String>, range: &Range) -> Diag {
+		Diag::error(message, range.clone()).with_file_id(self.file_id)
 	}
 }

@@ -53,6 +53,10 @@ impl TypeId {
 		self.0 >= TypeId::I8.0 && self.0 <= TypeId::F64.0
 	}
 
+	pub fn is_string(&self) -> bool {
+		self.0 == TypeId::STRING.0
+	}
+
 	pub fn is_float(&self) -> bool {
 		self.0 >= TypeId::F32.0 && self.0 <= TypeId::F64.0
 	}

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{io, path::Path};
 
 use crate::{
 	checker::{context::Context, Checker},
@@ -13,11 +13,24 @@ use crate::{
 	report::throw_cross_compile_error,
 };
 use clap::ArgMatches;
+use console::{Style, Term};
 use inkwell::targets::FileType;
 use logos::Logos;
 use target_lexicon::HOST;
 
+pub fn execute_term(respose: io::Result<()>, text: &str) {
+	match respose {
+		Ok(_) => {}
+		Err(_) => println!("{}", text),
+	}
+}
+
 pub fn compile(path_name: &str, matches: &ArgMatches) {
+	let term = Term::stdout();
+	let style = Style::new();
+	let compile_green_text = style.green().apply_to("compiling...");
+	execute_term(term.write_line(&compile_green_text.to_string()), "compiling...");
+
 	let mut loader = Loader::new();
 	let file_id = loader.load(path_name);
 	let source = loader.get_source(file_id);
@@ -30,13 +43,14 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 		Err(diag) => diag.report_syntax_err_wrap(source),
 	};
 
+	// print ln!("{:#?}", ast);
+
 	let mut diag_group = DiagGroup::new(&loader);
 
 	let mut ctx = Context::new();
 
 	// check
-	//
-	println!("check...");
+	execute_term(term.write_line(" check..."), "check...");
 	let mut checker = Checker::new(&mut diag_group, &mut ctx);
 	let _ = match checker.check_program(&mut ast) {
 		Ok(tyy) => tyy,
@@ -45,7 +59,8 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// emit lnr
 	//
-	println!("emmit lnr...");
+	execute_term(term.clear_last_lines(1), "");
+	execute_term(term.write_line(" emmit lnr..."), "emmit lnr...");
 	let mut ir_builder = ir::Builder::new(&ctx.type_store);
 	let ir = ir_builder.build(&mut ast);
 
@@ -58,7 +73,9 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// emit llvm
 	//
-	println!("emmit llvm...");
+
+	execute_term(term.clear_last_lines(1), "");
+	execute_term(term.write_line(" emmit llvm..."), "emmit llvm...");
 	let llvm_context = inkwell::context::Context::create();
 	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
 	let mut llvm = Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
@@ -71,7 +88,9 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// cross compile
 	//
-	println!("emmit machine code...");
+	// println!("emmit object...", HOST.architecture);
+	execute_term(term.clear_last_lines(1), "");
+	execute_term(term.write_line(" emmit object..."), "emmit object...");
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 
@@ -85,11 +104,14 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// link
 	//
-	println!("linking...");
+	// println!("linking...");
+	execute_term(term.clear_last_lines(1), "");
+	execute_term(term.write_line(" linking..."), "linking...");
 	let linker = Linker::new(output_path.to_path_buf());
 	linker.link();
+	execute_term(term.clear_last_lines(1), "");
+	execute_term(term.write_line(" finished."), "finished.");
 }
-
 fn generate_output_filename(path: &Path) -> String {
 	let file_name = path.file_name().unwrap().to_str().unwrap();
 	let file_name_without_ext = file_name.split('.').next().unwrap();
@@ -133,7 +155,7 @@ pub fn run(path_name: &str) {
 
 	// cross compile
 	//
-	println!("emmit binary...");
+	println!("emmit '{}' binary...", HOST.architecture);
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 

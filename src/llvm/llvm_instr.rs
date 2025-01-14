@@ -21,6 +21,7 @@ impl Llvm<'_> {
 			ir::Instr::OwnHeap(own_heap) => self.llvm_own_heap(own_heap),
 			ir::Instr::Call(call) => self.llvm_call(call),
 			ir::Instr::Ret(ret) => self.llvm_ret(ret),
+			ir::Instr::JmpIf(jump_if) => self.llvm_jmp_if(jump_if),
 			_ => todo!("code {:?}", instr),
 		}
 	}

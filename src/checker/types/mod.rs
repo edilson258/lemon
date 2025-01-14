@@ -17,9 +17,12 @@ pub enum Type {
 	Borrow(BorrowType),
 	Const(ConstType),
 	Fn(FnType),
+	ExternFn(ExternFnType),
 
 	// internal
 	Unit,
+	// variadic pack
+	VarPack,
 }
 
 impl Type {
@@ -238,6 +241,19 @@ pub enum ConstKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ExternFnType {
+	pub args: Vec<TypeId>,
+	pub ret: TypeId,
+	pub var_packed: bool,
+}
+
+impl ExternFnType {
+	pub fn new(args: Vec<TypeId>, ret: TypeId, var_packed: bool) -> Self {
+		Self { args, ret, var_packed }
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FnType {
 	pub args: Vec<TypeId>,
 	pub ret: TypeId,
@@ -280,5 +296,11 @@ impl RefType {
 impl From<BorrowType> for Type {
 	fn from(value: BorrowType) -> Self {
 		Type::Borrow(value)
+	}
+}
+
+impl From<ExternFnType> for Type {
+	fn from(value: ExternFnType) -> Self {
+		Type::ExternFn(value)
 	}
 }

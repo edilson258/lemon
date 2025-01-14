@@ -10,7 +10,7 @@ use crate::{
 pub(crate) fn synthesise_literal(literal: &ast::Literal, ctx: &mut Context) -> TyResult<TypeId> {
 	match literal {
 		ast::Literal::Number(number) => synthesise_number_literal(number, ctx),
-		ast::Literal::String(string) => Ok(TypeId::STRING),
+		ast::Literal::String(string) => Ok(TypeId::STR),
 		ast::Literal::Bool(bool) => Ok(TypeId::BOOL),
 		ast::Literal::Char(char) => Ok(TypeId::CHAR),
 		ast::Literal::Null(null) => todo!(),

@@ -14,23 +14,51 @@ impl ir::Root {
 	}
 }
 
-impl ir::Fn {
+impl ir::LnFn {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let fn_id = self.fn_id.as_string();
 		let ret = type_store.get_display_type(self.ret);
 
-		let params = self.params.iter().map(|param| param.display_ir(type_store));
-		let params = params.collect::<Vec<_>>().join(", ");
-		let instr = if self.params.is_empty() {
+		let args = self.args.iter().map(|param| param.display_ir(type_store));
+		let args = args.collect::<Vec<_>>().join(", ");
+		let instr = if self.args.is_empty() {
 			format!("fn {} -> {}\n", fn_id, ret)
 		} else {
-			format!("fn {} {} -> {}\n", fn_id, params.trim(), ret)
+			format!("fn {} ({}) -> {}\n", fn_id, args.trim(), ret)
 		};
 		text.push_str(&instr);
 		for block in self.blocks.iter() {
 			block.display_ir(type_store, text);
 		}
 		text.push('\n');
+	}
+}
+
+impl ir::ExFn {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		let fn_id = self.fn_id.as_string();
+		let args = self.args.iter().map(|param| param.display_ir(type_store));
+		let mut args = args.collect::<Vec<_>>().join(", ");
+		if self.var_packed {
+			args += ", ..."
+		}
+		let ret = type_store.get_display_type(self.ret);
+		let instr = if self.args.is_empty() {
+			format!("extern fn {} -> {}\n", fn_id, ret)
+		} else {
+			format!("extern fn {} ({}) -> {}\n", fn_id, args.trim(), ret)
+		};
+		text.push_str(&instr);
+		text.push('\n');
+	}
+}
+
+impl ir::Fn {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		match self {
+			ir::Fn::Ln(fn_ir) => fn_ir.display_ir(type_store, text),
+			ir::Fn::Ex(fn_ir) => fn_ir.display_ir(type_store, text),
+		}
 	}
 }
 
@@ -207,7 +235,8 @@ impl ir::CallInstr {
 		let type_str = type_store.get_display_type(self.type_id);
 		let fn_id = self.fn_id.as_string();
 		let dest = self.dest.as_string();
-		let instr = format!("call {} {} -> {}", type_str, fn_id, dest);
+		let args = self.args.iter().map(|r| r.as_string()).collect::<Vec<_>>().join(", ");
+		let instr = format!("call {} {} {} -> {}", type_str, fn_id, args, dest);
 		text.push_str(&instr);
 		text.push('\n');
 	}
@@ -266,8 +295,8 @@ impl IrValue {
 			IrValue::Int(int) => int.to_string(),
 			IrValue::Float(float) => float.to_string(),
 			IrValue::Bool(bool) => bool.to_string(),
-			IrValue::String(string) => string.to_string(),
-			IrValue::Char(char) => char.to_string(),
+			IrValue::String(string) => format!("\"{}\"", string),
+			IrValue::Char(char) => format!("'{}'", char),
 			IrValue::Reg(reg) => reg.as_string(),
 			IrValue::Fn(fn_id) => fn_id.as_string().to_string(),
 		}

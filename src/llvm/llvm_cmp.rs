@@ -20,7 +20,7 @@ impl Llvm<'_> {
 			let operator = IntPredicate::SGT;
 			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_gt register"),
+				Err(_) => throw_llvm_error("cmp_gt register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -34,7 +34,7 @@ impl Llvm<'_> {
 			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_gt register"),
+				Err(_) => throw_llvm_error("cmp_gt register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -55,7 +55,7 @@ impl Llvm<'_> {
 			let operator = IntPredicate::EQ;
 			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_eq register"),
+				Err(_) => throw_llvm_error("cmp_eq register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -69,7 +69,7 @@ impl Llvm<'_> {
 			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_eq register"),
+				Err(_) => throw_llvm_error("cmp_eq register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -90,7 +90,7 @@ impl Llvm<'_> {
 			let operator = IntPredicate::SLT;
 			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_lt register"),
+				Err(_) => throw_llvm_error("cmp_lt register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -104,7 +104,7 @@ impl Llvm<'_> {
 			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_lt register"),
+				Err(_) => throw_llvm_error("cmp_lt register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -125,7 +125,7 @@ impl Llvm<'_> {
 			let operator = IntPredicate::SLE;
 			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_le register"),
+				Err(_) => throw_llvm_error("cmp_le register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -139,7 +139,7 @@ impl Llvm<'_> {
 			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_le register"),
+				Err(_) => throw_llvm_error("cmp_le register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -160,7 +160,7 @@ impl Llvm<'_> {
 			let operator = IntPredicate::SGE;
 			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_ge register"),
+				Err(_) => throw_llvm_error("cmp_ge register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);
@@ -174,7 +174,7 @@ impl Llvm<'_> {
 			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
-				Err(err) => throw_llvm_error("cmp_ge register"),
+				Err(_) => throw_llvm_error("cmp_ge register"),
 			};
 			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
 			self.stack.save(result.into(), binary.dest, &mut self.builder);

@@ -18,6 +18,7 @@ pub enum Stmt {
 	Let(LetStmt),
 	Expr(Expr),
 	Fn(FnStmt),
+	ExternFn(ExternFnStmt),
 	Ret(RetStmt),
 
 	ConstDel(ConstDelStmt),
@@ -38,6 +39,7 @@ impl Stmt {
 			Stmt::ConstDel(const_del) => const_del.get_range(),
 			Stmt::ConstFn(const_stmt) => const_stmt.get_range(),
 			Stmt::Ret(ret_stmt) => ret_stmt.get_range(),
+			Stmt::ExternFn(extern_fn_stmt) => extern_fn_stmt.get_range(),
 		}
 	}
 	pub fn ends_with_ret(&self) -> bool {
@@ -175,6 +177,32 @@ impl FnBody {
 			FnBody::Block(block) => block.get_range(),
 			FnBody::Expr(expr) => expr.get_range(),
 		}
+	}
+}
+
+// extern fn <name>(<pats>): <type> = { }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExternFnStmt {
+	pub name: Ident,
+	pub params: Vec<Binding>,
+	pub ret_type: Option<ast_type::AstType>,
+	pub range: Range,    // extern fn range
+	pub fn_range: Range, // fn range
+	pub var_packed: Option<Range>,
+	pub ret_id: Option<TypeId>,
+}
+
+impl ExternFnStmt {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+
+	pub fn get_ret_id(&self) -> Option<TypeId> {
+		self.ret_id
+	}
+
+	pub fn set_ret_id(&mut self, ret_id: TypeId) {
+		self.ret_id = Some(ret_id);
 	}
 }
 

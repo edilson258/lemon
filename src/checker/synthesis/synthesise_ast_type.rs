@@ -7,9 +7,9 @@ use crate::{
 	},
 };
 
-pub(crate) fn synthesise_ast_type(
+pub fn synthesise_ast_type(
 	ast_type: &ast::AstType,
-	external_borrow: bool,
+	extern_borrow: bool,
 	ctx: &mut Context,
 ) -> TyResult<TypeId> {
 	match ast_type {
@@ -17,8 +17,9 @@ pub(crate) fn synthesise_ast_type(
 		AstType::Bool(bool) => Ok(TypeId::BOOL),
 		AstType::Char(char) => Ok(TypeId::CHAR),
 		AstType::String(string) => Ok(TypeId::STRING),
+		AstType::Str(str_type) => Ok(TypeId::STR),
 		AstType::Fn(fn_type) => synthesise_fn_type(fn_type, ctx),
-		AstType::Borrow(borrow) => synthesise_borrow_type(borrow, external_borrow, ctx),
+		AstType::Borrow(borrow) => synthesise_borrow_type(borrow, extern_borrow, ctx),
 		_ => todo!(),
 	}
 }
@@ -40,11 +41,12 @@ fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> TyResu
 }
 
 fn synthesise_fn_type(fn_type: &ast::FnType, ctx: &mut Context) -> TyResult<TypeId> {
-	let mut args = Vec::with_capacity(fn_type.params.len());
-	for param in fn_type.params.iter() {
-		let type_id = synthesise_ast_type(param, false, ctx)?;
-		args.push(type_id);
-	}
+	let args = fn_type
+		.params
+		.iter()
+		.map(|param| synthesise_ast_type(param, false, ctx))
+		.collect::<Result<Vec<_>, _>>()?;
+
 	let ret = match fn_type.ret_type.as_ref() {
 		Some(ty) => synthesise_ast_type(ty, false, ctx)?,
 		None => TypeId::VOID,
@@ -55,10 +57,10 @@ fn synthesise_fn_type(fn_type: &ast::FnType, ctx: &mut Context) -> TyResult<Type
 
 fn synthesise_borrow_type(
 	borrow_type: &ast::BorrowType,
-	external_borrow: bool,
+	external: bool,
 	ctx: &mut Context,
 ) -> TyResult<TypeId> {
 	let value = synthesise_ast_type(&borrow_type.value, false, ctx)?;
-	let borrow = BorrowType::new(value, borrow_type.mutable, external_borrow);
+	let borrow = BorrowType::new(value, borrow_type.mutable, external);
 	Ok(ctx.type_store.add_type(borrow.into()))
 }

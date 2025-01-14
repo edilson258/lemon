@@ -7,6 +7,7 @@ pub enum AstType {
 	Float(FloatType),
 	Bool(BaseType),
 	String(BaseType),
+	Str(BaseType),
 	Char(BaseType),
 	Void(BaseType),
 	Ident(IdentType),
@@ -24,6 +25,7 @@ impl AstType {
 			AstType::Ident(ident) => ident.get_range(),
 			AstType::Fn(fn_type) => fn_type.get_range(),
 			AstType::Borrow(borrow) => borrow.get_range(),
+			AstType::Str(str) => str.get_range(),
 			AstType::Void(void) => void.get_range(),
 		}
 	}

@@ -22,7 +22,7 @@ impl Checker<'_> {
 		if !self.equal_type_id(expect_id, found_id) {
 			let found = self.display_type(found_id);
 			let expect = self.display_type(expect_id);
-			return Err(SyntaxErr::type_mismatch(expect, found, let_stmt.get_range()));
+			return Err(SyntaxErr::type_mismatch(expect, found, let_stmt.expr.get_range()));
 		}
 
 		self.ctx.add_value(lexeme, expect_id, let_stmt.mutable.is_some());
