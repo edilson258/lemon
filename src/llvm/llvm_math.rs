@@ -17,31 +17,20 @@ impl<'ll> Llvm<'ll> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("build int add"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
 		if lhs.is_float_value() && rhs.is_float_value() {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
-			let result = match self
-				.builder
-				.build_float_add(lhs_float, rhs_float, &dest_str)
-			{
+			let result = match self.builder.build_float_add(lhs_float, rhs_float, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("build float add"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -63,30 +52,19 @@ impl<'ll> Llvm<'ll> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("sub register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		if lhs.is_float_value() && rhs.is_float_value() {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
-			let result = match self
-				.builder
-				.build_float_sub(lhs_float, rhs_float, &dest_str)
-			{
+			let result = match self.builder.build_float_sub(lhs_float, rhs_float, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("sub register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -102,19 +80,12 @@ impl<'ll> Llvm<'ll> {
 		if lhs.is_int_value() && rhs.is_int_value() {
 			let lhs_int = lhs.into_int_value();
 			let rhs_int = rhs.into_int_value();
-			let result = match self
-				.builder
-				.build_int_mul(lhs_int, rhs_int, &binary.dest.as_string())
-			{
+			let result = match self.builder.build_int_mul(lhs_int, rhs_int, &binary.dest.as_string()) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("mul register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		if lhs.is_float_value() && rhs.is_float_value() {
@@ -128,12 +99,8 @@ impl<'ll> Llvm<'ll> {
 					Ok(result) => result,
 					Err(_) => throw_llvm_error("mul register"),
 				};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 

@@ -235,12 +235,7 @@ impl ir::CallInstr {
 		let type_str = type_store.get_display_type(self.type_id);
 		let fn_id = self.fn_id.as_string();
 		let dest = self.dest.as_string();
-		let args = self
-			.args
-			.iter()
-			.map(|r| r.as_string())
-			.collect::<Vec<_>>()
-			.join(", ");
+		let args = self.args.iter().map(|r| r.as_string()).collect::<Vec<_>>().join(", ");
 		let instr = format!("call {} {} {} -> {}", type_str, fn_id, args, dest);
 		text.push_str(&instr);
 		text.push('\n');

@@ -30,10 +30,7 @@ fn run_single_snippet(path: &Path, run: &[&RunFn]) -> Result<(), String> {
 		results.entry(file_path).or_default().push(result);
 	}
 
-	let results = results
-		.into_values()
-		.map(|v| v.join("\n"))
-		.collect::<Vec<_>>();
+	let results = results.into_values().map(|v| v.join("\n")).collect::<Vec<_>>();
 
 	let mut settings = insta::Settings::clone_current();
 	settings.set_prepend_module_to_snapshot(false);
@@ -65,10 +62,7 @@ fn run_snippets_dir_multiple(test_name: &str, run: &[&RunFn]) {
 			let path = e.path();
 			path == root
 				|| path.is_dir()
-				|| (path.is_file()
-					&& path
-						.extension()
-						.map_or(false, |x| x == "lemon" || x == "ln"))
+				|| (path.is_file() && path.extension().map_or(false, |x| x == "lemon" || x == "ln"))
 		});
 
 	for entry in walker {

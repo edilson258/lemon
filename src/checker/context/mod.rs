@@ -76,35 +76,23 @@ impl Context {
 	// values
 	pub fn add_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
 		let value = Value::new_scoped(self.value_id, type_id, is_mut);
-		self
-			.store
-			.add_value_type(self.store_id, name.to_string(), type_id);
+		self.store.add_value_type(self.store_id, name.to_string(), type_id);
 		self.get_scope_mut().add_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
 	pub fn get_value(&self, name: &str) -> Option<&Value> {
-		self
-			.scopes
-			.iter()
-			.rev()
-			.find_map(|scope| scope.get_value(name))
+		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
 	}
 	// fns
 	pub fn add_fn_value(&mut self, name: &str, type_id: TypeId) -> ValueId {
 		let value = Value::new_scoped(self.value_id, type_id, false);
-		self
-			.store
-			.add_value_type(self.store_id, name.to_string(), type_id);
+		self.store.add_value_type(self.store_id, name.to_string(), type_id);
 		self.get_scope_mut().add_fn_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
 
 	pub fn get_fn_value(&self, name: &str) -> Option<&Value> {
-		self
-			.scopes
-			.iter()
-			.rev()
-			.find_map(|scope| scope.get_fn_value(name))
+		self.scopes.iter().rev().find_map(|scope| scope.get_fn_value(name))
 	}
 
 	pub fn contains_fn_value_in_current_scope(&self, name: &str) -> bool {

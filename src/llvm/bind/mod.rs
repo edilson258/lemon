@@ -58,9 +58,7 @@ impl<'ll> Llvm<'ll> {
 	pub fn define_string_struct(&mut self) -> StructType<'ll> {
 		let i8_ptr_type = self.ctx.ptr_type(AddressSpace::default());
 		let i32_type = self.ctx.i32_type();
-		self
-			.ctx
-			.struct_type(&[i8_ptr_type.into(), i32_type.into()], false)
+		self.ctx.struct_type(&[i8_ptr_type.into(), i32_type.into()], false)
 	}
 
 	// strings lens
@@ -80,10 +78,7 @@ impl<'ll> Llvm<'ll> {
 
 		let str_ptr = len_fn.get_first_param().unwrap().into_pointer_value();
 
-		let len_ptr = match self
-			.builder
-			.build_struct_gep(string_type, str_ptr, 1, "len_ptr")
-		{
+		let len_ptr = match self.builder.build_struct_gep(string_type, str_ptr, 1, "len_ptr") {
 			Ok(value) => value,
 			Err(err) => throw_llvm_error("failed to get len ptr"),
 		};

@@ -23,9 +23,7 @@ impl Llvm<'_> {
 		}
 		let llvm_value = self.ln_value_to_llvm(&instr.value);
 		let llvm_type = self.resolve_llvm_type(instr.type_id);
-		self
-			.stack
-			.allocate(llvm_type, instr.dest, &mut self.builder);
+		self.stack.allocate(llvm_type, instr.dest, &mut self.builder);
 		self.stack.save(llvm_value, instr.dest, &mut self.builder);
 	}
 
@@ -66,9 +64,7 @@ impl Llvm<'_> {
 		}
 		let llvm_type = self.resolve_llvm_type(instr.type_id);
 
-		self
-			.stack
-			.allocate(llvm_type, instr.dest, &mut self.builder);
+		self.stack.allocate(llvm_type, instr.dest, &mut self.builder);
 
 		let value = self.stack.get_value(instr.value);
 

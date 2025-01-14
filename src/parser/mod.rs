@@ -540,11 +540,7 @@ impl<'lex> Parser<'lex> {
 
 	fn next(&mut self) -> PResult<'lex, Option<Token>> {
 		let temp = self.token.take();
-		self.token = self
-			.lex
-			.next()
-			.transpose()
-			.map_err(|_| self.unexpected_token())?;
+		self.token = self.lex.next().transpose().map_err(|_| self.unexpected_token())?;
 		self.range = Range::from_span(self.lex.span());
 		Ok(temp)
 	}

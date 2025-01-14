@@ -13,9 +13,7 @@ impl Checker<'_> {
 			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
 			None => {
 				let found_id = self.infer_no_type_anotation(found_id)?;
-				self
-					.ctx
-					.add_value(lexeme, found_id, let_stmt.mutable.is_some());
+				self.ctx.add_value(lexeme, found_id, let_stmt.mutable.is_some());
 				let_stmt.set_type_id(found_id);
 				return Ok(TypeId::UNIT);
 			}
@@ -27,9 +25,7 @@ impl Checker<'_> {
 			return Err(SyntaxErr::type_mismatch(expect, found, let_stmt.expr.get_range()));
 		}
 
-		self
-			.ctx
-			.add_value(lexeme, expect_id, let_stmt.mutable.is_some());
+		self.ctx.add_value(lexeme, expect_id, let_stmt.mutable.is_some());
 		let_stmt.set_type_id(expect_id);
 		Ok(TypeId::UNIT)
 	}

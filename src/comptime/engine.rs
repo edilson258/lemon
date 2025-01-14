@@ -62,10 +62,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Float(lhs + rhs),
 			_ => unreachable!(),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -76,10 +73,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Float(lhs.min(rhs)),
 			_ => unreachable!(),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -90,10 +84,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Float(lhs.div(rhs)),
 			_ => unreachable!(),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -104,10 +95,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Float(lhs.mul(rhs)),
 			_ => unreachable!(),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -118,10 +106,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Float(lhs.rem(rhs)),
 			_ => unreachable!(),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -132,10 +117,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Bool(lhs > rhs),
 			_ => todo!("code {:?}", binary),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -146,10 +128,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Bool(lhs == rhs),
 			_ => throw_engine_error("we don't expect... ocurrs in cmp_eq"),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -160,10 +139,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Bool(lhs < rhs),
 			_ => throw_engine_error("we don't expect... ocurrs in cmp_lt"),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -174,10 +150,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Bool(lhs <= rhs),
 			_ => throw_engine_error("we don't expect... ocurrs in cmp_le"),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -188,10 +161,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Bool(lhs >= rhs),
 			_ => throw_engine_error("we don't expect... ocurrs in cmp_ge"),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 
@@ -202,10 +172,7 @@ impl<'eng> Engine<'eng> {
 			(Value::Float(lhs), Value::Float(rhs)) => Value::Bool(lhs != rhs),
 			_ => throw_engine_error("we don't expect... ocurrs in cmp_ne"),
 		};
-		self
-			.stack
-			.current_frame()
-			.set_register(&binary.dest, result);
+		self.stack.current_frame().set_register(&binary.dest, result);
 		Ok(())
 	}
 

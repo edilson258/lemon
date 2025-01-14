@@ -18,19 +18,12 @@ impl Llvm<'_> {
 			let lhs_int = lhs.into_int_value();
 			let rhs_int = rhs.into_int_value();
 			let operator = IntPredicate::SGT;
-			let result = match self
-				.builder
-				.build_int_compare(operator, lhs_int, rhs_int, &dest_str)
-			{
+			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_gt register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -45,12 +38,8 @@ impl Llvm<'_> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_gt register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		throw_llvm_error("unsupported operand types for 'cmp_gt' instr");
@@ -66,19 +55,12 @@ impl Llvm<'_> {
 			let lhs_int = lhs.into_int_value();
 			let rhs_int = rhs.into_int_value();
 			let operator = IntPredicate::EQ;
-			let result = match self
-				.builder
-				.build_int_compare(operator, lhs_int, rhs_int, &dest_str)
-			{
+			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_eq register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -93,12 +75,8 @@ impl Llvm<'_> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_eq register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		throw_llvm_error("unsupported operand types for 'cmp_eq' instr");
@@ -114,19 +92,12 @@ impl Llvm<'_> {
 			let lhs_int = lhs.into_int_value();
 			let rhs_int = rhs.into_int_value();
 			let operator = IntPredicate::SLT;
-			let result = match self
-				.builder
-				.build_int_compare(operator, lhs_int, rhs_int, &dest_str)
-			{
+			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_lt register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -141,12 +112,8 @@ impl Llvm<'_> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_lt register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		throw_llvm_error("unsupported operand types for 'cmp_lt' instr");
@@ -162,19 +129,12 @@ impl Llvm<'_> {
 			let lhs_int = lhs.into_int_value();
 			let rhs_int = rhs.into_int_value();
 			let operator = IntPredicate::SLE;
-			let result = match self
-				.builder
-				.build_int_compare(operator, lhs_int, rhs_int, &dest_str)
-			{
+			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_le register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -189,12 +149,8 @@ impl Llvm<'_> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_le register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		throw_llvm_error("unsupported operand types for 'cmp_le' instr");
@@ -210,19 +166,12 @@ impl Llvm<'_> {
 			let lhs_int = lhs.into_int_value();
 			let rhs_int = rhs.into_int_value();
 			let operator = IntPredicate::SGE;
-			let result = match self
-				.builder
-				.build_int_compare(operator, lhs_int, rhs_int, &dest_str)
-			{
+			let result = match self.builder.build_int_compare(operator, lhs_int, rhs_int, &dest_str) {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_ge register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 
@@ -237,12 +186,8 @@ impl Llvm<'_> {
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_ge register"),
 			};
-			self
-				.stack
-				.allocate(llvm_type, binary.dest, &mut self.builder);
-			self
-				.stack
-				.save(result.into(), binary.dest, &mut self.builder);
+			self.stack.allocate(llvm_type, binary.dest, &mut self.builder);
+			self.stack.save(result.into(), binary.dest, &mut self.builder);
 			return;
 		}
 		throw_llvm_error("unsupported operand types for 'cmp_ge' instr");

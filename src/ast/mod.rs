@@ -254,11 +254,7 @@ impl BlockStmt {
 	}
 
 	pub fn ends_with_ret(&self) -> bool {
-		self
-			.stmts
-			.last()
-			.map(|stmt| stmt.ends_with_ret())
-			.unwrap_or(false)
+		self.stmts.last().map(|stmt| stmt.ends_with_ret()).unwrap_or(false)
 	}
 
 	pub fn last_stmt_range(&self) -> Range {

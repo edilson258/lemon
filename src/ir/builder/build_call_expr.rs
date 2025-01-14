@@ -30,10 +30,7 @@ impl Builder<'_> {
 
 	#[inline(always)]
 	fn build_args(&mut self, args: &[ast::Expr], args_type: &[TypeId]) -> Vec<Register> {
-		let registers = args
-			.iter()
-			.map(|arg| self.build_expr(arg))
-			.collect::<Vec<_>>();
+		let registers = args.iter().map(|arg| self.build_expr(arg)).collect::<Vec<_>>();
 		registers
 	}
 }

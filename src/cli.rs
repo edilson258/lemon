@@ -13,20 +13,14 @@ pub fn command_line() -> clap::ArgMatches {
 				.arg(Arg::new("file").required(true)),
 		)
 		.subcommand(
-			Command::new("run").about("run lemon.").arg(
-				Arg::new("file")
-					.help("path to the lemon file")
-					.required(true),
-			),
+			Command::new("run")
+				.about("run lemon.")
+				.arg(Arg::new("file").help("path to the lemon file").required(true)),
 		)
 		.subcommand(
 			Command::new("compile")
 				.about("compile lemon to machine code.")
-				.arg(
-					Arg::new("file")
-						.help("path to the lemon file")
-						.required(true),
-				)
+				.arg(Arg::new("file").help("path to the lemon file").required(true))
 				.arg(
 					Arg::new("target")
 						.help("target triple for cross-compilation [default: host target]")

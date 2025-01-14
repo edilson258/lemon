@@ -23,10 +23,7 @@ impl Llvm<'_> {
 			args.push(value.into());
 		}
 
-		let result = match self
-			.builder
-			.build_call(llvm_fn, &args, &call_instr.dest.as_string())
-		{
+		let result = match self.builder.build_call(llvm_fn, &args, &call_instr.dest.as_string()) {
 			Ok(sucess) => sucess,
 			Err(err) => throw_llvm_error(format!("call error: {}", err)),
 		};
@@ -35,9 +32,7 @@ impl Llvm<'_> {
 			self.stack.set_value(call_instr.dest, return_value);
 		} else if !call_instr.type_id.is_unit() && !call_instr.type_id.is_void() {
 			let mut type_text = String::new();
-			call_instr
-				.type_id
-				.display_type(&mut type_text, self.type_store);
+			call_instr.type_id.display_type(&mut type_text, self.type_store);
 			throw_llvm_error(format!("call ret expected '{}', but nothing found", type_text));
 		}
 	}
