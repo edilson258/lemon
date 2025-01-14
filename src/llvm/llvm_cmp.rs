@@ -31,9 +31,7 @@ impl Llvm<'_> {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
 			let operator = FloatPredicate::OGT;
-			let result = match self
-				.builder
-				.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
+			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_gt register"),
@@ -68,9 +66,7 @@ impl Llvm<'_> {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
 			let operator = FloatPredicate::OEQ;
-			let result = match self
-				.builder
-				.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
+			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_eq register"),
@@ -105,9 +101,7 @@ impl Llvm<'_> {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
 			let operator = FloatPredicate::OLT;
-			let result = match self
-				.builder
-				.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
+			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_lt register"),
@@ -142,9 +136,7 @@ impl Llvm<'_> {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
 			let operator = FloatPredicate::OLE;
-			let result = match self
-				.builder
-				.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
+			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_le register"),
@@ -179,9 +171,7 @@ impl Llvm<'_> {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
 			let operator = FloatPredicate::OGE;
-			let result = match self
-				.builder
-				.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
+			let result = match self.builder.build_float_compare(operator, lhs_float, rhs_float, &dest_str)
 			{
 				Ok(result) => result,
 				Err(_) => throw_llvm_error("cmp_ge register"),

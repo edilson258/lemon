@@ -123,9 +123,7 @@ impl ConstDelStmt {
 		&self.name.ident.text
 	}
 	pub fn get_range(&self) -> Range {
-		self
-			.range
-			.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
+		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
@@ -155,9 +153,7 @@ impl LetStmt {
 		self.mutable.is_some()
 	}
 	pub fn get_range(&self) -> Range {
-		self
-			.range
-			.merged_with(&self.bind.get_range().merged_with(&self.expr.get_range()))
+		self.range.merged_with(&self.bind.get_range().merged_with(&self.expr.get_range()))
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
@@ -258,11 +254,7 @@ impl BlockStmt {
 	}
 
 	pub fn last_stmt_range(&self) -> Range {
-		self
-			.stmts
-			.last()
-			.map(|stmt| stmt.get_range())
-			.unwrap_or(self.range.clone())
+		self.stmts.last().map(|stmt| stmt.get_range()).unwrap_or(self.range.clone())
 	}
 }
 
@@ -407,10 +399,7 @@ pub struct AssignExpr {
 
 impl AssignExpr {
 	pub fn get_range(&self) -> Range {
-		self
-			.range
-			.merged_with(&self.left.get_range())
-			.merged_with(&self.right.get_range())
+		self.range.merged_with(&self.left.get_range()).merged_with(&self.right.get_range())
 	}
 	pub fn set_type_id(&mut self, type_id: TypeId) {
 		self.type_id = Some(type_id);
@@ -442,11 +431,7 @@ pub struct PipeExpr {
 
 impl PipeExpr {
 	pub fn get_range(&self) -> Range {
-		self
-			.left
-			.get_range()
-			.merged_with(&self.range)
-			.merged_with(&self.right.get_range())
+		self.left.get_range().merged_with(&self.range).merged_with(&self.right.get_range())
 	}
 }
 
@@ -460,11 +445,7 @@ pub struct BinaryExpr {
 
 impl BinaryExpr {
 	pub fn get_range(&self) -> Range {
-		self
-			.left
-			.get_range()
-			.merged_with(&self.operator.range)
-			.merged_with(&self.right.get_range())
+		self.left.get_range().merged_with(&self.operator.range).merged_with(&self.right.get_range())
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {

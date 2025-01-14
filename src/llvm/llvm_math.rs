@@ -92,10 +92,7 @@ impl<'ll> Llvm<'ll> {
 			let lhs_float = lhs.into_float_value();
 			let rhs_float = rhs.into_float_value();
 			let result =
-				match self
-					.builder
-					.build_float_mul(lhs_float, rhs_float, &binary.dest.as_string())
-				{
+				match self.builder.build_float_mul(lhs_float, rhs_float, &binary.dest.as_string()) {
 					Ok(result) => result,
 					Err(_) => throw_llvm_error("mul register"),
 				};

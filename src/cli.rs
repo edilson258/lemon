@@ -7,11 +7,7 @@ pub fn command_line() -> clap::ArgMatches {
 		.author(env!("CARGO_PKG_AUTHORS"))
 		.subcommand_required(true)
 		.arg_required_else_help(true)
-		.subcommand(
-			Command::new("check")
-				.about("check lemon.")
-				.arg(Arg::new("file").required(true)),
-		)
+		.subcommand(Command::new("check").about("check lemon.").arg(Arg::new("file").required(true)))
 		.subcommand(
 			Command::new("run")
 				.about("run lemon.")
@@ -42,30 +38,12 @@ pub fn command_line() -> clap::ArgMatches {
 						.long("assembly")
 						.action(ArgAction::SetTrue),
 				)
-				.arg(
-					Arg::new("lnr")
-						.help("generate lemon ir")
-						.long("lnr")
-						.action(ArgAction::SetTrue),
-				)
-				.arg(
-					Arg::new("llr")
-						.help("generate llvm ir")
-						.long("llr")
-						.action(ArgAction::SetTrue),
-				)
-				.arg(
-					Arg::new("output")
-						.help("custom output file path")
-						.short('o')
-						.long("output"),
-				),
+				.arg(Arg::new("lnr").help("generate lemon ir").long("lnr").action(ArgAction::SetTrue))
+				.arg(Arg::new("llr").help("generate llvm ir").long("llr").action(ArgAction::SetTrue))
+				.arg(Arg::new("output").help("custom output file path").short('o').long("output")),
 		)
 		.subcommand(
-			Command::new("lex")
-				.about("lex lemon.")
-				.arg(Arg::new("file").required(true))
-				.hide(true),
+			Command::new("lex").about("lex lemon.").arg(Arg::new("file").required(true)).hide(true),
 		)
 		.get_matches();
 	matches

@@ -561,10 +561,7 @@ impl<'lex> Parser<'lex> {
 	fn expect(&mut self, token: Token) -> PResult<'lex, Range> {
 		if !self.match_token(token) {
 			// todo: add error message
-			let peeked = self
-				.token
-				.map(|t| t.to_string())
-				.unwrap_or_else(|| "unkown".to_string());
+			let peeked = self.token.map(|t| t.to_string()).unwrap_or_else(|| "unkown".to_string());
 			let diag = Diag::error(format!("expected {} but got {}", token, peeked), self.range.clone());
 			return Err(diag.with_file_id(self.file_id));
 		}

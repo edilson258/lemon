@@ -21,10 +21,7 @@ impl Llvm<'_> {
 			None => throw_llvm_error("jmp if block l1 not found"),
 		};
 
-		match self
-			.builder
-			.build_conditional_branch(cond_value, *block_true, *block_false)
-		{
+		match self.builder.build_conditional_branch(cond_value, *block_true, *block_false) {
 			Ok(_) => {}
 			Err(err) => throw_llvm_error(format!("jmp if error: {}", err)),
 		}

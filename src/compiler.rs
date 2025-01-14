@@ -174,9 +174,5 @@ pub fn run(path_name: &str) {
 	let bin = linker.link();
 	let command = format!("./{}", bin);
 	println!("running...");
-	std::process::Command::new("sh")
-		.arg("-c")
-		.arg(command)
-		.status()
-		.unwrap();
+	std::process::Command::new("sh").arg("-c").arg(command).status().unwrap();
 }

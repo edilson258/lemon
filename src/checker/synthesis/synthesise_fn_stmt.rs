@@ -20,10 +20,8 @@ pub fn synthesise_fn_stmt(fn_stmt: &mut ast::FnStmt, ctx: &mut Context) -> TyRes
 }
 
 pub fn synthesise_fn_binds(binds: &mut [ast::Binding], ctx: &mut Context) -> TyResult<Vec<TypeId>> {
-	let types = binds
-		.iter_mut()
-		.map(|param| synthesise_binding(param, ctx))
-		.collect::<Result<Vec<_>, _>>()?;
+	let types =
+		binds.iter_mut().map(|param| synthesise_binding(param, ctx)).collect::<Result<Vec<_>, _>>()?;
 
 	Ok(types)
 }

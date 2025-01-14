@@ -33,9 +33,7 @@ impl Llvm<'_> {
 			Ok(str) => str,
 		};
 		let string_value = self.ctx.const_string(c_string.as_bytes_with_nul(), false);
-		let global = self
-			.module
-			.add_global(string_value.get_type(), None, &dest.as_string());
+		let global = self.module.add_global(string_value.get_type(), None, &dest.as_string());
 		global.set_initializer(&string_value);
 
 		let global_ptr_str = global.as_pointer_value();

@@ -22,9 +22,7 @@ impl Checker<'_> {
 
 		for (bind, bind_type_id) in fn_stmt.params.iter().zip(fn_arg_types.iter()) {
 			let type_value = self.get_stored_type(*bind_type_id);
-			self
-				.ctx
-				.add_value(bind.lexeme(), *bind_type_id, type_value.is_borrow_mut());
+			self.ctx.add_value(bind.lexeme(), *bind_type_id, type_value.is_borrow_mut());
 		}
 
 		let _ = self.check_fn_body(&mut fn_stmt.body)?;

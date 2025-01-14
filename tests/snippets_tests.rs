@@ -54,16 +54,12 @@ fn run_snippets_dir_multiple(test_name: &str, run: &[&RunFn]) {
 	));
 	println!("Root: {}", root.display());
 
-	let walker = WalkDir::new(&root)
-		.sort_by_file_name()
-		.max_depth(1)
-		.into_iter()
-		.filter_entry(|e| {
-			let path = e.path();
-			path == root
-				|| path.is_dir()
-				|| (path.is_file() && path.extension().map_or(false, |x| x == "lemon" || x == "ln"))
-		});
+	let walker = WalkDir::new(&root).sort_by_file_name().max_depth(1).into_iter().filter_entry(|e| {
+		let path = e.path();
+		path == root
+			|| path.is_dir()
+			|| (path.is_file() && path.extension().map_or(false, |x| x == "lemon" || x == "ln"))
+	});
 
 	for entry in walker {
 		let entry = entry.unwrap();
