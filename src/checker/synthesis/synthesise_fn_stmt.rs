@@ -3,7 +3,7 @@ use crate::{
 	checker::{
 		context::Context,
 		diags::SyntaxErr,
-		types::{FnType, TypeId},
+		types::{FnType, InferType, TypeId},
 		TyResult,
 	},
 };
@@ -19,11 +19,26 @@ pub fn synthesise_fn_stmt(fn_stmt: &mut ast::FnStmt, ctx: &mut Context) -> TyRes
 	Ok(FnType::new(params, ret))
 }
 
-pub fn synthesise_fn_binds(binds: &mut [ast::Binding], ctx: &mut Context) -> TyResult<Vec<TypeId>> {
-	let types =
-		binds.iter_mut().map(|param| synthesise_binding(param, ctx)).collect::<Result<Vec<_>, _>>()?;
+pub fn synthesise_generics(
+	generics: &mut [ast::Generic],
+	ctx: &mut Context,
+) -> TyResult<Vec<TypeId>> {
+	let types = generics.iter_mut().map(|param| synthesise_generic(param, ctx));
+	types.collect::<Result<Vec<_>, _>>()
+}
 
-	Ok(types)
+pub fn synthesise_generic(generic: &mut ast::Generic, ctx: &mut Context) -> TyResult<TypeId> {
+	let mut bound_type = None;
+	if let Some(bound) = &mut generic.bound {
+		bound_type = Some(synthesise_ast_type(bound, false, ctx)?);
+	};
+	let infered = InferType { id: generic.lexeme(), extend: bound_type };
+	Ok(ctx.type_store.add_generic(infered))
+}
+
+pub fn synthesise_fn_binds(binds: &mut [ast::Binding], ctx: &mut Context) -> TyResult<Vec<TypeId>> {
+	let types = binds.iter_mut().map(|param| synthesise_binding(param, ctx));
+	types.collect::<Result<Vec<_>, _>>()
 }
 
 pub fn synthesise_binding(binding: &mut ast::Binding, ctx: &mut Context) -> TyResult<TypeId> {

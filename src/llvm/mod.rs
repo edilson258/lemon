@@ -16,6 +16,7 @@ mod llvm_instr;
 mod llvm_jump;
 mod llvm_math;
 mod llvm_mem;
+mod llvm_ownership;
 mod llvm_ret;
 mod llvm_type;
 mod llvm_value;
@@ -27,9 +28,9 @@ pub fn create_module_from_source<'ll>(ctx: &'ll Context, source: &Source) -> Mod
 
 pub struct Llvm<'ll> {
 	pub ctx: &'ll Context,
-	pub stack: Stack<'ll>,
 	pub module: Module<'ll>,
 	pub builder: Builder<'ll>,
+	pub stack: Stack<'ll>,
 	pub type_store: &'ll TypeStore,
 }
 

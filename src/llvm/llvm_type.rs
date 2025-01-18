@@ -14,14 +14,10 @@ impl<'ll> Llvm<'ll> {
 			TypeId::F32 => Some(self.ctx.f32_type().into()),
 			TypeId::F64 => Some(self.ctx.f64_type().into()),
 			TypeId::BOOL => Some(self.ctx.bool_type().into()),
-			TypeId::STRING | TypeId::STR => {
-				let address_space = AddressSpace::default();
-				Some(self.ctx.ptr_type(address_space).into())
-			}
+			TypeId::STRING | TypeId::STR => Some(self.ctx.ptr_type(AddressSpace::default()).into()),
 			TypeId::UNIT | TypeId::VOID => None, // void
 			found => {
-				let text = self.type_store.get_display_type(found);
-				throw_llvm_error(format!("type '{}' not found", text))
+				throw_llvm_error(format!("type '{}' not found", self.type_store.get_display_type(found)))
 			}
 		}
 	}

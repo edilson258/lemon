@@ -3,18 +3,29 @@ use std::{
 	hash::{DefaultHasher, Hash, Hasher},
 };
 
-use super::{type_id::TypeId, Number, Type};
+use super::{type_id::TypeId, InferType, Number, Type};
 
 #[derive(Debug)]
 pub struct TypeStore {
 	types: Vec<Type>,
+	generics: HashMap<String, InferType>,
 	// is good?
 	cache: HashMap<u64, TypeId>,
 }
 
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
-		Self { types, cache: HashMap::new() }
+		Self { types, cache: HashMap::new(), generics: HashMap::new() }
+	}
+
+	pub fn add_generic(&mut self, generic: InferType) -> TypeId {
+		let type_id = TypeId(self.generics.len() as u64);
+		self.generics.insert(generic.id.clone(), generic);
+		type_id
+	}
+
+	pub fn get_generic(&self, id: &str) -> Option<&InferType> {
+		self.generics.get(id)
 	}
 
 	pub fn add_type(&mut self, ty: Type) -> TypeId {

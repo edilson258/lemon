@@ -14,13 +14,23 @@ pub fn synthesise_ast_type(
 ) -> TyResult<TypeId> {
 	match ast_type {
 		AstType::Number(number) => synthesise_number_type(number, ctx),
+		AstType::Float(float) => synthesise_float_type(float, ctx),
 		AstType::Bool(bool) => Ok(TypeId::BOOL),
 		AstType::Char(char) => Ok(TypeId::CHAR),
 		AstType::String(string) => Ok(TypeId::STRING),
 		AstType::Str(str_type) => Ok(TypeId::STR),
 		AstType::Fn(fn_type) => synthesise_fn_type(fn_type, ctx),
 		AstType::Borrow(borrow) => synthesise_borrow_type(borrow, extern_borrow, ctx),
-		_ => todo!(),
+		AstType::Ident(ident) => synthesise_ident_type(ident, ctx),
+		_ => todo!("code {:?}", ast_type),
+	}
+}
+
+fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> TyResult<TypeId> {
+	if let Some(generic) = ctx.type_store.get_generic(ident.lexeme()) {
+		Ok(TypeId::from(generic))
+	} else {
+		Err(SyntaxErr::not_found_generic(ident.lexeme(), ident.get_range()))
 	}
 }
 
@@ -36,6 +46,16 @@ fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> TyResu
 	}
 	if number.bits == 64 {
 		return if number.signed { Ok(TypeId::I64) } else { Ok(TypeId::U64) };
+	}
+	unreachable!();
+}
+
+fn synthesise_float_type(float: &ast::FloatType, ctx: &mut Context) -> TyResult<TypeId> {
+	if float.bits == 32 {
+		return Ok(TypeId::F32);
+	}
+	if float.bits == 64 {
+		return Ok(TypeId::F64);
 	}
 	unreachable!();
 }

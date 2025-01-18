@@ -80,6 +80,7 @@ impl Context {
 		self.get_scope_mut().add_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
+
 	pub fn get_value(&self, name: &str) -> Option<&Value> {
 		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
 	}

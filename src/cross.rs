@@ -25,7 +25,7 @@ impl Cross {
 			triple: TargetTriple::create(triple),
 			cpu: "generic".to_string(),
 			feats: String::new(),
-			opt: OptimizationLevel::Aggressive,
+			opt: OptimizationLevel::default(),
 			reloc: RelocMode::Default,
 			model: CodeModel::Default,
 		}

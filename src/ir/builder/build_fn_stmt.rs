@@ -17,15 +17,14 @@ impl Builder<'_> {
 
 	#[inline(always)]
 	pub fn build_fn_binds(&mut self, params: &[ast::Binding]) -> Vec<ir::Bind> {
-		let binds = params
-			.iter()
-			.map(|param| {
-				let register = self.ir_ctx.new_register();
-				let type_id = self.get_type_id(param.type_id);
-				self.ir_ctx.add_value(param.lexeme(), register);
-				ir::Bind { register, type_id }
-			})
-			.collect::<Vec<_>>();
+		let mut binds = Vec::with_capacity(params.len());
+		for param in params {
+			let register = self.ir_ctx.new_register();
+			let type_id = self.get_type_id(param.type_id);
+			self.ir_ctx.add_value(param.lexeme(), register);
+			self.ir_ctx.add_type(register, type_id);
+			binds.push(ir::Bind { register, type_id });
+		}
 		binds
 	}
 

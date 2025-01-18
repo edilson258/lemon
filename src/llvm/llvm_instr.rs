@@ -22,6 +22,7 @@ impl Llvm<'_> {
 			ir::Instr::Call(call) => self.llvm_call(call),
 			ir::Instr::Ret(ret) => self.llvm_ret(ret),
 			ir::Instr::JmpIf(jump_if) => self.llvm_jmp_if(jump_if),
+			ir::Instr::Goto(goto) => self.llvm_goto(goto),
 			_ => todo!("code {:?}", instr),
 		}
 	}

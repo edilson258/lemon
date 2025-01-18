@@ -20,7 +20,7 @@ impl<'ll> Llvm<'ll> {
 	}
 
 	pub fn llvm_ex_fn(&mut self, ex_fn: &ir::ExFn) {
-		let fn_type = self.llvm_fun_type(&ex_fn.args, &ex_fn.ret, ex_fn.var_packed);
+		let fn_type = self.llvm_fun_type(&ex_fn.args, ex_fn.ret, ex_fn.var_packed);
 		let fn_name = ex_fn.fn_id.as_string();
 
 		self.module.add_function(fn_name, fn_type, None);
@@ -38,21 +38,29 @@ impl<'ll> Llvm<'ll> {
 		for block in &ln_fn.blocks {
 			self.llvm_instr_block(block);
 		}
-		self.llvm_void_ret_value(&ln_fn.ret);
+
+		self.llvm_void_ret_value(ln_fn.ret, ln_fn.is_main());
 	}
 
 	fn llvm_fun_value(&mut self, ln_fn: &ir::LnFn) -> FunctionValue<'ll> {
 		let fn_name = ln_fn.fn_id.as_string();
-		let fn_type = self.llvm_fun_type(&ln_fn.args, &ln_fn.ret, false);
+		let ret_type = if ln_fn.is_main() { TypeId::I32 } else { ln_fn.ret };
+		let fn_type = self.llvm_fun_type(&ln_fn.args, ret_type, false);
 		self.module.add_function(fn_name, fn_type, None)
 	}
 
-	fn llvm_void_ret_value(&mut self, type_id: &TypeId) {
+	fn llvm_void_ret_value(&mut self, type_id: TypeId, is_main: bool) {
 		if type_id.is_unit() || type_id.is_void() {
-			let sucess = self.ctx.i8_type().const_int(0, false);
-			match self.builder.build_return(Some(&sucess)) {
-				Ok(_) => {}
-				Err(err) => throw_llvm_error(format!("void return, error: {}", err)),
+			if is_main {
+				let sucess = self.ctx.i32_type().const_int(0, false);
+				if let Err(err) = self.builder.build_return(Some(&sucess)) {
+					throw_llvm_error(format!("void return, error: {}", err));
+				}
+				return;
+			}
+
+			if let Err(err) = self.builder.build_return(None) {
+				throw_llvm_error(format!("void return, error: {}", err));
 			}
 		}
 	}
@@ -70,7 +78,7 @@ impl<'ll> Llvm<'ll> {
 	fn llvm_fun_type(
 		&mut self,
 		binds: &[ir::Bind],
-		ret: &TypeId,
+		ret: TypeId,
 		is_packed: bool,
 	) -> FunctionType<'ll> {
 		let mut param_types: Vec<_> = Vec::with_capacity(binds.len());
@@ -78,10 +86,10 @@ impl<'ll> Llvm<'ll> {
 			let param_type = self.resolve_llvm_type(param.type_id);
 			param_types.push(param_type.into());
 		}
-		if let TypeId::UNIT = *ret {
+		if let TypeId::UNIT = ret {
 			return self.ctx.void_type().fn_type(&param_types, is_packed);
 		}
-		match self.llvm_type_from_type(*ret) {
+		match self.llvm_type_from_type(ret) {
 			Some(ret_type) => ret_type.fn_type(&param_types, is_packed),
 			None => self.ctx.void_type().fn_type(&param_types, is_packed),
 		}

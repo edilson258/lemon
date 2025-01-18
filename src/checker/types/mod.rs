@@ -21,8 +21,9 @@ pub enum Type {
 
 	// internal
 	Unit,
-	// variadic pack
-	VarPack,
+
+	// e.g. T
+	Infer(InferType),
 }
 
 impl Type {
@@ -257,12 +258,22 @@ impl ExternFnType {
 pub struct FnType {
 	pub args: Vec<TypeId>,
 	pub ret: TypeId,
+	pub generics: Vec<TypeId>,
 }
 
 impl FnType {
 	pub fn new(args: Vec<TypeId>, ret: TypeId) -> Self {
-		Self { args, ret }
+		Self { args, ret, generics: vec![] }
 	}
+	pub fn extend_generics(&mut self, generics: Vec<TypeId>) {
+		self.generics.extend(generics);
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct InferType {
+	pub id: String,
+	pub extend: Option<TypeId>,
 }
 
 impl From<FnType> for Type {
@@ -302,5 +313,11 @@ impl From<BorrowType> for Type {
 impl From<ExternFnType> for Type {
 	fn from(value: ExternFnType) -> Self {
 		Type::ExternFn(value)
+	}
+}
+
+impl From<InferType> for Type {
+	fn from(value: InferType) -> Self {
+		Type::Infer(value)
 	}
 }

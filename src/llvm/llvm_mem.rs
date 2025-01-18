@@ -1,7 +1,12 @@
-#![allow(unused_imports)]
+#![allow(unused_imports, dead_code)]
+
 use std::ffi::CString;
 
-use inkwell::values::FunctionValue;
+use inkwell::{
+	types::BasicTypeEnum,
+	values::{BasicValueEnum, FunctionValue, PointerValue},
+	AddressSpace,
+};
 use logos::Source;
 
 use crate::{
@@ -11,73 +16,77 @@ use crate::{
 
 use super::Llvm;
 
-impl Llvm<'_> {
-	pub fn llvm_load(&mut self, instr: &ir::UnaryInstr) {
-		self.stack.load(instr.value, instr.dest, &mut self.builder);
-	}
+type BasicType<'ll> = inkwell::types::BasicTypeEnum<'ll>;
+type Ptr<'ll> = inkwell::values::PointerValue<'ll>;
+type BasicValue<'ll> = inkwell::values::BasicValueEnum<'ll>;
 
-	pub fn llvm_store(&mut self, instr: &ir::StoreInstr) {
-		if let IrValue::String(value) = &instr.value {
-			self.store_string(value, instr.dest);
-			return;
+impl<'ll> Llvm<'ll> {
+	pub fn alloc(&mut self, llvm_t: BasicType<'ll>, dest: &str) -> Ptr<'ll> {
+		match self.builder.build_alloca(llvm_t, dest) {
+			Ok(value) => value,
+			Err(err) => throw_llvm_error(format!("alloc error: {}", err)),
 		}
-		let llvm_value = self.ln_value_to_llvm(&instr.value);
-		let llvm_type = self.resolve_llvm_type(instr.type_id);
-		self.stack.allocate(llvm_type, instr.dest, &mut self.builder);
-		self.stack.save(llvm_value, instr.dest, &mut self.builder);
 	}
 
-	pub fn store_string(&mut self, value: &str, dest: Register) {
-		let c_string = match CString::new(value) {
-			Err(_) => throw_llvm_error("transform to c_string"),
-			Ok(str) => str,
+	pub fn load(&mut self, llvm_t: BasicType<'ll>, ptr: Ptr<'ll>, dest: &str) -> BasicValue<'ll> {
+		match self.builder.build_load(llvm_t, ptr, dest) {
+			Ok(value) => value,
+			Err(err) => throw_llvm_error(format!("load error: {}", err)),
+		}
+	}
+
+	pub fn store(&mut self, ptr: Ptr<'ll>, value: BasicValue<'ll>) {
+		if let Err(err) = self.builder.build_store(ptr, value) {
+			throw_llvm_error(format!("store error: {}", err))
+		}
+	}
+
+	fn malloc(&mut self, size: u64) -> Ptr<'ll> {
+		let malloc_fun = self.get_malloc_fun();
+		let llvm_value = self.ctx.i64_type().const_int(size, false);
+		let value = match self.builder.build_call(malloc_fun, &[llvm_value.into()], "malloc_call") {
+			Ok(site_value) => site_value,
+			Err(err) => throw_llvm_error(format!("malloc error: {}", err)),
 		};
-		let string_value = self.ctx.const_string(c_string.as_bytes_with_nul(), false);
-		let global = self.module.add_global(string_value.get_type(), None, &dest.as_string());
-		global.set_initializer(&string_value);
 
-		let global_ptr_str = global.as_pointer_value();
-
-		self.stack.set_value(dest, global_ptr_str.into());
-	}
-
-	pub fn llvm_borrow(&mut self, instr: &ir::UnaryInstr) {
-		let value_ptr = self.stack.get_value(instr.value);
-
-		if !value_ptr.is_pointer_value() {
-			throw_llvm_error(format!("cannot borrow non-pointer '{}'", instr.value.as_string()));
+		match value.try_as_basic_value().left() {
+			Some(value) => value.into_pointer_value(),
+			None => throw_llvm_error("malloc return value not found"),
 		}
-
-		self.stack.set_value(instr.dest, *value_ptr);
 	}
 
-	// pub fn llvm_borrow_mut(&mut self, instr: &ir::UnaryInstr) {
-	// 	self.llvm_borrow(instr);
-	// }
+	fn free(&mut self, ptr: Ptr<'ll>) {
+		let free_fun = self.get_free_fun();
+		match self.builder.build_call(free_fun, &[ptr.into()], "free_call") {
+			Ok(_) => {} // do nothing here?
+			Err(err) => throw_llvm_error(format!("free error: {}", err)),
+		};
+	}
 
-	pub fn llvm_own(&mut self, instr: &ir::OwnInstr) {
-		if instr.type_id.is_string() {
-			self.own_string(instr);
-			return;
+	// heap memory
+	//
+	fn get_malloc_fun(&mut self) -> FunctionValue<'ll> {
+		match self.module.get_function("malloc") {
+			Some(fun) => fun,
+			None => self.declare_malloc_fun(),
 		}
-		let llvm_type = self.resolve_llvm_type(instr.type_id);
-
-		self.stack.allocate(llvm_type, instr.dest, &mut self.builder);
-
-		let value = self.stack.get_value(instr.value);
-
-		self.stack.save(*value, instr.dest, &mut self.builder);
 	}
 
-	pub fn own_string(&mut self, instr: &ir::OwnInstr) {
-		let value = self.stack.get_value(instr.value);
-		self.stack.set_value(instr.dest, *value);
+	fn get_free_fun(&mut self) -> FunctionValue<'ll> {
+		match self.module.get_function("free") {
+			Some(fun) => fun,
+			None => self.declare_free_fun(),
+		}
 	}
 
-	pub fn llvm_own_heap(&mut self, _instr: &ir::OwnHeapInstr) {
-		todo!()
+	fn declare_malloc_fun(&mut self) -> FunctionValue<'ll> {
+		let malloc_type = self.ctx.i8_type().fn_type(&[self.ctx.i64_type().into()], false);
+		self.module.add_function("malloc", malloc_type, None)
 	}
-	pub fn llvm_free(&mut self, _instr: &ir::FreeInstr) {
-		todo!()
+
+	fn declare_free_fun(&mut self) -> FunctionValue<'ll> {
+		let ptr_type = self.ctx.ptr_type(AddressSpace::default());
+		let free_type = self.ctx.void_type().fn_type(&[ptr_type.into()], false);
+		self.module.add_function("free", free_type, None)
 	}
 }

@@ -1,9 +1,11 @@
+use std::process::id;
+
 use crate::{
 	ast,
 	checker::types::TypeId,
 	ir::{
 		ir::{self, IrValue},
-		FnId, Register,
+		Bind, FnId, Register,
 	},
 };
 
@@ -29,8 +31,17 @@ impl Builder<'_> {
 	}
 
 	#[inline(always)]
-	fn build_args(&mut self, args: &[ast::Expr], args_type: &[TypeId]) -> Vec<Register> {
-		let registers = args.iter().map(|arg| self.build_expr(arg)).collect::<Vec<_>>();
-		registers
+	fn build_args(&mut self, args: &[ast::Expr], args_type: &[TypeId]) -> Vec<Bind> {
+		let mut binds = Vec::with_capacity(args.len());
+		for (index, arg) in args.iter().enumerate() {
+			let reg = self.build_expr(arg);
+			let arg_type = match args_type.get(index) {
+				Some(type_id) => type_id,
+				None => self.ir_ctx.get_type(reg).expect("type not found"),
+			};
+
+			binds.push(Bind::new(reg, *arg_type));
+		}
+		binds
 	}
 }

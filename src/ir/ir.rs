@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::checker::types::TypeId;
+use crate::{
+	checker::types::TypeId,
+	report::{text_green, text_red},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct BlockId(pub usize);
@@ -14,7 +17,11 @@ impl BlockId {
 	pub fn as_string(&self) -> String {
 		format!("l{}", self.0)
 	}
-	pub fn next_block(&mut self) -> Self {
+
+	pub fn as_colored(&self) -> String {
+		text_green(format!("l{}", self.0).as_str())
+	}
+	pub fn next_block(&self) -> Self {
 		Self(self.0 + 1)
 	}
 }
@@ -44,6 +51,9 @@ impl Register {
 	}
 	pub fn as_string(&self) -> String {
 		format!("r{}", self.0)
+	}
+	pub fn as_colored(&self) -> String {
+		text_red(format!("R{}", self.0).as_str())
 	}
 }
 
@@ -85,6 +95,7 @@ pub enum Instr {
 	// jumpif lhs, l0, l1
 	JmpIf(JmpIfInstr),
 	Goto(GotoInstr),
+
 	// Memory
 	// load i32 value -> dest
 	Load(UnaryInstr),
@@ -104,11 +115,15 @@ pub enum Instr {
 	BorrowMut(UnaryInstr),
 	// deref i32 register -> dest
 	Deref(UnaryInstr),
+	// drop i32 register -> dest
+	// Drop(UnaryInstr),
 
-	// set_cache i32 register -> dest
-	SetCache(SetCacheInstr),
-	// load_cache i32 register -> dest
-	LoadCache(LoadCacheInstr),
+	// cache i32 register -> dest
+	Cache(SetCacheInstr),
+
+	// Async Cache
+	// cache_async i32 register -> dest
+	// CacheAsync(SetCacheAsyncInstr),
 
 	// Other
 	// ret i32 register
@@ -214,7 +229,7 @@ impl From<JmpIfInstr> for Instr {
 pub struct CallInstr {
 	pub type_id: TypeId,
 	pub fn_id: FnId,
-	pub args: Vec<Register>,
+	pub args: Vec<Bind>,
 	pub dest: Register,
 }
 
@@ -356,6 +371,10 @@ impl LnFn {
 		Self { fn_id, args, ret, blocks: vec![] }
 	}
 
+	pub fn is_main(&self) -> bool {
+		self.fn_id.as_string() == "main"
+	}
+
 	pub fn add_block(&mut self, block: Block) {
 		self.blocks.push(block);
 	}
@@ -400,6 +419,12 @@ impl Fn {
 pub struct Bind {
 	pub register: Register,
 	pub type_id: TypeId,
+}
+
+impl Bind {
+	pub fn new(register: Register, type_id: TypeId) -> Self {
+		Self { register, type_id }
+	}
 }
 
 #[derive(Debug, Clone)]

@@ -24,6 +24,10 @@ pub enum Stmt {
 	ConstDel(ConstDelStmt),
 	ConstFn(ConstFnStmt),
 	Block(BlockStmt),
+
+	// loop
+	While(WhileStmt),
+	For(ForStmt),
 }
 
 impl Stmt {
@@ -40,6 +44,8 @@ impl Stmt {
 			Stmt::ConstFn(const_stmt) => const_stmt.get_range(),
 			Stmt::Ret(ret_stmt) => ret_stmt.get_range(),
 			Stmt::ExternFn(extern_fn_stmt) => extern_fn_stmt.get_range(),
+			Stmt::While(while_stmt) => while_stmt.get_range(),
+			Stmt::For(for_stmt) => for_stmt.get_range(),
 		}
 	}
 	pub fn ends_with_ret(&self) -> bool {
@@ -180,6 +186,35 @@ impl FnBody {
 	}
 }
 
+// ------- loops -------
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WhileStmt {
+	pub test: Box<Expr>,
+	pub body: Box<Stmt>,
+	pub range: Range, // while range
+}
+
+impl WhileStmt {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ForStmt {
+	pub value: Ident,
+	pub index: Option<Ident>,
+	pub iterable: Box<Expr>,
+	pub body: Box<Stmt>,
+	pub range: Range, // for range
+}
+
+impl ForStmt {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+}
+
 // extern fn <name>(<pats>): <type> = { }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExternFnStmt {
@@ -206,6 +241,22 @@ impl ExternFnStmt {
 	}
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Generic {
+	pub ident: Ident,
+	pub bound: Option<AstType>,
+}
+
+impl Generic {
+	pub fn get_range(&self) -> Range {
+		self.ident.get_range()
+	}
+
+	pub fn lexeme(&self) -> String {
+		self.ident.text.clone()
+	}
+}
+
 // fn <name>(<pats>): <type> = { <stmts> }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnStmt {
@@ -214,6 +265,7 @@ pub struct FnStmt {
 	pub ret_type: Option<ast_type::AstType>, // todo: implement this
 	pub body: FnBody,
 	pub range: Range, // fn range
+	pub generics: Vec<Generic>,
 	pub ret_id: Option<TypeId>,
 }
 
@@ -314,8 +366,6 @@ pub enum Expr {
 	Fn(FnExpr),
 	Assign(AssignExpr),
 	Binary(BinaryExpr),
-	For(ForExpr),
-	While(WhileExpr),
 	Break(BaseExpr),
 	Skip(BaseExpr),
 	Pipe(PipeExpr),
@@ -344,8 +394,6 @@ impl Expr {
 			Expr::Assign(assign) => assign.get_range(),
 			Expr::Literal(literal) => literal.get_range(),
 			Expr::Import(import) => import.get_range(),
-			Expr::For(for_expr) => for_expr.get_range(),
-			Expr::While(while_expr) => while_expr.get_range(),
 			Expr::Break(break_) => break_.get_range(),
 			Expr::Skip(skip) => skip.get_range(),
 			Expr::Borrow(ref_expr) => ref_expr.get_range(),
@@ -444,13 +492,18 @@ pub struct BinaryExpr {
 }
 
 impl BinaryExpr {
+	pub fn new(left: Box<Expr>, operator: Operator, right: Box<Expr>) -> Self {
+		Self { left, operator, right, type_id: None }
+	}
+
 	pub fn get_range(&self) -> Range {
 		self.left.get_range().merged_with(&self.operator.range).merged_with(&self.right.get_range())
 	}
 
 	pub fn set_type_id(&mut self, type_id: TypeId) {
-		self.type_id = Some(type_id);
+		self.type_id = Some(type_id)
 	}
+
 	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
 	}
@@ -512,49 +565,6 @@ impl IfExpr {
 		}
 	}
 }
-
-// for <pat> in <expr> = { <stmts> } or for <idx>, <value> in <expr> = { <stmts> }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ForExpr {
-	pub value: Ident,
-	pub index: Option<Ident>,
-	pub iterable: Box<Expr>,
-	pub body: Box<Stmt>,
-	pub range: Range, // for range
-}
-
-impl ForExpr {
-	pub fn get_range(&self) -> Range {
-		self.range.merged_with(&self.body.get_range())
-	}
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WhileExpr {
-	pub test: Box<Expr>,
-	pub body: Box<Stmt>,
-	pub range: Range, // while range
-}
-impl WhileExpr {
-	pub fn get_range(&self) -> Range {
-		self.range.merged_with(&self.body.get_range())
-	}
-}
-
-// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-// pub struct RetExpr {
-// 	pub value: Option<Box<Expr>>,
-// 	pub range: Range, // return range
-// }
-
-// impl RetExpr {
-// 	pub fn get_range(&self) -> Range {
-// 		match &self.value {
-// 			Some(value) => self.range.merged_with(&value.get_range()),
-// 			None => self.range.clone(),
-// 		}
-// 	}
-// }
 
 // &<expr>
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

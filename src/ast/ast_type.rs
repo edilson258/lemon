@@ -127,6 +127,10 @@ impl IdentType {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
 	}
+
+	pub fn lexeme(&self) -> &str {
+		&self.text
+	}
 }
 
 // fn(params_types...): ret_type

@@ -58,7 +58,7 @@ fn run_snippets_dir_multiple(test_name: &str, run: &[&RunFn]) {
 		let path = e.path();
 		path == root
 			|| path.is_dir()
-			|| (path.is_file() && path.extension().map_or(false, |x| x == "lemon" || x == "ln"))
+			|| (path.is_file() && path.extension().is_some_and(|x| x == "lemon" || x == "ln"))
 	});
 
 	for entry in walker {
