@@ -10,11 +10,12 @@ impl Checker<'_> {
 			ident.set_type_id(value.type_id);
 			return Ok(value.type_id);
 		}
+		self.ctx.type_store.create_monomo_fn(ident.lexeme().to_string());
 		if let Some(fn_value) = self.ctx.get_fn_value(ident.lexeme()) {
 			ident.set_type_id(fn_value.type_id);
 			return Ok(fn_value.type_id);
 		}
-
+		self.ctx.type_store.end_monomo_fn();
 		Err(SyntaxErr::not_found_value(ident.lexeme(), ident.get_range()))
 	}
 }

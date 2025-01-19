@@ -19,7 +19,7 @@ impl Llvm<'_> {
 
 		let mut args: Vec<_> = Vec::with_capacity(call_instr.args.len());
 		for arg in &call_instr.args {
-			let value = *self.stack.get_value(*arg);
+			let value = self.get_value_or_load(arg.register, arg.type_id);
 			args.push(value.into());
 		}
 

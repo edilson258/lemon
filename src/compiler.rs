@@ -1,4 +1,4 @@
-use std::{io, path::Path};
+use std::{io, path::Path, time::Instant};
 
 use crate::{
 	checker::{context::Context, Checker},
@@ -26,9 +26,10 @@ pub fn execute_term(respose: io::Result<()>, text: &str) {
 }
 
 pub fn compile(path_name: &str, matches: &ArgMatches) {
+	let timer = Instant::now();
 	let term = Term::stdout();
 	let style = Style::new();
-	let compile_green_text = style.green().apply_to("compiling...");
+	let compile_green_text = style.green().apply_to("compiling...").bold();
 	execute_term(term.write_line(&compile_green_text.to_string()), "compiling...");
 
 	let mut loader = Loader::new();
@@ -60,7 +61,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	// emit lnr
 	//
 	execute_term(term.clear_last_lines(1), "");
-	execute_term(term.write_line(" emmit lnr..."), "emmit lnr...");
+	execute_term(term.write_line(" emit lnr..."), "emit lnr...");
 	let mut ir_builder = ir::Builder::new(&ctx.type_store);
 	let ir = ir_builder.build(&mut ast);
 
@@ -75,7 +76,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	//
 
 	execute_term(term.clear_last_lines(1), "");
-	execute_term(term.write_line(" emmit llvm..."), "emmit llvm...");
+	execute_term(term.write_line(" emit llvm..."), "emit llvm...");
 	let llvm_context = inkwell::context::Context::create();
 	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
 	let mut llvm = Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
@@ -88,9 +89,9 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 
 	// cross compile
 	//
-	// println!("emmit object...", HOST.architecture);
+	// println!("emit object...", HOST.architecture);
 	execute_term(term.clear_last_lines(1), "");
-	execute_term(term.write_line(" emmit object..."), "emmit object...");
+	execute_term(term.write_line(" emit object..."), "emit object...");
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 
@@ -110,7 +111,14 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let linker = Linker::new(output_path.to_path_buf());
 	linker.link();
 	execute_term(term.clear_last_lines(1), "");
-	execute_term(term.write_line(" finished."), "finished.");
+
+	let elapsed = timer.elapsed();
+	let elapsed_text = if elapsed.as_secs_f64() < 1.0 {
+		format!("{}ms", elapsed.as_millis())
+	} else {
+		format!("{:.2}s", elapsed.as_secs_f64())
+	};
+	execute_term(term.write_line(format!(" finished in {}.", elapsed_text).as_str()), "finished.");
 }
 fn generate_output_filename(path: &Path) -> String {
 	let file_name = path.file_name().unwrap().to_str().unwrap();
@@ -143,11 +151,11 @@ pub fn run(path_name: &str) {
 	};
 	// emit lnr
 	//
-	println!("emmit lnr...");
+	println!("emit lnr...");
 	let mut ir_builder = ir::Builder::new(&ctx.type_store);
 	let ir = ir_builder.build(&mut ast);
 
-	println!("emmit llvm...");
+	println!("emit llvm...");
 	let llvm_context = inkwell::context::Context::create();
 	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
 	let mut llvm = Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
@@ -155,7 +163,7 @@ pub fn run(path_name: &str) {
 
 	// cross compile
 	//
-	println!("emmit '{}' binary...", HOST.architecture);
+	println!("emit '{}' binary...", HOST.architecture);
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 

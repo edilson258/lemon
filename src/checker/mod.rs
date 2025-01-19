@@ -21,15 +21,18 @@ mod check_deref_expr;
 mod check_expr;
 mod check_extern_fn_stmt;
 mod check_fn_stmt;
+mod check_for_stmt;
 mod check_ident_expr;
 mod check_if_expr;
 mod check_import_expr;
 mod check_let_stmt;
 mod check_literal;
 mod check_ret_stmt;
+mod check_while_stmt;
 mod diags;
 mod equal_type;
 mod infer;
+mod infer_generic;
 
 type TyResult<T> = Result<T, Diag>;
 
@@ -55,6 +58,8 @@ impl<'ckr> Checker<'ckr> {
 			ast::Stmt::Expr(expr) => self.check_expr(expr),
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
 			ast::Stmt::Fn(fn_stmt) => self.check_fn_stmt(fn_stmt),
+			ast::Stmt::While(while_stmt) => self.check_while_stmt(while_stmt),
+			ast::Stmt::For(for_stmt) => self.check_for_stmt(for_stmt),
 			ast::Stmt::Block(block_stmt) => self.check_block_stmt(block_stmt),
 			ast::Stmt::ConstDel(const_del) => self.check_const_del_stmt(const_del),
 			ast::Stmt::ConstFn(const_fn) => self.check_const_fn_stmt(const_fn),

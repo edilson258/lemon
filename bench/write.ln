@@ -1,5 +1,10 @@
-extern fn printf(i: i8): i8 = {};
+extern fn printf(fmt: str, ...): i32 = {};
+
+fn println(value: i32) = {
+	printf("%d\n", value);
+}
 
 fn main() = {
-  printf(10);
+  let a = 10;
+  println(a);
 }

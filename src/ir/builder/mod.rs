@@ -20,11 +20,13 @@ mod build_deref_expr;
 mod build_expr;
 mod build_extern_fn;
 mod build_fn_stmt;
+mod build_for_stmt;
 mod build_ident_expr;
 mod build_if_expr;
 mod build_let_stmt;
 mod build_literal;
 mod build_ret_stmt;
+mod build_while_stmt;
 pub mod ircontext;
 
 pub struct Builder<'br> {
@@ -67,6 +69,7 @@ impl<'br> Builder<'br> {
 		let blocks = self.ir_ctx.reset_fn_scope();
 		self.root.add_blocks(blocks);
 		self.ir_ctx.exit_scope();
+		self.ir_ctx.set_ret_type(None)
 	}
 
 	fn build_stmt(&mut self, stmt: &ast::Stmt) {
@@ -74,13 +77,15 @@ impl<'br> Builder<'br> {
 			ast::Stmt::Let(let_stmt) => self.build_let_stmt(let_stmt),
 			ast::Stmt::Fn(fn_stmt) => self.build_fn_stmt(fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
-			ast::Stmt::Expr(expr) => {
-				self.build_expr(expr);
-			}
+			ast::Stmt::While(while_stmt) => self.build_while_stmt(while_stmt),
+			ast::Stmt::For(for_stmt) => self.build_for_stmt(for_stmt),
 			ast::Stmt::ConstDel(const_del) => self.build_const_del_stmt(const_del),
 			ast::Stmt::ConstFn(const_fn) => self.build_const_fn_stmt(const_fn),
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
 			ast::Stmt::ExternFn(extern_fn) => self.build_extern_fn(extern_fn),
+			ast::Stmt::Expr(expr) => {
+				self.build_expr(expr);
+			}
 		}
 	}
 }

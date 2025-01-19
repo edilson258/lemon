@@ -44,6 +44,8 @@ impl<'lex> Parser<'lex> {
 			Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
 			Some(Token::Ret) => self.parse_ret_stmt().map(ast::Stmt::Ret),
 			Some(Token::Extern) => self.parse_extern_fn_stmt().map(ast::Stmt::ExternFn),
+			Some(Token::While) => self.parse_while_stmt().map(ast::Stmt::While),
+			Some(Token::For) => self.parse_for_stmt().map(ast::Stmt::For),
 			_ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
 		};
 		self.match_take(Token::Semi)?;
@@ -113,8 +115,8 @@ impl<'lex> Parser<'lex> {
 	fn parse_fn_stmt(&mut self) -> PResult<'lex, ast::FnStmt> {
 		let range = self.expect(Token::Fn)?;
 		let name = self.parse_ident()?;
+		let generics = self.parse_generics()?;
 		self.expect(Token::LParen)?;
-
 		let mut params = vec![];
 		while !self.match_token(Token::RParen) {
 			params.push(self.parse_binding()?);
@@ -132,7 +134,36 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = self.parse_fn_body()?;
-		Ok(ast::FnStmt { name, params, ret_type, body, range, ret_id: None })
+		Ok(ast::FnStmt { name, generics, params, ret_type, body, range, ret_id: None })
+	}
+
+	// <T, U: Eq>
+	fn parse_generics(&mut self) -> PResult<'lex, Vec<ast::Generic>> {
+		let mut generics = vec![];
+		if !self.match_token(Token::Less) {
+			return Ok(generics);
+		}
+		self.expect(Token::Less)?;
+		while !self.match_token(Token::Greater) {
+			generics.push(self.parse_generic()?);
+			if !self.match_token(Token::Comma) {
+				break;
+			}
+			self.expect(Token::Comma)?;
+		}
+
+		self.expect(Token::Greater)?;
+		Ok(generics)
+	}
+
+	fn parse_generic(&mut self) -> PResult<'lex, ast::Generic> {
+		let ident = self.parse_ident()?;
+		let mut bound = None;
+		if self.match_token(Token::Colon) {
+			self.expect(Token::Colon)?;
+			bound = Some(self.parse_type()?);
+		}
+		Ok(ast::Generic { ident, bound })
 	}
 
 	fn parse_fn_body(&mut self) -> PResult<'lex, ast::FnBody> {
@@ -190,16 +221,36 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::ExternFnStmt { name, params, ret_type, range, fn_range, var_packed, ret_id })
 	}
 
+	fn parse_while_stmt(&mut self) -> PResult<'lex, ast::WhileStmt> {
+		let range = self.expect(Token::While)?;
+		self.expect(Token::LParen)?;
+		let test = Box::new(self.parse_expr(MIN_PDE)?);
+		self.expect(Token::RParen)?;
+
+		self.expect(Token::Assign)?;
+
+		let body = Box::new(self.parse_stmt()?);
+
+		Ok(ast::WhileStmt { test, body, range })
+	}
+
+	fn parse_for_stmt(&mut self) -> PResult<'lex, ast::ForStmt> {
+		todo!("parse for stmt");
+		// let range = self.expect(Token::For)?;
+		// let value = self.parse_ident()?;
+		// self.expect(Token::In)?;
+		// let iterable = Box::new(self.parse_expr(MIN_PDE)?);
+		// self.expect(Token::LBrace)?;
+		// let body = self.parse_stmt()?;
+		// self.expect(Token::RBrace)?;
+		// Ok(ast::Stmt::For(ast::ForStmt { value, index: None, iterable, body, range }))
+	}
+
 	fn parse_expr(&mut self, min_pde: u8) -> PResult<'lex, ast::Expr> {
 		let mut left = self.parse_primary(true)?;
 		while let Some(operator) = self.match_operator(min_pde)? {
 			let right = self.parse_expr(min_pde + 1)?;
-			left = ast::Expr::Binary(ast::BinaryExpr {
-				left: Box::new(left),
-				operator,
-				right: Box::new(right),
-				type_id: None,
-			});
+			left = ast::Expr::Binary(ast::BinaryExpr::new(Box::new(left), operator, Box::new(right)));
 		}
 		Ok(left)
 	}
@@ -420,6 +471,7 @@ impl<'lex> Parser<'lex> {
 	fn parse_call_expr(&mut self, callee: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let mut range = self.expect(Token::LParen)?; // consume '('
 		let mut args = Vec::new();
+		let generics = vec![];
 		while !self.match_token(Token::RParen) {
 			args.push(self.parse_expr(MIN_PDE)?);
 			if !self.match_token(Token::RParen) {
@@ -427,8 +479,7 @@ impl<'lex> Parser<'lex> {
 			}
 		}
 		range.merge(&self.expect(Token::RParen)?); // consume ')'
-		let call_expr =
-			ast::CallExpr { callee: Box::new(callee), args, range, type_id: None, args_type: vec![] };
+		let call_expr = ast::CallExpr::new(callee, args, range, generics);
 		Ok(ast::Expr::Call(call_expr))
 	}
 

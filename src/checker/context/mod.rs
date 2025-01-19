@@ -1,11 +1,11 @@
-use bind::create_binds;
+// use bind::create_binds;
 use borrow::BorrowId;
 use flow::Flow;
 use scope::{Scope, ScopeType};
 use store::Store;
 use value::{Value, ValueId};
 
-use super::types::{TypeId, TypeStore};
+use super::types::{monomorphic::MonomorphicStore, TypeId, TypeStore};
 
 mod bind;
 mod borrow;
@@ -32,9 +32,13 @@ impl Context {
 		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		let mut ctx = Self { scopes, flow, type_store, store, value_id, store_id };
-		create_binds(&mut ctx);
-		ctx
+		Self { scopes, flow, type_store, store, value_id, store_id }
+		// create_binds(&mut ctx);
+		// ctx
+	}
+
+	pub fn get_monomorphic_store(&mut self) -> &mut MonomorphicStore {
+		&mut self.type_store.monomorphic_store
 	}
 
 	pub fn get_type_store(&self) -> &TypeStore {
@@ -80,6 +84,7 @@ impl Context {
 		self.get_scope_mut().add_value(name.to_string(), value);
 		self.value_id.next_id()
 	}
+
 	pub fn get_value(&self, name: &str) -> Option<&Value> {
 		self.scopes.iter().rev().find_map(|scope| scope.get_value(name))
 	}

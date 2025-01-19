@@ -1,5 +1,15 @@
-fn main(): i32 = {
-  let x = 10;
+extern fn printf(fmt: str, ...): i32 = {};
+
+fn println(value: i32) = {
+	printf("%d\n", value);
+}
+
+fn test(x: i32): i32 = {
   if (x > 5) return x;
   return 100;
+}
+
+fn main() = {
+  let x = test(1);
+  println(x);
 }

@@ -2,7 +2,7 @@ mod ast;
 mod checker;
 mod cli;
 mod compiler;
-mod comptime;
+// mod comptime;
 mod cross;
 mod diag;
 mod ir;

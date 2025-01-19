@@ -31,7 +31,10 @@ impl TypeId {
 	// internal
 	pub const UNIT: TypeId = TypeId(17);
 
-	pub const LENGTH: usize = 18; // internal
+	// internal
+	pub const ANY: TypeId = TypeId(18);
+
+	pub const LENGTH: usize = 19; // internal
 
 	// methods
 	pub fn as_usize(&self) -> usize {
@@ -49,6 +52,10 @@ impl TypeId {
 		self.0 == TypeId::VOID.0
 	}
 
+	pub fn is_int(&self) -> bool {
+		self.0 >= TypeId::I8.0 && self.0 <= TypeId::I64.0 || self.is_unit()
+	}
+
 	pub fn is_number(&self) -> bool {
 		self.0 >= TypeId::I8.0 && self.0 <= TypeId::F64.0
 	}
@@ -57,8 +64,20 @@ impl TypeId {
 		self.0 == TypeId::STRING.0
 	}
 
+	pub fn is_str(&self) -> bool {
+		self.0 == TypeId::STR.0
+	}
+
+	pub fn is_char(&self) -> bool {
+		self.0 == TypeId::CHAR.0
+	}
+
 	pub fn is_float(&self) -> bool {
 		self.0 >= TypeId::F32.0 && self.0 <= TypeId::F64.0
+	}
+
+	pub fn is_any(&self) -> bool {
+		self.0 == TypeId::ANY.0
 	}
 
 	// pub fn is_infer(&self) -> bool {

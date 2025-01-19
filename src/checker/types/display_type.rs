@@ -1,5 +1,5 @@
 use super::{
-	BorrowType, ConstType, ExternFnType, FnType, NumRange, Number, Type, TypeId, TypeStore,
+	BorrowType, ConstType, ExternFnType, FnType, InferType, NumRange, Number, Type, TypeId, TypeStore,
 };
 
 impl Type {
@@ -11,9 +11,10 @@ impl Type {
 			Type::String => *text += "string",
 			Type::Char => *text += "char",
 			Type::Unit => *text += "unit",
-			Type::VarPack => *text += "...",
+			Type::Any => *text += "any",
 			Type::Number(number) => number.display_type(text),
 			Type::NumRange(num_range) => num_range.display_type(text),
+			Type::Infer(infer) => infer.display_type(text, type_store),
 			Type::Borrow(borrow) => borrow.display_type(text, type_store),
 			Type::Const(const_type) => const_type.display_type(text, type_store),
 			Type::Fn(fn_type) => fn_type.display_type(text, type_store),
@@ -105,8 +106,18 @@ impl NumRange {
 		// } else {
 		// 	*text += "i";
 		// }
-		*text += "?";
+		// *text += "?";
 		self.as_number().display_type(text);
+	}
+}
+
+impl InferType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+		*text += &self.id;
+		if let Some(extend) = &self.extend {
+			*text += ": ";
+			extend.display_type(text, type_store);
+		}
 	}
 }
 

@@ -2,7 +2,13 @@ use super::{
 	ir::{self},
 	IrValue,
 };
-use crate::checker::types::{TypeId, TypeStore};
+use crate::{
+	checker::types::{TypeId, TypeStore},
+	report::text_green,
+};
+
+// colors
+//
 
 impl ir::Root {
 	pub fn display_ir(&self, type_store: &TypeStore) -> String {
@@ -22,9 +28,9 @@ impl ir::LnFn {
 		let args = self.args.iter().map(|param| param.display_ir(type_store));
 		let args = args.collect::<Vec<_>>().join(", ");
 		let instr = if self.args.is_empty() {
-			format!("fn {} -> {}\n", fn_id, ret)
+			format!("{} {} -> {}\n", text_green("fn"), fn_id, ret)
 		} else {
-			format!("fn {} ({}) -> {}\n", fn_id, args.trim(), ret)
+			format!("{} {} {} -> {}\n", text_green("fn"), fn_id, args.trim(), ret)
 		};
 		text.push_str(&instr);
 		for block in self.blocks.iter() {
@@ -44,9 +50,9 @@ impl ir::ExFn {
 		}
 		let ret = type_store.get_display_type(self.ret);
 		let instr = if self.args.is_empty() {
-			format!("extern fn {} -> {}\n", fn_id, ret)
+			format!("{} {} -> {}\n", text_green("extern fn"), fn_id, ret)
 		} else {
-			format!("extern fn {} ({}) -> {}\n", fn_id, args.trim(), ret)
+			format!("{} {} {} -> {}\n", text_green("extern fn"), fn_id, args.trim(), ret)
 		};
 		text.push_str(&instr);
 		text.push('\n');
@@ -64,7 +70,7 @@ impl ir::Fn {
 
 impl ir::Block {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let block_id = self.block_id.as_string();
+		let block_id = self.block_id.as_colored();
 		text.push_str(format!("{}:", block_id).as_str());
 
 		for (index, instr) in self.instrs.iter().enumerate() {
@@ -76,18 +82,18 @@ impl ir::Block {
 				instr.display_ir(type_store, text);
 			}
 		}
-
 		if self.instrs.is_empty() {
 			text.push('\n');
 		}
+		text.push_str(format!("    {}\n", text_green("_")).as_str());
 	}
 }
 
 impl ir::Bind {
 	fn display_ir(&self, type_store: &TypeStore) -> String {
 		let type_str = type_store.get_display_type(self.type_id);
-		let register = self.register.as_string();
-		format!("{}: {}", register, type_str)
+		let register = self.register.as_colored();
+		format!("{} {}", register, type_str)
 	}
 }
 
@@ -117,8 +123,9 @@ impl ir::Instr {
 			ir::Instr::Ret(ret) => ret.display_ir(type_store, text),
 			ir::Instr::Call(call) => call.display_ir(type_store, text),
 			ir::Instr::Goto(goto) => goto.display_ir(text),
-			ir::Instr::SetCache(set_cache) => set_cache.display_ir(text),
-			ir::Instr::LoadCache(load_cache) => load_cache.display_ir(text),
+			ir::Instr::Cache(_) => todo!(),
+			// ir::Instr::SetCache(set_cache) => set_cache.display_ir(text),
+			// ir::Instr::LoadCache(load_cache) => load_cache.display_ir(text),
 		}
 	}
 }
@@ -126,9 +133,9 @@ impl ir::Instr {
 impl ir::BinaryInstr {
 	pub fn display_ir(&self, operator: &str, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
-		let lhs = self.lhs.as_string();
-		let rhs = self.rhs.as_string();
-		let dest = self.dest.as_string();
+		let lhs = self.lhs.as_colored();
+		let rhs = self.rhs.as_colored();
+		let dest = self.dest.as_colored();
 		let instr = format!("{} {} {} {} -> {}", operator, lhs, rhs, type_str, dest);
 		text.push_str(&instr);
 		text.push('\n');
@@ -138,8 +145,8 @@ impl ir::BinaryInstr {
 impl ir::UnaryInstr {
 	pub fn display_ir(&self, operator: &str, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
-		let value = self.value.as_string();
-		let dest = self.dest.as_string();
+		let value = self.value.as_colored();
+		let dest = self.dest.as_colored();
 		let instr = format!("{} {} {} -> {}", operator, type_str, value, dest);
 		text.push_str(&instr);
 		text.push('\n');
@@ -148,7 +155,7 @@ impl ir::UnaryInstr {
 
 impl ir::JmpIfInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let cond = self.cond.as_string();
+		let cond = self.cond.as_colored();
 		let type_str = type_store.get_display_type(TypeId::BOOL);
 		let l0 = self.l0.as_string();
 		let l1 = self.l1.as_string();
@@ -161,7 +168,7 @@ impl ir::JmpIfInstr {
 impl ir::GotoInstr {
 	pub fn display_ir(&self, text: &mut String) {
 		let block_id = self.block_id.as_string();
-		let instr = format!("goto {}", block_id);
+		let instr = format!("goto {}", text_green(&block_id));
 		text.push_str(&instr);
 		text.push('\n');
 	}
@@ -169,7 +176,7 @@ impl ir::GotoInstr {
 
 impl ir::FreeInstr {
 	pub fn display_ir(&self, text: &mut String) {
-		let register = self.register.as_string();
+		let register = self.register.as_colored();
 		let instr = format!("free {}", register);
 		text.push_str(&instr);
 		text.push('\n');
@@ -179,8 +186,8 @@ impl ir::FreeInstr {
 impl ir::OwnInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
-		let value = self.value.as_string();
-		let dest = self.dest.as_string();
+		let value = self.value.as_colored();
+		let dest = self.dest.as_colored();
 		let instr = format!("own {} {} -> {}", type_str, value, dest);
 		text.push_str(&instr);
 		text.push('\n');
@@ -189,8 +196,8 @@ impl ir::OwnInstr {
 impl ir::OwnHeapInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
-		let value = self.value.as_string();
-		let dest = self.dest.as_string();
+		let value = self.value.as_colored();
+		let dest = self.dest.as_colored();
 		let instr = format!("own_heap {} {} -> {} size={}", type_str, value, dest, self.size);
 		text.push_str(&instr);
 		text.push('\n');
@@ -201,7 +208,7 @@ impl ir::HeapInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
 		let value = self.value.as_string();
-		let dest = self.dest.as_string();
+		let dest = self.dest.as_colored();
 		let instr = format!("heap {} {} -> {} size={}", type_str, value, dest, self.size);
 		text.push_str(&instr);
 		text.push('\n');
@@ -211,7 +218,7 @@ impl ir::StoreInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
 		let value = self.value.as_string();
-		let dest = self.dest.as_string();
+		let dest = self.dest.as_colored();
 		let instr = format!("store {} {} -> {}", type_str, value, dest);
 		text.push_str(&instr);
 		text.push('\n');
@@ -222,7 +229,9 @@ impl ir::RetInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
 		let instr = match &self.value {
-			Some(value) => format!("ret {} -> {}", type_str, value.as_string()),
+			Some(value) => {
+				format!("ret {} {}", type_str, value.as_colored())
+			}
 			None => format!("ret {}", type_str),
 		};
 		text.push_str(&instr);
@@ -234,27 +243,9 @@ impl ir::CallInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
 		let fn_id = self.fn_id.as_string();
-		let dest = self.dest.as_string();
-		let args = self.args.iter().map(|r| r.as_string()).collect::<Vec<_>>().join(", ");
+		let dest = self.dest.as_colored();
+		let args = self.args.iter().map(|r| r.display_ir(type_store)).collect::<Vec<_>>().join(", ");
 		let instr = format!("call {} {} {} -> {}", type_str, fn_id, args, dest);
-		text.push_str(&instr);
-		text.push('\n');
-	}
-}
-
-impl ir::SetCacheInstr {
-	pub fn display_ir(&self, text: &mut String) {
-		let register = self.register.as_string();
-		let instr = format!("set_cache {}", register);
-		text.push_str(&instr);
-		text.push('\n');
-	}
-}
-
-impl ir::LoadCacheInstr {
-	pub fn display_ir(&self, text: &mut String) {
-		let register = self.register.as_string();
-		let instr = format!("load_cache {}", register);
 		text.push_str(&instr);
 		text.push('\n');
 	}
@@ -295,9 +286,12 @@ impl IrValue {
 			IrValue::Int(int) => int.to_string(),
 			IrValue::Float(float) => float.to_string(),
 			IrValue::Bool(bool) => bool.to_string(),
-			IrValue::String(string) => format!("\"{}\"", string),
+			IrValue::String(string) => {
+				let string = string.replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r");
+				format!("\"{}\"", string)
+			}
 			IrValue::Char(char) => format!("'{}'", char),
-			IrValue::Reg(reg) => reg.as_string(),
+			IrValue::Reg(reg) => reg.as_colored(),
 			IrValue::Fn(fn_id) => fn_id.as_string().to_string(),
 		}
 	}

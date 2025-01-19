@@ -22,7 +22,7 @@ impl<'ll> Llvm<'ll> {
 		if block_id.0 == 0 {
 			return "entry".to_string();
 		}
-		format!("block_{}", block_id.0)
+		block_id.as_string()
 	}
 
 	pub fn register_block(&mut self, block_id: BlockId, fun: &FunctionValue<'ll>) {
