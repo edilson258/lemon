@@ -11,6 +11,7 @@ impl Type {
 			Type::String => *text += "string",
 			Type::Char => *text += "char",
 			Type::Unit => *text += "unit",
+			Type::Any => *text += "any",
 			Type::Number(number) => number.display_type(text),
 			Type::NumRange(num_range) => num_range.display_type(text),
 			Type::Infer(infer) => infer.display_type(text, type_store),
@@ -105,7 +106,7 @@ impl NumRange {
 		// } else {
 		// 	*text += "i";
 		// }
-		*text += "?";
+		// *text += "?";
 		self.as_number().display_type(text);
 	}
 }

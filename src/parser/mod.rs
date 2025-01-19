@@ -471,6 +471,7 @@ impl<'lex> Parser<'lex> {
 	fn parse_call_expr(&mut self, callee: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let mut range = self.expect(Token::LParen)?; // consume '('
 		let mut args = Vec::new();
+		let generics = vec![];
 		while !self.match_token(Token::RParen) {
 			args.push(self.parse_expr(MIN_PDE)?);
 			if !self.match_token(Token::RParen) {
@@ -478,8 +479,7 @@ impl<'lex> Parser<'lex> {
 			}
 		}
 		range.merge(&self.expect(Token::RParen)?); // consume ')'
-		let call_expr =
-			ast::CallExpr { callee: Box::new(callee), args, range, type_id: None, args_type: vec![] };
+		let call_expr = ast::CallExpr::new(callee, args, range, generics);
 		Ok(ast::Expr::Call(call_expr))
 	}
 

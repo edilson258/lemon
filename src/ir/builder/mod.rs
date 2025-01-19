@@ -69,6 +69,7 @@ impl<'br> Builder<'br> {
 		let blocks = self.ir_ctx.reset_fn_scope();
 		self.root.add_blocks(blocks);
 		self.ir_ctx.exit_scope();
+		self.ir_ctx.set_ret_type(None)
 	}
 
 	fn build_stmt(&mut self, stmt: &ast::Stmt) {

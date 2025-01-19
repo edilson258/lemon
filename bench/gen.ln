@@ -1,18 +1,32 @@
+
 extern fn printf(fmt: str, ...): i32 = {};
 
-fn println(value: i32) = {
-	printf("%d\n", value);
+fn println<T>(value: T) = {
+  if (is_float(value)) {
+    printf("%f\n", value);
+    return;
+  }
+  if (is_int(value)) {
+    printf("%d\n", value);
+    return;
+  }
+  if (is_str(value)) {
+    printf("%s\n", value);
+    return;
+  }
+  if (is_char(value)) {
+    printf("%c\n", value);
+    return;
+  }
+  printf("unknown type\n");
 }
-
-
-
-fn add<T>(val: T): T = {
-  return val
-}
-
-
-
 
 fn main() = {
-  println(add(10))
+ let nun = 10;
+ println(nun);
+ let flo = 10.0;
+ println(flo);
+
+ let chr = 'a';
+ println(chr);
 }

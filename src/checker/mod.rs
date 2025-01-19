@@ -32,6 +32,7 @@ mod check_while_stmt;
 mod diags;
 mod equal_type;
 mod infer;
+mod infer_generic;
 
 type TyResult<T> = Result<T, Diag>;
 

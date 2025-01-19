@@ -3,28 +3,57 @@ use std::{
 	hash::{DefaultHasher, Hash, Hasher},
 };
 
-use super::{type_id::TypeId, InferType, Number, Type};
+use super::{
+	monomorphic::MonomorphicStore, type_id::TypeId, ExternFnType, FnType, InferType, Number, Type,
+};
 
 #[derive(Debug)]
 pub struct TypeStore {
 	types: Vec<Type>,
-	generics: HashMap<String, InferType>,
+	generics: HashMap<String, TypeId>,
 	// is good?
 	cache: HashMap<u64, TypeId>,
+	pub monomorphic_store: MonomorphicStore,
 }
 
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
-		Self { types, cache: HashMap::new(), generics: HashMap::new() }
+		let monomorphic_store = MonomorphicStore::default();
+		Self { types, cache: HashMap::new(), generics: HashMap::new(), monomorphic_store }
 	}
 
-	pub fn add_generic(&mut self, generic: InferType) -> TypeId {
-		let type_id = TypeId(self.generics.len() as u64);
-		self.generics.insert(generic.id.clone(), generic);
+	pub fn add_monomo_fn(&mut self, fn_type: FnType) {
+		self.monomorphic_store.add_fn(fn_type);
+	}
+
+	pub fn add_monomo_extern_fn(&mut self, fn_type: ExternFnType) {
+		self.monomorphic_store.add_extern_fn(fn_type);
+	}
+
+	pub fn create_monomo_fn(&mut self, name: String) {
+		self.monomorphic_store.create_fn(name);
+	}
+
+	pub fn end_monomo_fn(&mut self) {
+		self.monomorphic_store.end_fn();
+	}
+
+	pub fn add_infer_type(&mut self, generic: InferType) -> TypeId {
+		let id = generic.id.clone();
+		let type_id = self.add_type(generic.into());
+		self.generics.insert(id, type_id);
 		type_id
 	}
 
-	pub fn get_generic(&self, id: &str) -> Option<&InferType> {
+	pub fn get_infer_type(&self, id: &str) -> Option<&InferType> {
+		let type_id = self.get_infer_id(id)?;
+		match self.get_type(*type_id) {
+			Some(Type::Infer(infer)) => Some(infer),
+			_ => None,
+		}
+	}
+
+	pub fn get_infer_id(&self, id: &str) -> Option<&TypeId> {
 		self.generics.get(id)
 	}
 
@@ -35,6 +64,7 @@ impl TypeStore {
 			return *type_id;
 		}
 		let type_id = TypeId(self.types.len() as u64);
+
 		self.cache.insert(hash, type_id);
 		self.types.push(ty);
 		type_id
@@ -94,6 +124,7 @@ impl Default for TypeStore {
 			Number::F64.as_type(), // 16
 			// internal
 			Type::Unit, // 17
+			Type::Any,  // 18
 		];
 		assert_eq!(types.len(), TypeId::LENGTH);
 		Self::new(types)

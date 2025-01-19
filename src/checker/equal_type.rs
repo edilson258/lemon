@@ -7,6 +7,10 @@ use super::types::TypeId;
 
 impl Checker<'_> {
 	pub fn equal_type_id(&self, expected: TypeId, found: TypeId) -> bool {
+		if expected.is_any() || found.is_any() {
+			return true;
+		}
+
 		if expected == found {
 			return true;
 		}

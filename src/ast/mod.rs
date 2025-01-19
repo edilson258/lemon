@@ -284,6 +284,10 @@ impl FnStmt {
 	pub fn get_ret_id(&self) -> Option<TypeId> {
 		self.ret_id
 	}
+
+	pub fn is_generic(&self) -> bool {
+		!self.generics.is_empty()
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -528,10 +532,15 @@ pub struct CallExpr {
 	pub args: Vec<Expr>,
 	pub args_type: Vec<TypeId>,
 	pub range: Range, // (args...)
+	pub generics: Vec<AstType>,
 	pub type_id: Option<TypeId>,
 }
 
 impl CallExpr {
+	pub fn new(callee: Expr, args: Vec<Expr>, range: Range, generics: Vec<AstType>) -> Self {
+		Self { callee: Box::new(callee), args, range, generics, type_id: None, args_type: vec![] }
+	}
+
 	pub fn get_range(&self) -> Range {
 		self.callee.get_range().merged_with(&self.range)
 	}

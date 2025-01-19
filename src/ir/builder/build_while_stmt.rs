@@ -20,7 +20,7 @@ impl Builder<'_> {
 		self.ir_ctx.add_instr(jmp_instr.into());
 
 		self.ir_ctx.switch_to_block(body_label);
-		self.build_loop_body_stmt(&while_stmt.body);
+		self.build_block_stmt_without_blcok_id(&while_stmt.body);
 
 		self.ir_ctx.add_instr(ir::GotoInstr { block_id: test_label }.into());
 
@@ -28,7 +28,7 @@ impl Builder<'_> {
 		self.ir_ctx.switch_to_block(exit_label);
 	}
 
-	pub fn build_loop_body_stmt(&mut self, stmt: &ast::Stmt) {
+	pub fn build_block_stmt_without_blcok_id(&mut self, stmt: &ast::Stmt) {
 		match stmt {
 			ast::Stmt::Block(block) => block.stmts.iter().for_each(|stmt| self.build_stmt(stmt)),
 			_ => self.build_stmt(stmt),

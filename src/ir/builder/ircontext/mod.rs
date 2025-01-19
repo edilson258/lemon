@@ -11,6 +11,7 @@ type Scope = HashMap<String, ir::Register>;
 pub struct IrContext {
 	register: ir::Register,
 	scopes: Vec<Scope>,
+	ret_type: Option<TypeId>,
 	types: HashMap<ir::Register, TypeId>,
 	fns: HashMap<String, ir::FnId>,
 	blocks: Vec<Block>,
@@ -30,7 +31,15 @@ impl IrContext {
 		let block_id = BlockId::new(0);
 		let blocks = vec![];
 		let types = HashMap::new();
-		Self { register, scopes, types, fns, blocks, block_id }
+		Self { register, scopes, types, fns, blocks, block_id, ret_type: None }
+	}
+
+	pub fn set_ret_type(&mut self, ret: Option<TypeId>) {
+		self.ret_type = ret;
+	}
+
+	pub fn get_ret_type(&self) -> Option<&TypeId> {
+		self.ret_type.as_ref()
 	}
 
 	pub fn add_type(&mut self, register: ir::Register, type_id: TypeId) {

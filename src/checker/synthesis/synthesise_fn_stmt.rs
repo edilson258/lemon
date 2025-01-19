@@ -11,12 +11,18 @@ use crate::{
 use super::synthesise_ast_type;
 
 pub fn synthesise_fn_stmt(fn_stmt: &mut ast::FnStmt, ctx: &mut Context) -> TyResult<FnType> {
+	let generics = synthesise_generics(&mut fn_stmt.generics, ctx)?;
+
 	let params = synthesise_fn_binds(&mut fn_stmt.params, ctx)?;
 	let ret = match fn_stmt.ret_type.as_ref() {
 		Some(ty) => synthesise_ast_type(ty, false, ctx)?,
 		None => TypeId::VOID,
 	};
-	Ok(FnType::new(params, ret))
+
+	let mut fn_type = FnType::new(params, ret);
+
+	fn_type.extend_generics(generics);
+	Ok(fn_type)
 }
 
 pub fn synthesise_generics(
@@ -33,7 +39,7 @@ pub fn synthesise_generic(generic: &mut ast::Generic, ctx: &mut Context) -> TyRe
 		bound_type = Some(synthesise_ast_type(bound, false, ctx)?);
 	};
 	let infered = InferType { id: generic.lexeme(), extend: bound_type };
-	Ok(ctx.type_store.add_generic(infered))
+	Ok(ctx.type_store.add_infer_type(infered))
 }
 
 pub fn synthesise_fn_binds(binds: &mut [ast::Binding], ctx: &mut Context) -> TyResult<Vec<TypeId>> {

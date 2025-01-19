@@ -1,4 +1,5 @@
 mod display_type;
+pub mod monomorphic;
 mod store;
 mod type_id;
 pub use store::*;
@@ -11,6 +12,7 @@ pub enum Type {
 	Str,
 	String,
 	Char,
+	Any,
 	// Number
 	NumRange(NumRange),
 	Number(Number),
@@ -268,8 +270,13 @@ impl FnType {
 	pub fn extend_generics(&mut self, generics: Vec<TypeId>) {
 		self.generics.extend(generics);
 	}
+	pub fn set_generics(&mut self, generics: Vec<TypeId>) {
+		self.generics = generics;
+	}
+	pub fn set_ret(&mut self, ret: TypeId) {
+		self.ret = ret;
+	}
 }
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct InferType {
 	pub id: String,
