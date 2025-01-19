@@ -21,9 +21,11 @@ pub enum Type {
 	Fn(FnType),
 	ExternFn(ExternFnType),
 
+	// struct
+	Struct(StructType),
+
 	// internal
 	Unit,
-
 	// e.g. T
 	Infer(InferType),
 }
@@ -237,6 +239,32 @@ impl ConstType {
 	}
 }
 
+// === struct ===
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct StructType {
+	// hashmap? name -> FieldType
+	pub fields: Vec<FieldType>,
+	// hasmap? name -> MethodType
+	pub methods: Vec<MethodType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FieldType {
+	pub name: String,
+	pub type_id: TypeId,
+	pub is_mut: bool,
+	pub is_pub: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MethodType {
+	pub name: String,
+	pub args: Vec<TypeId>,
+	pub ret: TypeId,
+	pub is_pub: bool,
+	pub self_id: Option<TypeId>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ConstKind {
 	Fn,
@@ -261,11 +289,12 @@ pub struct FnType {
 	pub args: Vec<TypeId>,
 	pub ret: TypeId,
 	pub generics: Vec<TypeId>,
+	pub is_pub: bool,
 }
 
 impl FnType {
 	pub fn new(args: Vec<TypeId>, ret: TypeId) -> Self {
-		Self { args, ret, generics: vec![] }
+		Self { args, ret, generics: vec![], is_pub: false }
 	}
 	pub fn extend_generics(&mut self, generics: Vec<TypeId>) {
 		self.generics.extend(generics);
