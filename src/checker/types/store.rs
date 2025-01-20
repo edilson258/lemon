@@ -1,7 +1,9 @@
 use std::{
 	collections::HashMap,
-	hash::{DefaultHasher, Hash, Hasher},
+	hash::{Hash, Hasher},
 };
+
+use rustc_hash::FxHasher;
 
 use super::{
 	monomorphic::MonomorphicStore, type_id::TypeId, ExternFnType, FnType, InferType, Number, Type,
@@ -10,6 +12,7 @@ use super::{
 #[derive(Debug)]
 pub struct TypeStore {
 	types: Vec<Type>,
+	types_by_name: HashMap<String, TypeId>,
 	generics: HashMap<String, TypeId>,
 	// is good?
 	cache: HashMap<u64, TypeId>,
@@ -19,7 +22,10 @@ pub struct TypeStore {
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
 		let monomorphic_store = MonomorphicStore::default();
-		Self { types, cache: HashMap::new(), generics: HashMap::new(), monomorphic_store }
+		let types_by_name = HashMap::new();
+		let cache = HashMap::new();
+		let generics = HashMap::new();
+		Self { types, types_by_name, cache, generics, monomorphic_store }
 	}
 
 	pub fn add_monomo_fn(&mut self, fn_type: FnType) {
@@ -57,6 +63,14 @@ impl TypeStore {
 		self.generics.get(id)
 	}
 
+	pub fn get_type_by_name(&self, name: &str) -> Option<&TypeId> {
+		self.types_by_name.get(name)
+	}
+
+	pub fn add_type_by_name(&mut self, name: String, type_id: TypeId) {
+		self.types_by_name.insert(name, type_id);
+	}
+
 	pub fn add_type(&mut self, ty: Type) -> TypeId {
 		// todo: is faster to generate hash and compare?
 		let hash = self.type_hash(&ty);
@@ -71,11 +85,10 @@ impl TypeStore {
 	}
 
 	pub fn type_hash(&self, ty: &Type) -> u64 {
-		let mut hasher = DefaultHasher::new();
-		ty.hash::<DefaultHasher>(&mut hasher);
+		let mut hasher = FxHasher::default();
+		ty.hash(&mut hasher);
 		hasher.finish()
 	}
-
 	pub fn get_type(&self, type_id: TypeId) -> Option<&Type> {
 		self.types.get(type_id.as_usize())
 	}

@@ -2,6 +2,10 @@ mod display_type;
 pub mod monomorphic;
 mod store;
 mod type_id;
+
+use std::hash::{Hash, Hasher};
+
+use rustc_hash::FxHashMap;
 pub use store::*;
 pub use type_id::*;
 
@@ -33,6 +37,9 @@ pub enum Type {
 impl Type {
 	pub fn is_numeric(&self) -> bool {
 		matches!(self, Type::Number(_) | Type::NumRange(_))
+	}
+	pub fn is_struct(&self) -> bool {
+		matches!(self, Type::Struct(_))
 	}
 
 	pub fn is_float(&self) -> bool {
@@ -66,6 +73,13 @@ impl Type {
 			Type::String => Some(TypeId::STRING),
 			Type::Char => Some(TypeId::CHAR),
 			Type::Number(number) => Some(TypeId::from(number)),
+			_ => None,
+		}
+	}
+
+	pub fn get_struct_type(&self) -> Option<&StructType> {
+		match self {
+			Type::Struct(struct_type) => Some(struct_type),
 			_ => None,
 		}
 	}
@@ -240,12 +254,63 @@ impl ConstType {
 }
 
 // === struct ===
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructType {
+	pub name: String,
 	// hashmap? name -> FieldType
-	pub fields: Vec<FieldType>,
+	pub fields: FxHashMap<String, FieldType>,
 	// hasmap? name -> MethodType
-	pub methods: Vec<MethodType>,
+	pub methods: FxHashMap<String, MethodType>,
+}
+
+impl Hash for StructType {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		self.name.hash(state);
+		// ignore internal hash... is it ok?
+		for (key, value) in &self.fields {
+			key.hash(state);
+			value.hash(state);
+		}
+	}
+}
+
+impl StructType {
+	pub fn new(name: String) -> Self {
+		Self { name, fields: FxHashMap::default(), methods: FxHashMap::default() }
+	}
+
+	pub fn add_field(&mut self, field: FieldType) {
+		self.fields.insert(field.name.clone(), field);
+	}
+	pub fn with_fields(&mut self, fields: Vec<FieldType>) {
+		self.fields = fields.into_iter().map(|field| (field.name.clone(), field)).collect();
+	}
+	pub fn add_method(&mut self, method: MethodType) {
+		self.methods.insert(method.name.clone(), method);
+	}
+	pub fn with_methods(&mut self, methods: Vec<MethodType>) {
+		self.methods = methods.into_iter().map(|method| (method.name.clone(), method)).collect();
+	}
+
+	// ceck methods
+	//
+
+	pub fn has_method(&self, name: &str) -> bool {
+		self.methods.contains_key(name)
+	}
+
+	pub fn has_field(&self, name: &str) -> bool {
+		self.fields.contains_key(name)
+	}
+
+	// get methods
+	pub fn get_field(&self, name: &str) -> Option<&FieldType> {
+		self.fields.get(name)
+	}
+
+	pub fn get_method(&self, name: &str) -> Option<&MethodType> {
+		self.methods.get(name)
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -256,6 +321,12 @@ pub struct FieldType {
 	pub is_pub: bool,
 }
 
+impl FieldType {
+	pub fn new(name: String, type_id: TypeId) -> Self {
+		Self { name, type_id, is_mut: false, is_pub: false }
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MethodType {
 	pub name: String,
@@ -263,6 +334,16 @@ pub struct MethodType {
 	pub ret: TypeId,
 	pub is_pub: bool,
 	pub self_id: Option<TypeId>,
+}
+
+impl MethodType {
+	pub fn new(name: String, args: Vec<TypeId>, ret: TypeId, is_pub: bool) -> Self {
+		Self { name, args, ret, is_pub, self_id: None }
+	}
+
+	pub fn set_self_id(&mut self, self_id: TypeId) {
+		self.self_id = Some(self_id);
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -355,5 +436,11 @@ impl From<ExternFnType> for Type {
 impl From<InferType> for Type {
 	fn from(value: InferType) -> Self {
 		Type::Infer(value)
+	}
+}
+
+impl From<StructType> for Type {
+	fn from(value: StructType) -> Self {
+		Type::Struct(value)
 	}
 }

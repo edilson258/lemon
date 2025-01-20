@@ -48,6 +48,10 @@ pub enum SyntaxErr<'tce> {
 	ConstOutsideGlobalScope { range: Range },
 	ConstRedefinition { range: Range },
 	ConstRequiredTypeNotation { range: Range },
+	// type alias / struct / enum...  errors
+	NotFoundType { name: &'tce str, range: Range },
+	InvalidInitType { found: String, range: Range },
+	NotFoundField { name: &'tce str, range: Range },
 }
 
 impl<'tce> SyntaxErr<'tce> {
@@ -173,6 +177,18 @@ impl<'tce> SyntaxErr<'tce> {
 
 	pub fn cannot_assign_immutable(name: &str, range: Range) -> Diag {
 		Self::CannotAssignImmutable { name: name.to_string(), range }.into()
+	}
+
+	pub fn not_found_type(name: &'tce str, range: Range) -> Diag {
+		Self::NotFoundType { name, range }.into()
+	}
+
+	pub fn invalid_init_type(found: String, range: Range) -> Diag {
+		Self::InvalidInitType { found, range }.into()
+	}
+
+	pub fn not_found_field(name: &'tce str, range: Range) -> Diag {
+		Self::NotFoundField { name, range }.into()
 	}
 }
 impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
@@ -315,6 +331,18 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 				let text = format!("cannot assign immutable '{}'", name);
 				diag::Diag::new(Severity::Err, text, range)
 					.with_note("consider making it mutable".to_string())
+			}
+			SyntaxErr::NotFoundType { name, range } => {
+				let text = format!("type '{}' not found in current scope", name);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::InvalidInitType { found, range } => {
+				let text = format!("expected `struct` or `enum`, found '{}'", found);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::NotFoundField { name, range } => {
+				let text = format!("field '{}' not found", name);
+				diag::Diag::new(Severity::Err, text, range)
 			}
 		}
 	}

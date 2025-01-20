@@ -42,9 +42,8 @@ pub fn command_line() -> clap::ArgMatches {
 				.arg(Arg::new("llr").help("generate llvm ir").long("llr").action(ArgAction::SetTrue))
 				.arg(Arg::new("output").help("custom output file path").short('o').long("output")),
 		)
-		.subcommand(
-			Command::new("lex").about("lex lemon.").arg(Arg::new("file").required(true)).hide(true),
-		)
+		.subcommand(Command::new("token").arg(Arg::new("file").required(true)).hide(true))
+		.subcommand(Command::new("ast").arg(Arg::new("file").required(true)).hide(true))
 		.get_matches();
 	matches
 }

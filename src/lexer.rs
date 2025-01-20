@@ -174,6 +174,8 @@ pub enum Token {
 
 	// types
 	//
+	#[token("type")]
+	Type,
 
 	// usize
 	#[token("usize")]
@@ -325,6 +327,7 @@ impl fmt::Display for Token {
 			Token::Tilde => write!(f, "~"),
 			Token::Const => write!(f, "const"),
 			Token::VoidType => write!(f, "void"),
+			Token::Type => write!(f, "type"),
 		}
 	}
 }

@@ -1,5 +1,6 @@
 use super::{
-	BorrowType, ConstType, ExternFnType, FnType, InferType, NumRange, Number, Type, TypeId, TypeStore,
+	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, NumRange, Number,
+	StructType, Type, TypeId, TypeStore,
 };
 
 impl Type {
@@ -19,6 +20,7 @@ impl Type {
 			Type::Const(const_type) => const_type.display_type(text, type_store),
 			Type::Fn(fn_type) => fn_type.display_type(text, type_store),
 			Type::ExternFn(extern_fn_type) => extern_fn_type.display_type(text, type_store),
+			Type::Struct(struct_type) => struct_type.display_type(text, type_store),
 		}
 	}
 }
@@ -39,6 +41,65 @@ impl Number {
 			Number::F32 => *text += "f32",
 			Number::F64 => *text += "f64",
 		}
+	}
+}
+
+impl StructType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+		*text += "struct ";
+		*text += &self.name;
+		// if !self.generics.is_empty() {
+		// 	*text += "<";
+		// 	for (i, generic) in self.generics.iter().enumerate() {
+		// 		if i > 0 {
+		// 			*text += ", ";
+		// 		}
+		// 		generic.display_type(text, type_store);
+		// 	}
+		// 	*text += ">";
+		// }
+		*text += " { ";
+		for (i, (_, field)) in self.fields.iter().enumerate() {
+			// display 2 fields
+			if i > 1 {
+				*text += ", ..";
+				*text += (self.fields.len() - i).to_string().as_str();
+				break;
+			}
+
+			// ----------
+			if i > 0 {
+				*text += ", ";
+			}
+			*text += &field.name;
+			*text += ": ";
+			*text += &type_store.get_display_type(field.type_id);
+		}
+		*text += " }";
+	}
+}
+
+impl FieldType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+		*text += &self.name;
+		*text += ": ";
+		*text += &type_store.get_display_type(self.type_id);
+	}
+}
+
+impl MethodType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+		*text += &self.name;
+		*text += "(";
+		for (i, param) in self.args.iter().enumerate() {
+			if i > 0 {
+				*text += ", ";
+			}
+			*text += &type_store.get_display_type(*param);
+		}
+		*text += ")";
+		*text += " -> ";
+		*text += &type_store.get_display_type(self.ret);
 	}
 }
 

@@ -86,6 +86,7 @@ impl<'br> Builder<'br> {
 			ast::Stmt::Expr(expr) => {
 				self.build_expr(expr);
 			}
+			_ => todo!("code {:?}", stmt),
 		}
 	}
 }

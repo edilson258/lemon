@@ -20,7 +20,7 @@ pub enum Stmt {
 	Fn(FnStmt),
 	ExternFn(ExternFnStmt),
 	Ret(RetStmt),
-
+	TypeDef(TypeDefStmt),
 	ConstDel(ConstDelStmt),
 	ConstFn(ConstFnStmt),
 	Block(BlockStmt),
@@ -46,6 +46,7 @@ impl Stmt {
 			Stmt::ExternFn(extern_fn_stmt) => extern_fn_stmt.get_range(),
 			Stmt::While(while_stmt) => while_stmt.get_range(),
 			Stmt::For(for_stmt) => for_stmt.get_range(),
+			Stmt::TypeDef(type_def_stmt) => type_def_stmt.get_range(),
 		}
 	}
 	pub fn ends_with_ret(&self) -> bool {
@@ -112,6 +113,70 @@ impl ConstFnStmt {
 	}
 	pub fn get_ret_id(&self) -> Option<TypeId> {
 		self.ret_id
+	}
+}
+
+// type <name> = {} or type <name> = <type>
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeDefStmt {
+	pub name: Ident,
+	pub range: Range, // type range
+	pub kind: TypeDefKind,
+}
+
+impl TypeDefStmt {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+
+	pub fn lexeme(&self) -> &str {
+		&self.name.text
+	}
+
+	pub fn get_struct_def(&mut self) -> Option<&mut StructType> {
+		match &mut self.kind {
+			TypeDefKind::Struct(struct_def) => Some(struct_def),
+			_ => None,
+		}
+	}
+
+	pub fn get_alias(&self) -> Option<&AstType> {
+		match &self.kind {
+			TypeDefKind::Alias(alias) => Some(alias),
+			_ => None,
+		}
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TypeDefKind {
+	Struct(StructType),
+	Alias(AstType),
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructType {
+	pub fields: Vec<FieldType>,
+	pub range: Range, // struct range
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FieldType {
+	pub ident: Ident,
+	pub ast_type: AstType,
+	pub is_pub: bool,
+}
+
+impl FieldType {
+	pub fn new(ident: Ident, ast_type: AstType, is_pub: bool) -> Self {
+		Self { ident, ast_type, is_pub }
+	}
+
+	pub fn get_range(&self) -> Range {
+		self.ident.get_range()
+	}
+
+	pub fn lexeme(&self) -> &str {
+		&self.ident.text
 	}
 }
 
@@ -369,6 +434,8 @@ pub enum Expr {
 	Group(GroupExpr),
 	Fn(FnExpr),
 	Assign(AssignExpr),
+	Associate(AssociateExpr),
+	Member(MemberExpr),
 	Binary(BinaryExpr),
 	Break(BaseExpr),
 	Skip(BaseExpr),
@@ -381,6 +448,7 @@ pub enum Expr {
 	Literal(Literal),
 	Borrow(BorrowExpr),
 	Deref(DerefExpr),
+	StructInit(StructInitExpr),
 }
 
 impl Expr {
@@ -402,6 +470,9 @@ impl Expr {
 			Expr::Skip(skip) => skip.get_range(),
 			Expr::Borrow(ref_expr) => ref_expr.get_range(),
 			Expr::Deref(deref_expr) => deref_expr.get_range(),
+			Expr::Associate(associate_expr) => associate_expr.get_range(),
+			Expr::Member(member_expr) => member_expr.get_range(),
+			Expr::StructInit(struct_init_expr) => struct_init_expr.get_range(),
 		}
 	}
 
@@ -419,6 +490,38 @@ impl Expr {
 			| matches!(self, Expr::Deref(_))
 	}
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructInitExpr {
+	pub name: Ident,
+	pub fields: Vec<FiledExpr>,
+	pub range: Range, // struct init range
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FiledExpr {
+	pub name: Ident,
+	pub value: Expr,
+	pub range: Range, // struct field range
+}
+
+impl StructInitExpr {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TupleExpr {
+	pub values: Vec<Expr>,
+	pub range: Range, // tuple range
+}
+impl TupleExpr {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnExpr {
 	pub params: Vec<Binding>,
@@ -459,6 +562,30 @@ impl AssignExpr {
 
 	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AssociateExpr {
+	pub left: Box<Expr>,
+	pub right: Box<Expr>,
+	pub range: Range, // ::
+}
+impl AssociateExpr {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MemberExpr {
+	pub left: Box<Expr>,
+	pub right: Box<Expr>,
+	pub range: Range, // .
+}
+impl MemberExpr {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
 	}
 }
 

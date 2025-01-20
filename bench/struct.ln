@@ -1,17 +1,25 @@
 type Person = {
-  age: i8
+ age: i8,
+ year: i32,
+ year2: i32,
 }
 
-impl Person = {
-  fn new(age: i8): Person = {
-    return Person { age };
-  }
-}
+// impl Person = {
+//   fn new(age: i8): Person = {
+//     return Person { age };
+//   }
+//   pub fn get_age(&self) -> i8 {
+//     return self.age;
+//   }
+// }
 
 
 
 fn main() = {
-  let mut person = Person::new(10);
-  person.age = 20;
-  println(person.age);
+  let mut person = Person { age: 10, year: 2020, year2: 2021 };
+
+  person = 20;
+
+//   person.age = 20;
+//   println(person.age);
 }

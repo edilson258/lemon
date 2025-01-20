@@ -46,6 +46,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Extern) => self.parse_extern_fn_stmt().map(ast::Stmt::ExternFn),
 			Some(Token::While) => self.parse_while_stmt().map(ast::Stmt::While),
 			Some(Token::For) => self.parse_for_stmt().map(ast::Stmt::For),
+			Some(Token::Type) => self.parse_type_def_stmt().map(ast::Stmt::TypeDef),
 			_ => self.parse_expr(MIN_PDE).map(ast::Stmt::Expr),
 		};
 		self.match_take(Token::Semi)?;
@@ -96,6 +97,36 @@ impl<'lex> Parser<'lex> {
 		self.expect(Token::Assign)?; // take '='
 		let expr = self.parse_expr(MIN_PDE)?;
 		Ok(ast::ConstDelStmt { name, expr, range, type_id: None })
+	}
+
+	// type <name> = {} or type <name> = <type>
+	fn parse_type_def_stmt(&mut self) -> PResult<'lex, ast::TypeDefStmt> {
+		let range = self.expect(Token::Type)?;
+		let name = self.parse_ident()?;
+		self.expect(Token::Assign)?; // take '='
+
+		if self.match_token(Token::LBrace) {
+			let kind = ast::TypeDefKind::Struct(self.parse_struct_def()?);
+			return Ok(ast::TypeDefStmt { name, range, kind });
+		}
+		let kind = ast::TypeDefKind::Alias(self.parse_type()?);
+		Ok(ast::TypeDefStmt { name, range, kind })
+	}
+
+	pub fn parse_struct_def(&mut self) -> PResult<'lex, ast::StructType> {
+		let mut range = self.expect(Token::LBrace)?;
+		let mut fields = vec![];
+		while !self.match_token(Token::RBrace) {
+			let ident = self.parse_ident()?;
+			self.expect(Token::Colon)?;
+			let ast_type = self.parse_type()?;
+			fields.push(ast::FieldType { ident, ast_type, is_pub: false });
+			if !self.match_token(Token::RBrace) {
+				self.expect(Token::Comma)?;
+			}
+		}
+		range.merge(&self.expect(Token::RBrace)?);
+		Ok(ast::StructType { fields, range })
 	}
 
 	fn parse_let_stmt(&mut self) -> PResult<'lex, ast::LetStmt> {
@@ -325,13 +356,57 @@ impl<'lex> Parser<'lex> {
 				// assign
 				Some(Token::Assign) => self.parse_assign_expr(expr)?,
 				Some(Token::Pipe) => self.parse_pipe_expr(expr)?,
-				// Some(Token::Dot) => self.parse_member_expr(expr)?,
+				Some(Token::ColonColon) => self.parse_associate_expr(expr)?,
+				Some(Token::Dot) => self.parse_member_expr(expr)?,
 				// Some(Token::LBracket) => self.parse_index_expr(expr)?,
+				Some(Token::LBrace) => self.parse_struct_init_expr(expr).map(ast::Expr::StructInit)?,
 				_ => break,
 			};
 		}
 		Ok(expr)
 	}
+	// {  ident, ident: <expr> ... } todo: suport only { ident } maybe convert to { ident: ident }?
+	fn parse_struct_init_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::StructInitExpr> {
+		if let ast::Expr::Ident(name) = expr {
+			let mut range = self.expect(Token::LBrace)?;
+			let mut fields = vec![];
+			while !self.match_token(Token::RBrace) {
+				let name = self.parse_ident()?;
+				self.expect(Token::Colon)?;
+				let value = self.parse_expr(MIN_PDE)?;
+				let range = name.range.merged_with(&value.get_range());
+				fields.push(ast::FiledExpr { name, value, range });
+				if !self.match_token(Token::RBrace) {
+					self.expect(Token::Comma)?;
+				}
+			}
+			range.merge(&self.expect(Token::RBrace)?);
+			return Ok(ast::StructInitExpr { name, fields, range });
+		}
+		//
+		let diag = self.custom_diag("expected struct name", &expr.get_range());
+		Err(diag.with_file_id(self.file_id))
+	}
+
+	// ::<expr>
+	fn parse_associate_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
+		let range = self.expect(Token::ColonColon)?;
+		let right = self.parse_expr(MIN_PDE)?;
+		Ok(ast::Expr::Associate(ast::AssociateExpr {
+			left: Box::new(expr),
+			right: Box::new(right),
+			range,
+		}))
+	}
+
+	// exper.<expr>
+	fn parse_member_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
+		let range = self.expect(Token::Dot)?;
+		let right = self.parse_expr(MIN_PDE)?;
+		let member = ast::MemberExpr { left: Box::new(expr), right: Box::new(right), range };
+		Ok(ast::Expr::Member(member))
+	}
+
 	// import("std/mem.ln", os = "windows")
 	fn parse_import_expr(&mut self) -> PResult<'lex, ast::ImportExpr> {
 		let range = self.expect(Token::Import)?;

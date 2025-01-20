@@ -28,6 +28,8 @@ mod check_import_expr;
 mod check_let_stmt;
 mod check_literal;
 mod check_ret_stmt;
+mod check_struct_init_expr;
+mod check_type_def_stmt;
 mod check_while_stmt;
 mod diags;
 mod equal_type;
@@ -65,6 +67,7 @@ impl<'ckr> Checker<'ckr> {
 			ast::Stmt::ConstFn(const_fn) => self.check_const_fn_stmt(const_fn),
 			ast::Stmt::Ret(ret_stmt) => self.check_ret_stmt(ret_stmt),
 			ast::Stmt::ExternFn(extern_fn_stmt) => self.check_extern_fn_stmt(extern_fn_stmt),
+			ast::Stmt::TypeDef(type_def_stmt) => self.check_type_def_stmt(type_def_stmt),
 		}
 	}
 
