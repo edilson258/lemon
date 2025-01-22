@@ -16,7 +16,8 @@ impl Checker<'_> {
 
 		let fn_type_id = self.ctx.type_store.add_type(fn_type.into());
 
-		self.ctx.add_fn_value(lexeme, fn_type_id);
+		self.register_fn_type(lexeme, fn_type_id, fn_stmt.get_range())?;
+
 		fn_stmt.set_ret_id(ret_id);
 		self.ctx.enter_scope(ScopeType::new_fn(ret_id));
 
@@ -30,6 +31,22 @@ impl Checker<'_> {
 
 		self.ctx.exit_scope();
 		Ok(TypeId::UNIT)
+	}
+
+	#[inline(always)]
+	fn register_fn_type(&mut self, fn_name: &str, type_id: TypeId, range: Range) -> TyResult<()> {
+		if self.ctx.has_impl_scope() {
+			let self_type_id = self.ctx.get_scope().self_scope().unwrap();
+			let self_type = self.get_stored_mut_type(self_type_id);
+			let struct_type = self_type.get_struct_type().unwrap(); // fix... suport enums etc
+			if struct_type.has_fn(fn_name) {
+				return Err(SyntaxErr::redefine_fn_in_same_scope(fn_name, range));
+			}
+			struct_type.add_associate(fn_name.to_string(), type_id);
+			return Ok(());
+		}
+		self.ctx.add_fn_value(fn_name, type_id);
+		Ok(())
 	}
 
 	#[inline(always)]

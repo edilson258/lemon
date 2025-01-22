@@ -1,15 +1,16 @@
 // use bind::create_binds;
+use super::types::{monomorphic::MonomorphicStore, TypeId, TypeStore};
 use borrow::BorrowId;
 use flow::Flow;
+use module::{Module, ModuleId};
 use scope::{Scope, ScopeType};
 use store::Store;
 use value::{Value, ValueId};
 
-use super::types::{monomorphic::MonomorphicStore, TypeId, TypeStore};
-
 mod bind;
 mod borrow;
 mod flow;
+mod module;
 pub mod scope;
 pub mod store;
 pub mod value;
@@ -22,6 +23,7 @@ pub struct Context {
 	pub store: Store,
 	pub value_id: ValueId,
 	pub store_id: usize,
+	pub modules: Vec<Module>,
 }
 
 impl Context {
@@ -32,9 +34,8 @@ impl Context {
 		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		Self { scopes, flow, type_store, store, value_id, store_id }
-		// create_binds(&mut ctx);
-		// ctx
+		let modules = Vec::from_iter(vec![Module::new(ModuleId::new(0))]);
+		Self { scopes, flow, type_store, store, value_id, store_id, modules }
 	}
 
 	pub fn get_monomorphic_store(&mut self) -> &mut MonomorphicStore {
@@ -47,6 +48,18 @@ impl Context {
 
 	pub fn get_scope(&self) -> &Scope {
 		self.scopes.last().unwrap()
+	}
+
+	pub fn get_module(&self, module_id: ModuleId) -> &Module {
+		self.modules.get(module_id.as_usize()).unwrap()
+	}
+
+	pub fn add_pub_value(&mut self, name: String, type_id: TypeId) {
+		todo!()
+	}
+
+	pub fn add_pub_fn(&mut self, name: String, type_id: TypeId) {
+		todo!()
 	}
 
 	pub fn get_scope_mut(&mut self) -> &mut Scope {
@@ -68,6 +81,25 @@ impl Context {
 
 	pub fn has_fn_scope(&self) -> bool {
 		self.scopes.iter().rev().any(|scope| scope.is_fn_scope())
+	}
+
+	pub fn self_scope_type(&self) -> Option<TypeId> {
+		self.scopes.iter().rev().find_map(|scope| scope.self_scope())
+	}
+
+	pub fn has_accessor_scope(&self) -> bool {
+		self.get_scope().is_accessor_scope()
+	}
+	pub fn is_acessor_associate_scope(&self) -> bool {
+		self.get_scope().is_accessor_associate_scope()
+	}
+
+	pub fn accessor_scope_type(&self) -> Option<TypeId> {
+		self.get_scope().accessor_type()
+	}
+
+	pub fn has_impl_scope(&self) -> bool {
+		self.scopes.iter().rev().any(|scope| scope.is_impl_scope())
 	}
 
 	pub fn has_loop_scope(&self) -> bool {

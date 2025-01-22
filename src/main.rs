@@ -22,9 +22,9 @@ use lexer::Token;
 use loader::Loader;
 use logos::Logos;
 use parser::Parser;
-
 fn check(path_name: &str) {
 	let mut loader = Loader::new();
+
 	let file_id = loader.load(path_name);
 	let source = loader.get_source(file_id);
 	let mut lexer = Token::lexer(source.raw());

@@ -11,6 +11,7 @@ use types::{Type, TypeId};
 mod synthesis;
 
 mod check_assign_expr;
+mod check_associate_expr;
 mod check_binary_expr;
 mod check_block_stmt;
 mod check_borrow_expr;
@@ -24,9 +25,11 @@ mod check_fn_stmt;
 mod check_for_stmt;
 mod check_ident_expr;
 mod check_if_expr;
+mod check_impl_stmt;
 mod check_import_expr;
 mod check_let_stmt;
 mod check_literal;
+mod check_member_expr;
 mod check_ret_stmt;
 mod check_struct_init_expr;
 mod check_type_def_stmt;
@@ -68,6 +71,7 @@ impl<'ckr> Checker<'ckr> {
 			ast::Stmt::Ret(ret_stmt) => self.check_ret_stmt(ret_stmt),
 			ast::Stmt::ExternFn(extern_fn_stmt) => self.check_extern_fn_stmt(extern_fn_stmt),
 			ast::Stmt::TypeDef(type_def_stmt) => self.check_type_def_stmt(type_def_stmt),
+			ast::Stmt::Impl(impl_stmt) => self.check_impl_stmt(impl_stmt),
 		}
 	}
 
@@ -78,9 +82,24 @@ impl<'ckr> Checker<'ckr> {
 		}
 	}
 
+	pub fn get_stored_mut_type(&mut self, type_id: TypeId) -> &mut Type {
+		match self.ctx.type_store.get_mut_type(type_id) {
+			Some(type_value) => type_value,
+			None => panic!("error: type not found"), // TODO: error handling
+		}
+	}
+
 	pub fn display_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
 		type_id.display_type(&mut text, &self.ctx.type_store);
+		text
+	}
+	pub fn display_type_value(&self, type_value: &Type) -> String {
+		if let Type::Struct(struct_type) = type_value {
+			return format!("struct {}", struct_type.name);
+		}
+		let mut text = String::new();
+		type_value.display_type(&mut text, &self.ctx.type_store);
 		text
 	}
 

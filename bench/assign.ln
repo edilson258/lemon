@@ -1,4 +1,4 @@
-
+pub import("std/io.ln");
 
 fn main() = {
 }

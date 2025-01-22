@@ -15,10 +15,13 @@ impl Checker<'_> {
 		let found_id = found_id.unwrap();
 
 		// remove clone :(
-		let found_type = self.get_stored_type(found_id).clone();
+		let mut found_type = self.get_stored_type(found_id).clone();
 
 		if !found_type.is_struct() {
-			return Err(SyntaxErr::invalid_init_type(self.display_type(found_id), init.name.get_range()));
+			return Err(SyntaxErr::expect_instaced_type(
+				self.display_type(found_id),
+				init.name.get_range(),
+			));
 		}
 
 		let found_struct_type = found_type.get_struct_type().unwrap();

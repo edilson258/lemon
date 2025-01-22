@@ -14,6 +14,9 @@ pub enum ScopeType {
 	Loop,
 	Block,
 	Global,
+	// impl (e.g struct, enum)
+	Impl { self_type: TypeId },
+	Accessor { self_type: TypeId, associate: bool },
 }
 
 impl ScopeType {
@@ -30,6 +33,21 @@ impl ScopeType {
 		Self::Block
 	}
 
+	pub fn new_impl(self_type: TypeId) -> Self {
+		Self::Impl { self_type }
+	}
+
+	pub fn new_accessor(self_type: TypeId, associate: bool) -> Self {
+		Self::Accessor { self_type, associate }
+	}
+
+	pub fn new_accessor_associate(self_type: TypeId) -> Self {
+		Self::new_accessor(self_type, true)
+	}
+	pub fn new_accessor_method(self_type: TypeId) -> Self {
+		Self::new_accessor(self_type, false)
+	}
+
 	pub fn new_global() -> Self {
 		Self::Global
 	}
@@ -38,6 +56,20 @@ impl ScopeType {
 		match self {
 			Self::Fn { ret_type } => Some(*ret_type),
 			Self::ConstFn { ret_type } => Some(*ret_type),
+			_ => None,
+		}
+	}
+
+	pub fn self_type(&self) -> Option<TypeId> {
+		match self {
+			Self::Impl { self_type } => Some(*self_type),
+			_ => None,
+		}
+	}
+
+	pub fn accessor_type(&self) -> Option<TypeId> {
+		match self {
+			Self::Accessor { self_type, .. } => Some(*self_type),
 			_ => None,
 		}
 	}
@@ -59,6 +91,18 @@ impl ScopeType {
 	}
 	pub fn is_global(&self) -> bool {
 		matches!(self, Self::Global)
+	}
+
+	pub fn is_impl(&self) -> bool {
+		matches!(self, Self::Impl { .. })
+	}
+
+	pub fn is_accessor(&self) -> bool {
+		matches!(self, Self::Accessor { .. })
+	}
+
+	pub fn is_accessor_associate(&self) -> bool {
+		matches!(self, Self::Accessor { associate: true, .. })
 	}
 }
 
@@ -130,8 +174,28 @@ impl Scope {
 		self.scope_type.ret_scope()
 	}
 
+	pub fn accessor_type(&self) -> Option<TypeId> {
+		self.scope_type.accessor_type()
+	}
+
+	pub fn self_scope(&self) -> Option<TypeId> {
+		self.scope_type.self_type()
+	}
+
 	pub fn is_fn_scope(&self) -> bool {
 		self.scope_type.is_fn()
+	}
+
+	pub fn is_impl_scope(&self) -> bool {
+		self.scope_type.is_impl()
+	}
+
+	pub fn is_accessor_scope(&self) -> bool {
+		self.scope_type.is_accessor()
+	}
+
+	pub fn is_accessor_associate_scope(&self) -> bool {
+		self.scope_type.is_accessor_associate()
 	}
 
 	pub fn is_loop_scope(&self) -> bool {

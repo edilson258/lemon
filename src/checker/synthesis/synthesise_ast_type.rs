@@ -30,7 +30,11 @@ fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> TyResult<
 	if let Some(infer_id) = ctx.type_store.get_infer_id(ident.lexeme()) {
 		return Ok(*infer_id);
 	}
-	todo!("not found generic '{}'", ident.lexeme())
+
+	if let Some(type_id) = ctx.type_store.get_type_by_name(ident.lexeme()) {
+		return Ok(*type_id);
+	}
+	todo!("not found type '{}'", ident.lexeme())
 }
 
 fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> TyResult<TypeId> {

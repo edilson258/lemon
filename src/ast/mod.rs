@@ -28,6 +28,7 @@ pub enum Stmt {
 	// loop
 	While(WhileStmt),
 	For(ForStmt),
+	Impl(ImplStmt),
 }
 
 impl Stmt {
@@ -47,6 +48,7 @@ impl Stmt {
 			Stmt::While(while_stmt) => while_stmt.get_range(),
 			Stmt::For(for_stmt) => for_stmt.get_range(),
 			Stmt::TypeDef(type_def_stmt) => type_def_stmt.get_range(),
+			Stmt::Impl(impl_stmt) => impl_stmt.get_range(),
 		}
 	}
 	pub fn ends_with_ret(&self) -> bool {
@@ -116,12 +118,31 @@ impl ConstFnStmt {
 	}
 }
 
+// impl <name> = {
+//   fn <name>(<params>): <ret_type> = {
+//     <body>
+//   }
+// }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImplStmt {
+	pub self_name: Ident,
+	pub items: Vec<FnStmt>,
+	pub range: Range, // impl range
+}
+
+impl ImplStmt {
+	pub fn get_range(&self) -> Range {
+		self.range.clone()
+	}
+}
+
 // type <name> = {} or type <name> = <type>
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeDefStmt {
 	pub name: Ident,
 	pub range: Range, // type range
 	pub kind: TypeDefKind,
+	pub is_pub: bool,
 }
 
 impl TypeDefStmt {
@@ -129,6 +150,12 @@ impl TypeDefStmt {
 		self.range.clone()
 	}
 
+	pub fn set_is_pub(&mut self, is_pub: bool) {
+		self.is_pub = is_pub;
+	}
+	pub fn is_pub(&self) -> bool {
+		self.is_pub
+	}
 	pub fn lexeme(&self) -> &str {
 		&self.name.text
 	}
@@ -290,11 +317,20 @@ pub struct ExternFnStmt {
 	pub fn_range: Range, // fn range
 	pub var_packed: Option<Range>,
 	pub ret_id: Option<TypeId>,
+	pub is_pub: bool,
 }
 
 impl ExternFnStmt {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
+	}
+
+	pub fn set_is_pub(&mut self, is_pub: bool) {
+		self.is_pub = is_pub;
+	}
+
+	pub fn is_pub(&self) -> bool {
+		self.is_pub
 	}
 
 	pub fn get_ret_id(&self) -> Option<TypeId> {
@@ -327,6 +363,7 @@ impl Generic {
 pub struct FnStmt {
 	pub name: Ident,
 	pub params: Vec<Binding>,
+	pub is_pub: bool,
 	pub ret_type: Option<ast_type::AstType>, // todo: implement this
 	pub body: FnBody,
 	pub range: Range, // fn range
@@ -337,6 +374,14 @@ pub struct FnStmt {
 impl FnStmt {
 	pub fn lexeme(&self) -> &str {
 		&self.name.text
+	}
+
+	pub fn set_is_pub(&mut self, is_pub: bool) {
+		self.is_pub = is_pub;
+	}
+
+	pub fn is_pub(&self) -> bool {
+		self.is_pub
 	}
 	pub fn get_range(&self) -> Range {
 		// fn ... body
@@ -568,7 +613,7 @@ impl AssignExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssociateExpr {
 	pub left: Box<Expr>,
-	pub right: Box<Expr>,
+	pub method: Ident,
 	pub range: Range, // ::
 }
 impl AssociateExpr {
@@ -580,12 +625,12 @@ impl AssociateExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MemberExpr {
 	pub left: Box<Expr>,
-	pub right: Box<Expr>,
+	pub method: Ident,
 	pub range: Range, // .
 }
 impl MemberExpr {
 	pub fn get_range(&self) -> Range {
-		self.range.clone()
+		self.left.get_range().merged_with(&self.method.get_range())
 	}
 }
 

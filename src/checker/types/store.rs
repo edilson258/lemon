@@ -92,6 +92,9 @@ impl TypeStore {
 	pub fn get_type(&self, type_id: TypeId) -> Option<&Type> {
 		self.types.get(type_id.as_usize())
 	}
+	pub fn get_mut_type(&mut self, type_id: TypeId) -> Option<&mut Type> {
+		self.types.get_mut(type_id.as_usize())
+	}
 
 	pub fn resolve_borrow_type(&self, type_id: TypeId) -> TypeId {
 		if type_id.is_known() {

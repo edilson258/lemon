@@ -42,6 +42,21 @@ impl Type {
 		matches!(self, Type::Struct(_))
 	}
 
+	pub fn can_implemented(&self) -> bool {
+		// all of types that can be implemented
+		self.is_struct()
+	}
+
+	pub fn is_impl(&self) -> bool {
+		matches!(self, Type::Struct(StructType { implemeted: true, .. }))
+	}
+
+	pub fn set_impl(&mut self, is_impl: bool) {
+		if let Type::Struct(struct_type) = self {
+			struct_type.set_implemented(is_impl);
+		}
+	}
+
 	pub fn is_float(&self) -> bool {
 		matches!(self, Type::Number(Number::F32) | Type::Number(Number::F64))
 	}
@@ -77,11 +92,11 @@ impl Type {
 		}
 	}
 
-	pub fn get_struct_type(&self) -> Option<&StructType> {
-		match self {
-			Type::Struct(struct_type) => Some(struct_type),
-			_ => None,
+	pub fn get_struct_type(&mut self) -> Option<&mut StructType> {
+		if let Type::Struct(struct_type) = self {
+			return Some(struct_type);
 		}
+		None
 	}
 }
 
@@ -260,7 +275,10 @@ pub struct StructType {
 	// hashmap? name -> FieldType
 	pub fields: FxHashMap<String, FieldType>,
 	// hasmap? name -> MethodType
-	pub methods: FxHashMap<String, MethodType>,
+	pub fns: FxHashMap<String, TypeId>,
+	pub associated: FxHashMap<String, TypeId>,
+	pub implemeted: bool,
+	pub mutable: bool,
 }
 
 impl Hash for StructType {
@@ -276,7 +294,26 @@ impl Hash for StructType {
 
 impl StructType {
 	pub fn new(name: String) -> Self {
-		Self { name, fields: FxHashMap::default(), methods: FxHashMap::default() }
+		let associated = FxHashMap::default();
+		let fields = FxHashMap::default();
+		let fns = FxHashMap::default();
+		Self { name, fields, fns, associated, implemeted: false, mutable: false }
+	}
+
+	pub fn has_implemented(&self) -> bool {
+		self.implemeted
+	}
+
+	pub fn is_mutable(&self) -> bool {
+		self.mutable
+	}
+
+	pub fn set_mutable(&mut self, is_mut: bool) {
+		self.mutable = is_mut;
+	}
+
+	pub fn set_implemented(&mut self, is_impl: bool) {
+		self.implemeted = is_impl;
 	}
 
 	pub fn add_field(&mut self, field: FieldType) {
@@ -285,18 +322,19 @@ impl StructType {
 	pub fn with_fields(&mut self, fields: Vec<FieldType>) {
 		self.fields = fields.into_iter().map(|field| (field.name.clone(), field)).collect();
 	}
-	pub fn add_method(&mut self, method: MethodType) {
-		self.methods.insert(method.name.clone(), method);
+	pub fn add_fn(&mut self, name: String, fn_id: TypeId) {
+		self.fns.insert(name, fn_id);
 	}
-	pub fn with_methods(&mut self, methods: Vec<MethodType>) {
-		self.methods = methods.into_iter().map(|method| (method.name.clone(), method)).collect();
+
+	pub fn add_associate(&mut self, name: String, type_id: TypeId) {
+		self.associated.insert(name, type_id);
 	}
 
 	// ceck methods
 	//
 
-	pub fn has_method(&self, name: &str) -> bool {
-		self.methods.contains_key(name)
+	pub fn has_fn(&self, name: &str) -> bool {
+		self.fns.contains_key(name)
 	}
 
 	pub fn has_field(&self, name: &str) -> bool {
@@ -308,8 +346,18 @@ impl StructType {
 		self.fields.get(name)
 	}
 
-	pub fn get_method(&self, name: &str) -> Option<&MethodType> {
-		self.methods.get(name)
+	pub fn get_associate(&self, name: &str) -> Option<&TypeId> {
+		self.associated.get(name)
+	}
+
+	pub fn get_fn(&self, name: &str) -> Option<&TypeId> {
+		self.fns.get(name)
+	}
+
+	#[rustfmt::skip]
+	pub fn get_type(&self, name: &str) -> Option<TypeId> {
+		self.get_field(name).map(|field| field.type_id)
+			.or_else(|| self.get_fn(name).copied())
 	}
 }
 

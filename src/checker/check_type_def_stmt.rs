@@ -20,6 +20,7 @@ impl Checker<'_> {
 		struct_type.with_fields(fields);
 		let type_id = self.ctx.type_store.add_type(struct_type.into());
 		self.ctx.type_store.add_type_by_name(lexeme, type_id);
+		self.ctx.add_value(type_def.lexeme(), type_id, false);
 		Ok(TypeId::UNIT)
 	}
 
