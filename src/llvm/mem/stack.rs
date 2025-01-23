@@ -1,11 +1,9 @@
 #![allow(dead_code)]
-
-use std::collections::HashMap;
-
 use inkwell::{
 	basic_block::BasicBlock,
 	values::{BasicValueEnum, PointerValue},
 };
+use rustc_hash::FxHashMap;
 
 use crate::{
 	ir::{self},
@@ -13,18 +11,20 @@ use crate::{
 };
 
 pub struct Stack<'ll> {
-	pub values: HashMap<ir::Register, BasicValueEnum<'ll>>,
-	pub global_values: HashMap<ir::Register, BasicValueEnum<'ll>>,
-	pub blocks: HashMap<ir::BlockId, BasicBlock<'ll>>,
+	pub values: FxHashMap<ir::Register, BasicValueEnum<'ll>>,
+	pub structs: FxHashMap<String, FxHashMap<ir::Register, usize>>,
+	pub global_values: FxHashMap<ir::Register, BasicValueEnum<'ll>>,
+	pub blocks: FxHashMap<ir::BlockId, BasicBlock<'ll>>,
 	pub temp_reg_count: usize,
 }
 
 impl<'ll> Stack<'ll> {
 	pub fn new() -> Self {
 		Self {
-			values: HashMap::new(),
-			blocks: HashMap::new(),
-			global_values: HashMap::new(),
+			values: FxHashMap::default(),
+			blocks: FxHashMap::default(),
+			structs: FxHashMap::default(),
+			global_values: FxHashMap::default(),
 			temp_reg_count: 0,
 		}
 	}
@@ -33,6 +33,16 @@ impl<'ll> Stack<'ll> {
 		let reg = format!("t{}", self.temp_reg_count);
 		self.temp_reg_count += 1;
 		reg
+	}
+
+	pub fn add_struct_field(&mut self, struct_id: String, reg: ir::Register, index: usize) {
+		let fields = self.structs.entry(struct_id).or_default();
+		fields.insert(reg, index);
+	}
+
+	pub fn get_struct_field(&self, struct_id: String, reg: ir::Register) -> Option<usize> {
+		let fields = self.structs.get(&struct_id)?;
+		fields.get(&reg).copied()
 	}
 
 	pub fn get_global_value(&self, reg: ir::Register) -> Option<&BasicValueEnum<'ll>> {

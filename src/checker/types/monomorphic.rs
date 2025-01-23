@@ -1,16 +1,16 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::checker::types::{ExternFnType, FnType, Type};
 
 #[derive(Debug)]
 pub struct MonomorphicStore {
 	pub current_fn: Option<String>,
-	pub fns: HashMap<String, Vec<Type>>,
+	pub fns: FxHashMap<String, Vec<Type>>,
 }
 
 impl MonomorphicStore {
 	pub fn new() -> Self {
-		Self { fns: HashMap::new(), current_fn: None }
+		Self { fns: FxHashMap::default(), current_fn: None }
 	}
 
 	pub fn add_fn(&mut self, fn_type: FnType) {

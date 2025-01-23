@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::range::Range;
 
 use super::{Checker, TyResult};
 
 use super::types::{FnType, Type, TypeId};
-type GenericTable = HashMap<TypeId, TypeId>;
+type GenericTable = FxHashMap<TypeId, TypeId>;
 
 impl Checker<'_> {
 	pub fn infer_generic(&self, callee: TypeId, args: &[(TypeId, Range)]) -> TyResult<Type> {
@@ -35,7 +35,7 @@ impl Checker<'_> {
 	}
 
 	fn create_generic_table(&self, generics: &[TypeId], args: &[(TypeId, Range)]) -> GenericTable {
-		let mut table = HashMap::new();
+		let mut table = FxHashMap::default();
 		for (generic, arg) in generics.iter().zip(args) {
 			table.insert(*generic, arg.0);
 		}

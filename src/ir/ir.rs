@@ -26,17 +26,6 @@ impl BlockId {
 	}
 }
 
-#[derive(Debug, Clone)]
-pub struct FnId(pub String);
-impl FnId {
-	pub fn new(name: &str) -> Self {
-		Self(name.to_owned())
-	}
-	pub fn as_string(&self) -> &str {
-		&self.0
-	}
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Register(pub usize);
 impl Register {
@@ -115,9 +104,24 @@ pub enum Instr {
 	BorrowMut(UnaryInstr),
 	// deref i32 register -> dest
 	Deref(UnaryInstr),
-	// drop i32 register -> dest
-	// Drop(UnaryInstr),
 
+	// drop i32 register -> dest
+	Drop(DropInstr),
+
+	// load_field struct register, field -> dest
+	LoadField(LoadFieldInstr),
+
+	// store_field struct register, field, dest
+	StoreField(StoreFieldInstr),
+
+	/*
+
+	struct Point
+		field r0: i32
+		field r1: i32
+		field r2: i32
+		field r3: i32
+	*/
 	// cache i32 register -> dest
 	Cache(SetCacheInstr),
 
@@ -130,6 +134,50 @@ pub enum Instr {
 	Ret(RetInstr),
 	// call fn_id(args) -> dest
 	Call(CallInstr),
+}
+
+#[derive(Debug, Clone)]
+pub struct StoreStructInstr {
+	pub type_id: TypeId,
+	pub name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DropInstr {
+	pub value: Register,
+}
+
+impl From<DropInstr> for Instr {
+	fn from(drop: DropInstr) -> Self {
+		Self::Drop(drop)
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct LoadFieldInstr {
+	pub type_id: TypeId,
+	pub value: Register,
+	pub field: String,
+	pub dest: Register,
+}
+
+impl From<LoadFieldInstr> for Instr {
+	fn from(load_field: LoadFieldInstr) -> Self {
+		Self::LoadField(load_field)
+	}
+}
+#[derive(Debug, Clone)]
+pub struct StoreFieldInstr {
+	pub type_id: TypeId,
+	pub value: Register,
+	pub field: String,
+	pub dest: Register,
+}
+
+impl From<StoreFieldInstr> for Instr {
+	fn from(store_field: StoreFieldInstr) -> Self {
+		Self::StoreField(store_field)
+	}
 }
 
 // == structures ==
@@ -228,7 +276,7 @@ impl From<JmpIfInstr> for Instr {
 #[derive(Debug, Clone)]
 pub struct CallInstr {
 	pub type_id: TypeId,
-	pub fn_id: FnId,
+	pub fn_id: String,
 	pub args: Vec<Bind>,
 	pub dest: Register,
 }
@@ -318,7 +366,7 @@ pub enum IrValue {
 	String(String),
 	Char(char),
 	Reg(Register),
-	Fn(FnId),
+	Value(String),
 }
 
 impl IrValue {
@@ -337,8 +385,8 @@ impl IrValue {
 	pub fn new_char(value: char) -> Self {
 		Self::Char(value)
 	}
-	pub fn new_fn(value: FnId) -> Self {
-		Self::Fn(value)
+	pub fn new_fn(value: String) -> Self {
+		Self::Value(value)
 	}
 }
 
@@ -360,19 +408,25 @@ impl Block {
 }
 
 #[derive(Debug, Clone)]
+pub struct StructInstr {
+	pub struct_id: String,
+	pub fields: Vec<Bind>,
+}
+
+#[derive(Debug, Clone)]
 pub struct LnFn {
-	pub fn_id: FnId,
+	pub fn_id: String,
 	pub args: Vec<Bind>,
 	pub ret: TypeId,
 	pub blocks: Vec<Block>,
 }
 impl LnFn {
-	pub fn new(fn_id: FnId, args: Vec<Bind>, ret: TypeId) -> Self {
+	pub fn new(fn_id: String, args: Vec<Bind>, ret: TypeId) -> Self {
 		Self { fn_id, args, ret, blocks: vec![] }
 	}
 
 	pub fn is_main(&self) -> bool {
-		self.fn_id.as_string() == "main"
+		self.fn_id == "main"
 	}
 
 	pub fn add_block(&mut self, block: Block) {
@@ -386,7 +440,7 @@ impl LnFn {
 
 #[derive(Debug, Clone)]
 pub struct ExFn {
-	pub fn_id: FnId,
+	pub fn_id: String,
 	pub args: Vec<Bind>,
 	pub ret: TypeId,
 	pub var_packed: bool,
@@ -399,10 +453,10 @@ pub enum Fn {
 }
 
 impl Fn {
-	pub fn new_ln(fn_id: FnId, args: Vec<Bind>, ret: TypeId) -> Self {
+	pub fn new_ln(fn_id: String, args: Vec<Bind>, ret: TypeId) -> Self {
 		Self::Ln(LnFn { fn_id, args, ret, blocks: vec![] })
 	}
-	pub fn new_ex(fn_id: FnId, args: Vec<Bind>, ret: TypeId, var_packed: bool) -> Self {
+	pub fn new_ex(fn_id: String, args: Vec<Bind>, ret: TypeId, var_packed: bool) -> Self {
 		Self::Ex(ExFn { fn_id, args, ret, var_packed })
 	}
 
@@ -431,6 +485,7 @@ impl Bind {
 pub struct Root {
 	reg_size: usize,
 	pub fns: Vec<Fn>,
+	pub structs: Vec<StructInstr>,
 }
 
 impl Default for Root {
@@ -441,10 +496,14 @@ impl Default for Root {
 
 impl Root {
 	pub fn new() -> Self {
-		Self { fns: Vec::new(), reg_size: 0 }
+		Self { fns: Vec::new(), reg_size: 0, structs: Vec::new() }
 	}
 	pub fn add_fn(&mut self, fn_ir: Fn) {
 		self.fns.push(fn_ir);
+	}
+
+	pub fn add_struct(&mut self, struct_ir: StructInstr) {
+		self.structs.push(struct_ir);
 	}
 
 	pub fn add_blocks(&mut self, blocks: Vec<Block>) {

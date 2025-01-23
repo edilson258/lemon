@@ -143,6 +143,7 @@ pub struct TypeDefStmt {
 	pub range: Range, // type range
 	pub kind: TypeDefKind,
 	pub is_pub: bool,
+	pub type_id: Option<TypeId>,
 }
 
 impl TypeDefStmt {
@@ -158,6 +159,14 @@ impl TypeDefStmt {
 	}
 	pub fn lexeme(&self) -> &str {
 		&self.name.text
+	}
+
+	pub fn get_type_id(&self) -> Option<TypeId> {
+		self.type_id
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
 	}
 
 	pub fn get_struct_def(&mut self) -> Option<&mut StructType> {
@@ -191,11 +200,20 @@ pub struct FieldType {
 	pub ident: Ident,
 	pub ast_type: AstType,
 	pub is_pub: bool,
+	pub type_id: Option<TypeId>,
 }
 
 impl FieldType {
 	pub fn new(ident: Ident, ast_type: AstType, is_pub: bool) -> Self {
-		Self { ident, ast_type, is_pub }
+		Self { ident, ast_type, is_pub, type_id: None }
+	}
+
+	pub fn get_type_id(&self) -> Option<TypeId> {
+		self.type_id
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
 	}
 
 	pub fn get_range(&self) -> Range {

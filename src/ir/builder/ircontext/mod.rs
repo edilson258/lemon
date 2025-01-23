@@ -1,4 +1,6 @@
-use std::{collections::HashMap, mem};
+use std::mem;
+
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
 	checker::types::TypeId,
@@ -6,14 +8,14 @@ use crate::{
 	report::throw_ir_build_error,
 };
 
-type Scope = HashMap<String, ir::Register>;
+type Scope = FxHashMap<String, ir::Register>;
 
 pub struct IrContext {
 	register: ir::Register,
 	scopes: Vec<Scope>,
 	ret_type: Option<TypeId>,
-	types: HashMap<ir::Register, TypeId>,
-	fns: HashMap<String, ir::FnId>,
+	types: FxHashMap<ir::Register, TypeId>,
+	values: FxHashSet<String>,
 	blocks: Vec<Block>,
 	block_id: BlockId,
 }
@@ -26,12 +28,20 @@ impl Default for IrContext {
 impl IrContext {
 	pub fn new() -> Self {
 		let register = ir::Register::new(0);
-		let scopes = vec![HashMap::new()];
-		let fns = HashMap::new();
+		let scopes = vec![FxHashMap::default()];
 		let block_id = BlockId::new(0);
 		let blocks = vec![];
-		let types = HashMap::new();
-		Self { register, scopes, types, fns, blocks, block_id, ret_type: None }
+		let types = FxHashMap::default();
+		let values = FxHashSet::default();
+		Self { register, scopes, types, blocks, block_id, ret_type: None, values }
+	}
+
+	pub fn add_ir_value(&mut self, name: &str) {
+		self.values.insert(name.to_string());
+	}
+
+	pub fn get_ir_value(&self, name: &str) -> Option<&String> {
+		self.values.get(name)
 	}
 
 	pub fn set_ret_type(&mut self, ret: Option<TypeId>) {
@@ -59,11 +69,11 @@ impl IrContext {
 	}
 
 	pub fn add_fn(&mut self, name: &str) {
-		self.fns.insert(name.to_owned(), ir::FnId::new(name));
+		self.values.insert(name.to_string());
 	}
 
-	pub fn get_fn_id(&self, name: &str) -> Option<&ir::FnId> {
-		self.fns.get(name)
+	pub fn get_fn_id(&self, name: &str) -> Option<String> {
+		self.values.get(name).map(|value| value.to_string())
 	}
 
 	pub fn get_current_register(&mut self) -> ir::Register {
@@ -77,7 +87,7 @@ impl IrContext {
 	}
 
 	pub fn enter_scope(&mut self) {
-		self.scopes.push(HashMap::new());
+		self.scopes.push(FxHashMap::default());
 		let block_id = self.new_block();
 		self.switch_to_block(block_id);
 	}
@@ -88,7 +98,7 @@ impl IrContext {
 		}
 	}
 
-	pub fn get_current_scope(&mut self) -> &mut HashMap<String, ir::Register> {
+	pub fn get_current_scope(&mut self) -> &mut FxHashMap<String, ir::Register> {
 		if let Some(scope) = self.scopes.last_mut() {
 			return scope;
 		}

@@ -1,17 +1,9 @@
+extern fn printf(fmt: str, ...): i32 = {};
+fn println(value: i32) = {
+	printf("%d\n", value);
+}
+
 type Person = {
-  age: i8,
-}
-
-impl Person = {
-  fn new(age: i8): Person = {
-    return Person { age };
-  }
-}
-
-
-
-fn main() = {
-  let person = Person::new(10);
-  person.ag = 20;
-//   println(person.age);
+  age: i32,
+  birthday: i32,
 }

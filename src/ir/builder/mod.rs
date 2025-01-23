@@ -26,6 +26,7 @@ mod build_if_expr;
 mod build_let_stmt;
 mod build_literal;
 mod build_ret_stmt;
+mod build_type_def_stmt;
 mod build_while_stmt;
 pub mod ircontext;
 
@@ -43,6 +44,10 @@ impl<'br> Builder<'br> {
 
 	pub fn add_fn(&mut self, fn_ir: ir::Fn) {
 		self.root.add_fn(fn_ir);
+	}
+
+	pub fn add_struct(&mut self, struct_ir: ir::StructInstr) {
+		self.root.add_struct(struct_ir);
 	}
 
 	pub fn add_blocks(&mut self, blocks: Vec<ir::Block>) {
@@ -83,6 +88,7 @@ impl<'br> Builder<'br> {
 			ast::Stmt::ConstFn(const_fn) => self.build_const_fn_stmt(const_fn),
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
 			ast::Stmt::ExternFn(extern_fn) => self.build_extern_fn(extern_fn),
+			ast::Stmt::TypeDef(type_def) => self.build_type_def_stmt(type_def),
 			ast::Stmt::Expr(expr) => {
 				self.build_expr(expr);
 			}

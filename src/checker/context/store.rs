@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::checker::types::TypeId;
 
@@ -7,12 +7,12 @@ pub struct StoreId(pub usize, pub String); // (scope, name)
 
 #[derive(Debug)]
 pub struct Store {
-	pub values: HashMap<StoreId, TypeId>,
+	pub values: FxHashMap<StoreId, TypeId>,
 }
 
 impl Store {
 	pub fn new() -> Self {
-		Self { values: HashMap::new() }
+		Self { values: FxHashMap::default() }
 	}
 
 	pub fn add_value_type(&mut self, scope: usize, name: String, type_id: TypeId) {

@@ -1,7 +1,4 @@
-use std::{
-	collections::HashMap,
-	ops::{Div, Mul, Rem},
-};
+use std::ops::{Div, Mul, Rem};
 
 use super::{frame::Value, stack::Stack};
 use crate::{diag::Diag, ir, report::throw_engine_error};

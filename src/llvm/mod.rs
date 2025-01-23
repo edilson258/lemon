@@ -18,6 +18,7 @@ mod llvm_math;
 mod llvm_mem;
 mod llvm_ownership;
 mod llvm_ret;
+mod llvm_struct;
 mod llvm_type;
 mod llvm_value;
 mod mem;
@@ -42,6 +43,9 @@ impl<'ll> Llvm<'ll> {
 	}
 
 	pub fn compile(&mut self, root: &ir::Root) {
+		for struct_ir in root.structs.iter() {
+			self.llvm_struct(struct_ir);
+		}
 		for fn_ir in root.fns.iter() {
 			self.llvm_function(fn_ir);
 			self.stack.block_clear();

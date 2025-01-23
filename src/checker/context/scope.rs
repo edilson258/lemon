@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::checker::types::TypeId;
 
@@ -116,16 +116,16 @@ impl ScopeId {
 
 #[derive(Debug, Clone)]
 pub struct Scope {
-	pub values: HashMap<String, Value>,
-	pub fn_values: HashMap<String, Value>,
+	pub values: FxHashMap<String, Value>,
+	pub fn_values: FxHashMap<String, Value>,
 	pub borrow_store: BorrowStore,
 	pub scope_type: ScopeType,
 }
 
 impl Scope {
 	pub fn new(scope_type: ScopeType) -> Self {
-		let values = HashMap::new();
-		let fn_values = HashMap::new();
+		let values = FxHashMap::default();
+		let fn_values = FxHashMap::default();
 		let borrow_store = BorrowStore::default();
 		Self { values, fn_values, scope_type, borrow_store }
 	}

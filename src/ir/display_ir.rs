@@ -13,6 +13,11 @@ use crate::{
 impl ir::Root {
 	pub fn display_ir(&self, type_store: &TypeStore) -> String {
 		let mut text = String::new();
+
+		for struct_ir in self.structs.iter() {
+			struct_ir.display_ir(type_store, &mut text);
+		}
+
 		for fn_ir in self.fns.iter() {
 			fn_ir.display_ir(type_store, &mut text);
 		}
@@ -22,15 +27,14 @@ impl ir::Root {
 
 impl ir::LnFn {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let fn_id = self.fn_id.as_string();
 		let ret = type_store.get_display_type(self.ret);
 
 		let args = self.args.iter().map(|param| param.display_ir(type_store));
 		let args = args.collect::<Vec<_>>().join(", ");
 		let instr = if self.args.is_empty() {
-			format!("{} {} -> {}\n", text_green("fn"), fn_id, ret)
+			format!("{} {} -> {}\n", text_green("fn"), self.fn_id, ret)
 		} else {
-			format!("{} {} {} -> {}\n", text_green("fn"), fn_id, args.trim(), ret)
+			format!("{} {} {} -> {}\n", text_green("fn"), self.fn_id, args.trim(), ret)
 		};
 		text.push_str(&instr);
 		for block in self.blocks.iter() {
@@ -42,7 +46,6 @@ impl ir::LnFn {
 
 impl ir::ExFn {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let fn_id = self.fn_id.as_string();
 		let args = self.args.iter().map(|param| param.display_ir(type_store));
 		let mut args = args.collect::<Vec<_>>().join(", ");
 		if self.var_packed {
@@ -50,9 +53,9 @@ impl ir::ExFn {
 		}
 		let ret = type_store.get_display_type(self.ret);
 		let instr = if self.args.is_empty() {
-			format!("{} {} -> {}\n", text_green("extern fn"), fn_id, ret)
+			format!("{} {} -> {}\n", text_green("extern fn"), self.fn_id, ret)
 		} else {
-			format!("{} {} {} -> {}\n", text_green("extern fn"), fn_id, args.trim(), ret)
+			format!("{} {} {} -> {}\n", text_green("extern fn"), self.fn_id, args.trim(), ret)
 		};
 		text.push_str(&instr);
 		text.push('\n');
@@ -124,11 +127,73 @@ impl ir::Instr {
 			ir::Instr::Call(call) => call.display_ir(type_store, text),
 			ir::Instr::Goto(goto) => goto.display_ir(text),
 			ir::Instr::Cache(_) => todo!(),
+			ir::Instr::Drop(drop) => drop.display_ir(text),
+			ir::Instr::LoadField(load_field) => load_field.display_ir(type_store, text),
+			ir::Instr::StoreField(store_field) => store_field.display_ir(type_store, text),
 			// ir::Instr::SetCache(set_cache) => set_cache.display_ir(text),
 			// ir::Instr::LoadCache(load_cache) => load_cache.display_ir(text),
 		}
 	}
 }
+
+impl ir::StructInstr {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		// let type_str = type_store.get_display_type(self.type_id);
+		let instr = format!("{} {} = ", text_green("struct"), self.struct_id);
+		text.push_str(&instr);
+		text.push('\n');
+		for field in self.fields.iter() {
+			let field_type = type_store.get_display_type(field.type_id);
+			let register = field.register.as_colored();
+			text.push_str(&format!(" {} {}", field_type, register));
+			text.push('\n');
+		}
+		text.push_str(format!(" {}\n", text_green("_")).as_str());
+		text.push('\n');
+	}
+}
+
+impl ir::DropInstr {
+	pub fn display_ir(&self, text: &mut String) {
+		let value = self.value.as_colored();
+		let instr = format!("drop {}", value);
+		text.push_str(&instr);
+		text.push('\n');
+	}
+}
+
+impl ir::LoadFieldInstr {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		let type_str = type_store.get_display_type(self.type_id);
+		let value = self.value.as_colored();
+		let field = self.field.as_str();
+		let dest = self.dest.as_colored();
+		let instr = format!("load_field {} {} {} -> {}", type_str, value, field, dest);
+		text.push_str(&instr);
+		text.push('\n');
+	}
+}
+
+impl ir::StoreFieldInstr {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		let type_str = type_store.get_display_type(self.type_id);
+		let value = self.value.as_colored();
+		let field = self.field.as_str();
+		let dest = self.dest.as_colored();
+		let instr = format!("store_field {} {} {} {}", type_str, value, field, dest);
+		text.push_str(&instr);
+		text.push('\n');
+	}
+}
+
+// impl ir::StoreStructInstr {
+// 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+// 		let type_str = type_store.get_display_type(self.type_id);
+// 		let instr = format!("struct {} {} ", type_str, self.name);
+// 		text.push_str(&instr);
+// 		text.push('\n');
+// 	}
+// }
 
 impl ir::BinaryInstr {
 	pub fn display_ir(&self, operator: &str, type_store: &TypeStore, text: &mut String) {
@@ -242,10 +307,9 @@ impl ir::RetInstr {
 impl ir::CallInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let type_str = type_store.get_display_type(self.type_id);
-		let fn_id = self.fn_id.as_string();
 		let dest = self.dest.as_colored();
 		let args = self.args.iter().map(|r| r.display_ir(type_store)).collect::<Vec<_>>().join(", ");
-		let instr = format!("call {} {} {} -> {}", type_str, fn_id, args, dest);
+		let instr = format!("call {} {} {} -> {}", type_str, self.fn_id, args, dest);
 		text.push_str(&instr);
 		text.push('\n');
 	}
@@ -292,7 +356,7 @@ impl IrValue {
 			}
 			IrValue::Char(char) => format!("'{}'", char),
 			IrValue::Reg(reg) => reg.as_colored(),
-			IrValue::Fn(fn_id) => fn_id.as_string().to_string(),
+			IrValue::Value(value) => value.to_string(),
 		}
 	}
 }

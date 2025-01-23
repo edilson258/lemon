@@ -1,9 +1,6 @@
-use std::{
-	collections::HashMap,
-	hash::{Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
 
-use rustc_hash::FxHasher;
+use rustc_hash::{FxHashMap, FxHasher};
 
 use super::{
 	monomorphic::MonomorphicStore, type_id::TypeId, ExternFnType, FnType, InferType, Number, Type,
@@ -12,19 +9,19 @@ use super::{
 #[derive(Debug)]
 pub struct TypeStore {
 	types: Vec<Type>,
-	types_by_name: HashMap<String, TypeId>,
-	generics: HashMap<String, TypeId>,
+	types_by_name: FxHashMap<String, TypeId>,
+	generics: FxHashMap<String, TypeId>,
 	// is good?
-	cache: HashMap<u64, TypeId>,
+	cache: FxHashMap<u64, TypeId>,
 	pub monomorphic_store: MonomorphicStore,
 }
 
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
 		let monomorphic_store = MonomorphicStore::default();
-		let types_by_name = HashMap::new();
-		let cache = HashMap::new();
-		let generics = HashMap::new();
+		let types_by_name = FxHashMap::default();
+		let cache = FxHashMap::default();
+		let generics = FxHashMap::default();
 		Self { types, types_by_name, cache, generics, monomorphic_store }
 	}
 

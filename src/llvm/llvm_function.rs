@@ -21,9 +21,7 @@ impl<'ll> Llvm<'ll> {
 
 	pub fn llvm_ex_fn(&mut self, ex_fn: &ir::ExFn) {
 		let fn_type = self.llvm_fun_type(&ex_fn.args, ex_fn.ret, ex_fn.var_packed);
-		let fn_name = ex_fn.fn_id.as_string();
-
-		self.module.add_function(fn_name, fn_type, None);
+		self.module.add_function(ex_fn.fn_id.as_str(), fn_type, None);
 	}
 
 	pub fn llvm_ln_fn(&mut self, ln_fn: &ir::LnFn) {
@@ -43,10 +41,9 @@ impl<'ll> Llvm<'ll> {
 	}
 
 	fn llvm_fun_value(&mut self, ln_fn: &ir::LnFn) -> FunctionValue<'ll> {
-		let fn_name = ln_fn.fn_id.as_string();
 		let ret_type = if ln_fn.is_main() { TypeId::I32 } else { ln_fn.ret };
 		let fn_type = self.llvm_fun_type(&ln_fn.args, ret_type, false);
-		self.module.add_function(fn_name, fn_type, None)
+		self.module.add_function(ln_fn.fn_id.as_str(), fn_type, None)
 	}
 
 	fn llvm_void_ret_value(&mut self, type_id: TypeId, is_main: bool) {

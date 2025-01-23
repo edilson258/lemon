@@ -13,8 +13,9 @@ pub fn synthesise_struct_def(
 	fields.collect::<Result<Vec<_>, _>>()
 }
 
-pub fn synthesise_field(field: &ast::FieldType, ctx: &mut Context) -> TyResult<FieldType> {
+pub fn synthesise_field(field: &mut ast::FieldType, ctx: &mut Context) -> TyResult<FieldType> {
 	let name = field.lexeme().to_owned();
 	let type_id = synthesise_ast_type(&field.ast_type, false, ctx)?;
+	field.set_type_id(type_id);
 	Ok(FieldType::new(name, type_id))
 }

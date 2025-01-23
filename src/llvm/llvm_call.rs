@@ -10,11 +10,9 @@ use super::Llvm;
 
 impl Llvm<'_> {
 	pub fn llvm_call(&mut self, call_instr: &ir::CallInstr) {
-		let fn_name = call_instr.fn_id.as_string();
-
-		let llvm_fn = match self.module.get_function(fn_name) {
+		let llvm_fn = match self.module.get_function(&call_instr.fn_id) {
 			Some(llvm_fn) => llvm_fn,
-			None => throw_llvm_error(format!("fn {} not found", fn_name)),
+			None => throw_llvm_error(format!("fn {} not found", call_instr.fn_id)),
 		};
 
 		let mut args: Vec<_> = Vec::with_capacity(call_instr.args.len());

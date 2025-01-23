@@ -19,6 +19,8 @@ impl Checker<'_> {
 		let mut struct_type = StructType::new(lexeme.to_owned());
 		struct_type.with_fields(fields);
 		let type_id = self.ctx.type_store.add_type(struct_type.into());
+		type_def.set_type_id(type_id);
+		type_def.name.set_type_id(type_id);
 		self.ctx.type_store.add_type_by_name(lexeme, type_id);
 		self.ctx.add_value(type_def.lexeme(), type_id, false);
 		Ok(TypeId::UNIT)

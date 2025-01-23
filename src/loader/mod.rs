@@ -1,4 +1,6 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
+
+use rustc_hash::FxHashMap;
 
 use crate::{report::throw_error, source::Source};
 
@@ -15,12 +17,12 @@ impl FileId {
 }
 
 pub struct Loader {
-	sources: HashMap<FileId, Source>,
+	sources: FxHashMap<FileId, Source>,
 }
 
 impl Loader {
 	pub fn new() -> Self {
-		Self { sources: HashMap::new() }
+		Self { sources: FxHashMap::default() }
 	}
 
 	fn validate_extension(&self, ext: Option<&str>) {

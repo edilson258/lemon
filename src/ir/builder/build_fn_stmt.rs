@@ -15,7 +15,7 @@ impl Builder<'_> {
 			return self.build_generics_fns_stmt(fn_stmt);
 		}
 		let ret_id = self.get_type_id(fn_stmt.get_ret_id());
-		let fn_id = ir::FnId::new(fn_stmt.name.lexeme());
+		let fn_id = fn_stmt.name.lexeme().to_string();
 		self.ir_ctx.enter_scope();
 		let binds = self.build_fn_binds(&fn_stmt.params);
 		let fn_native = ir::Fn::new_ln(fn_id, binds, ret_id);
@@ -40,7 +40,7 @@ impl Builder<'_> {
 	pub fn build_generic_fn_stmt(&mut self, fn_stmt: &ast::FnStmt, fn_type: FnType) {
 		let fn_name = fn_stmt.lexeme();
 		let fn_name_hashed = format!("{fn_name}_{}", self.create_hash_type(&fn_type.generics));
-		let fn_id = ir::FnId::new(fn_name_hashed.as_str());
+		let fn_id = fn_name_hashed.as_str().to_string();
 		let ret_id = fn_type.ret;
 		self.ir_ctx.set_ret_type(Some(ret_id));
 		self.ir_ctx.enter_scope();

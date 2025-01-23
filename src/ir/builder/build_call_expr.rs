@@ -5,7 +5,7 @@ use crate::{
 	checker::types::{FnType, TypeId},
 	ir::{
 		ir::{self, IrValue},
-		Bind, FnId, Register,
+		Bind, Register,
 	},
 	report::throw_ir_build_error,
 };
@@ -64,7 +64,7 @@ impl Builder<'_> {
 	}
 
 	#[inline(always)]
-	fn build_callee(&mut self, expr: &ast::CallExpr) -> FnId {
+	fn build_callee(&mut self, expr: &ast::CallExpr) -> String {
 		match expr.callee.as_ref() {
 			ast::Expr::Ident(ident) => self.build_ident_callee(ident, &expr.args_type),
 			_ => todo!(),
@@ -72,16 +72,16 @@ impl Builder<'_> {
 	}
 
 	#[inline(always)]
-	fn build_ident_callee(&mut self, ident: &ast::Ident, args_type: &[TypeId]) -> FnId {
+	fn build_ident_callee(&mut self, ident: &ast::Ident, args_type: &[TypeId]) -> String {
 		let lexeme = ident.lexeme();
 		let monomo_callles = self.type_store.monomorphic_store.get_fns(lexeme);
 		if monomo_callles.is_none() {
-			return ir::FnId::new(lexeme);
+			return lexeme.to_string();
 		}
 		let generics = self.find_generic_fn(&monomo_callles.unwrap(), args_type);
 		if let Some(generics) = generics {
 			let lexeme_hashed = format!("{lexeme}_{}", self.create_hash_type(&generics));
-			return ir::FnId::new(&lexeme_hashed);
+			return lexeme_hashed;
 		}
 		throw_ir_build_error(format!("callee not found '{lexeme}'"));
 	}

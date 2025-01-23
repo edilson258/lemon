@@ -155,10 +155,10 @@ impl<'lex> Parser<'lex> {
 
 		if self.match_token(Token::LBrace) {
 			let kind = ast::TypeDefKind::Struct(self.parse_struct_def()?);
-			return Ok(ast::TypeDefStmt { is_pub: false, name, range, kind });
+			return Ok(ast::TypeDefStmt { is_pub: false, name, type_id: None, range, kind });
 		}
 		let kind = ast::TypeDefKind::Alias(self.parse_type()?);
-		Ok(ast::TypeDefStmt { is_pub: false, name, range, kind })
+		Ok(ast::TypeDefStmt { is_pub: false, name, range, kind, type_id: None })
 	}
 
 	pub fn parse_struct_def(&mut self) -> PResult<'lex, ast::StructType> {
@@ -168,7 +168,7 @@ impl<'lex> Parser<'lex> {
 			let ident = self.parse_ident()?;
 			self.expect(Token::Colon)?;
 			let ast_type = self.parse_type()?;
-			fields.push(ast::FieldType { ident, ast_type, is_pub: false });
+			fields.push(ast::FieldType::new(ident, ast_type, false));
 			if !self.match_token(Token::RBrace) {
 				self.expect(Token::Comma)?;
 			}
