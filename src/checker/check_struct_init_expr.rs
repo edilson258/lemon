@@ -14,6 +14,7 @@ impl Checker<'_> {
 
 		let found_id = found_id.unwrap();
 
+		init.set_type_id(found_id);
 		// remove clone :(
 		let mut found_type = self.get_stored_type(found_id).clone();
 
@@ -48,6 +49,7 @@ impl Checker<'_> {
 			let expect = field_type.type_id;
 			let found = self.infer_type(expect, value)?;
 			self.equal_type_expected(expect, found, field_expr.name.get_range())?;
+			field_expr.name.set_type_id(field_type.type_id);
 		}
 
 		Ok(found_id)

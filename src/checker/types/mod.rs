@@ -98,6 +98,10 @@ impl Type {
 		}
 		None
 	}
+
+	pub fn needs_free(&self) -> bool {
+		matches!(self, Type::Struct(_))
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

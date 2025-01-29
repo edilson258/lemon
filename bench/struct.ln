@@ -1,9 +1,7 @@
-extern fn printf(fmt: str, ...): i32 = {};
-fn println(value: i32) = {
-	printf("%d\n", value);
-}
-
 type Person = {
+  born: i32,
   age: i32,
-  birthday: i32,
+}
+fn main() = {
+  let parson: Person = Person { age: 10, born: 2000 };
 }

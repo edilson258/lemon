@@ -81,7 +81,6 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
 	let mut llvm = Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
 	llvm.compile(&ir);
-
 	if matches.get_flag("llr") {
 		println!("{}", llvm.module.print_to_string().to_string());
 		return;

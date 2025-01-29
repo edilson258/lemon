@@ -114,16 +114,16 @@ pub enum Instr {
 	// store_field struct register, field, dest
 	StoreField(StoreFieldInstr),
 
-	/*
-
-	struct Point
-		field r0: i32
-		field r1: i32
-		field r2: i32
-		field r3: i32
-	*/
 	// cache i32 register -> dest
 	Cache(SetCacheInstr),
+
+	StructInit(StructInitInstr),
+
+	// get_field register, field -> dest
+	GetField(GetFieldInstr),
+
+	// set_field register, field, value
+	SetField(SetFieldInstr),
 
 	// Async Cache
 	// cache_async i32 register -> dest
@@ -136,10 +136,39 @@ pub enum Instr {
 	Call(CallInstr),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct GetFieldInstr {
+	pub self_reg: Register,
+	pub field: Register,
+	pub dest: Register,
+}
+
+impl From<GetFieldInstr> for Instr {
+	fn from(get_field: GetFieldInstr) -> Self {
+		Self::GetField(get_field)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SetFieldInstr {
+	pub struct_reg: Register,
+	pub field: Register,
+	pub value: Register,
+}
+
+impl From<SetFieldInstr> for Instr {
+	fn from(set_field: SetFieldInstr) -> Self {
+		Self::SetField(set_field)
+	}
+}
+
 #[derive(Debug, Clone)]
-pub struct StoreStructInstr {
+pub struct StructInitInstr {
+	pub struct_id: String,
+	// field, value
+	pub binds: Vec<(Register, Bind)>,
+	pub dest: Register,
 	pub type_id: TypeId,
-	pub name: String,
 }
 
 #[derive(Debug, Clone)]

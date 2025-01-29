@@ -7,11 +7,16 @@ use crate::{
 	source::Source,
 };
 
+mod allocate_struct;
 mod bind;
+mod calculate_struct_size;
+mod fill_struct_values;
 mod llvm_block;
 mod llvm_call;
 mod llvm_cmp;
+mod llvm_free;
 mod llvm_function;
+mod llvm_init_struct;
 mod llvm_instr;
 mod llvm_jump;
 mod llvm_math;
@@ -22,6 +27,8 @@ mod llvm_struct;
 mod llvm_type;
 mod llvm_value;
 mod mem;
+mod store_struct_fields;
+
 pub fn create_module_from_source<'ll>(ctx: &'ll Context, source: &Source) -> Module<'ll> {
 	let module = ctx.create_module(source.file_name());
 	module

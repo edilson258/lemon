@@ -36,7 +36,7 @@ impl<'ll> Llvm<'ll> {
 		for block in &ln_fn.blocks {
 			self.llvm_instr_block(block);
 		}
-
+		self.free_end_of_scope();
 		self.llvm_void_ret_value(ln_fn.ret, ln_fn.is_main());
 	}
 

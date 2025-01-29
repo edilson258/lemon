@@ -559,6 +559,7 @@ pub struct StructInitExpr {
 	pub name: Ident,
 	pub fields: Vec<FiledExpr>,
 	pub range: Range, // struct init range
+	pub type_id: Option<TypeId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -571,6 +572,13 @@ pub struct FiledExpr {
 impl StructInitExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
+	}
+
+	pub fn set_type_id(&mut self, type_id: TypeId) {
+		self.type_id = Some(type_id);
+	}
+	pub fn get_type_id(&self) -> Option<TypeId> {
+		self.type_id
 	}
 }
 

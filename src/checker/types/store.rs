@@ -107,8 +107,27 @@ impl TypeStore {
 	pub fn get_display_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
 		let type_value = self.get_type(type_id).unwrap();
-		type_value.display_type(&mut text, self);
+		type_value.display_type(&mut text, self, false);
 		text
+	}
+
+	pub fn get_display_ir_type(&self, type_id: TypeId) -> String {
+		let mut text = String::new();
+		let type_value = self.get_type(type_id).unwrap();
+		type_value.display_ir_type(&mut text, self);
+		text
+	}
+
+	// checks if needs to free
+	pub fn needs_free(&self, type_id: TypeId) -> bool {
+		if type_id.is_known() {
+			return false;
+		}
+		let type_value = self.get_type(type_id).expect("type not found");
+		if let Type::Borrow(borrow) = type_value {
+			return self.needs_free(borrow.value);
+		}
+		type_value.needs_free()
 	}
 }
 

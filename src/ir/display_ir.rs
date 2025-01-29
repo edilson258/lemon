@@ -27,7 +27,7 @@ impl ir::Root {
 
 impl ir::LnFn {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let ret = type_store.get_display_type(self.ret);
+		let ret = type_store.get_display_ir_type(self.ret);
 
 		let args = self.args.iter().map(|param| param.display_ir(type_store));
 		let args = args.collect::<Vec<_>>().join(", ");
@@ -51,7 +51,7 @@ impl ir::ExFn {
 		if self.var_packed {
 			args += ", ..."
 		}
-		let ret = type_store.get_display_type(self.ret);
+		let ret = type_store.get_display_ir_type(self.ret);
 		let instr = if self.args.is_empty() {
 			format!("{} {} -> {}\n", text_green("extern fn"), self.fn_id, ret)
 		} else {
@@ -94,7 +94,7 @@ impl ir::Block {
 
 impl ir::Bind {
 	fn display_ir(&self, type_store: &TypeStore) -> String {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let register = self.register.as_colored();
 		format!("{} {}", register, type_str)
 	}
@@ -130,25 +130,72 @@ impl ir::Instr {
 			ir::Instr::Drop(drop) => drop.display_ir(text),
 			ir::Instr::LoadField(load_field) => load_field.display_ir(type_store, text),
 			ir::Instr::StoreField(store_field) => store_field.display_ir(type_store, text),
+			ir::Instr::StructInit(struct_init) => struct_init.display_ir(type_store, text),
+			ir::Instr::GetField(get_field) => get_field.display_ir(type_store, text),
+			ir::Instr::SetField(set_field) => set_field.display_ir(type_store, text),
 			// ir::Instr::SetCache(set_cache) => set_cache.display_ir(text),
 			// ir::Instr::LoadCache(load_cache) => load_cache.display_ir(text),
 		}
 	}
 }
 
-impl ir::StructInstr {
+impl ir::GetFieldInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		// let type_str = type_store.get_display_type(self.type_id);
-		let instr = format!("{} {} = ", text_green("struct"), self.struct_id);
+		let _ = type_store;
+		let id = self.self_reg.as_colored();
+		let field = self.field.as_colored();
+		let dest = self.dest.as_colored();
+		let instr = format!("get_field {} {} -> {}", id, field, dest);
 		text.push_str(&instr);
 		text.push('\n');
-		for field in self.fields.iter() {
-			let field_type = type_store.get_display_type(field.type_id);
+	}
+}
+
+impl ir::SetFieldInstr {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		let _ = type_store;
+		let id = self.struct_reg.as_colored();
+		let field = self.field.as_colored();
+		let value = self.value.as_colored();
+		let instr = format!("set_field {} {} {}", id, field, value);
+		text.push_str(&instr);
+		text.push('\n');
+	}
+}
+
+impl ir::StructInitInstr {
+	pub fn display_ir(&self, _: &TypeStore, text: &mut String) {
+		let struct_id = self.struct_id.as_str();
+
+		let dest = self.dest.as_colored();
+
+		#[rustfmt::skip]
+		let args = self.binds.iter().map(|(field, bind)| {
+		  format!("{} = {}", field.as_colored(), bind.register.as_colored())
+		}).collect::<Vec<_>>().join(", ");
+
+		let instr = format!("init {} { } -> {}", struct_id, args, dest);
+		text.push_str(&instr);
+		text.push('\n');
+	}
+}
+
+impl ir::StructInstr {
+	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
+		// let type_str = type_store.get_display_ir_type(self.type_id);
+		let instr = format!("{} {} = ", text_green("struct"), self.struct_id);
+		text.push_str(&instr);
+		// text.push('\n');
+		for (pos, field) in self.fields.iter().enumerate() {
+			let field_type = type_store.get_display_ir_type(field.type_id);
 			let register = field.register.as_colored();
-			text.push_str(&format!(" {} {}", field_type, register));
-			text.push('\n');
+			text.push_str(&format!("{} {}", field_type, register));
+			if pos != self.fields.len() - 1 {
+				text.push_str(", ");
+			}
 		}
-		text.push_str(format!(" {}\n", text_green("_")).as_str());
+		// text.push_str(format!(" {}\n", text_green("_")).as_str());
+		text.push('\n');
 		text.push('\n');
 	}
 }
@@ -164,7 +211,7 @@ impl ir::DropInstr {
 
 impl ir::LoadFieldInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_colored();
 		let field = self.field.as_str();
 		let dest = self.dest.as_colored();
@@ -176,7 +223,7 @@ impl ir::LoadFieldInstr {
 
 impl ir::StoreFieldInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_colored();
 		let field = self.field.as_str();
 		let dest = self.dest.as_colored();
@@ -188,7 +235,7 @@ impl ir::StoreFieldInstr {
 
 // impl ir::StoreStructInstr {
 // 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-// 		let type_str = type_store.get_display_type(self.type_id);
+// 		let type_str = type_store.get_display_ir_type(self.type_id);
 // 		let instr = format!("struct {} {} ", type_str, self.name);
 // 		text.push_str(&instr);
 // 		text.push('\n');
@@ -197,7 +244,7 @@ impl ir::StoreFieldInstr {
 
 impl ir::BinaryInstr {
 	pub fn display_ir(&self, operator: &str, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let lhs = self.lhs.as_colored();
 		let rhs = self.rhs.as_colored();
 		let dest = self.dest.as_colored();
@@ -209,7 +256,7 @@ impl ir::BinaryInstr {
 
 impl ir::UnaryInstr {
 	pub fn display_ir(&self, operator: &str, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_colored();
 		let dest = self.dest.as_colored();
 		let instr = format!("{} {} {} -> {}", operator, type_str, value, dest);
@@ -221,7 +268,7 @@ impl ir::UnaryInstr {
 impl ir::JmpIfInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let cond = self.cond.as_colored();
-		let type_str = type_store.get_display_type(TypeId::BOOL);
+		let type_str = type_store.get_display_ir_type(TypeId::BOOL);
 		let l0 = self.l0.as_string();
 		let l1 = self.l1.as_string();
 		let instr = format!("jmp_if {} {} -> {}, {}", type_str, cond, l0, l1);
@@ -250,7 +297,7 @@ impl ir::FreeInstr {
 
 impl ir::OwnInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_colored();
 		let dest = self.dest.as_colored();
 		let instr = format!("own {} {} -> {}", type_str, value, dest);
@@ -260,7 +307,7 @@ impl ir::OwnInstr {
 }
 impl ir::OwnHeapInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_colored();
 		let dest = self.dest.as_colored();
 		let instr = format!("own_heap {} {} -> {} size={}", type_str, value, dest, self.size);
@@ -271,7 +318,7 @@ impl ir::OwnHeapInstr {
 
 impl ir::HeapInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_string();
 		let dest = self.dest.as_colored();
 		let instr = format!("heap {} {} -> {} size={}", type_str, value, dest, self.size);
@@ -281,7 +328,7 @@ impl ir::HeapInstr {
 }
 impl ir::StoreInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let value = self.value.as_string();
 		let dest = self.dest.as_colored();
 		let instr = format!("store {} {} -> {}", type_str, value, dest);
@@ -292,7 +339,7 @@ impl ir::StoreInstr {
 
 impl ir::RetInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let instr = match &self.value {
 			Some(value) => {
 				format!("ret {} {}", type_str, value.as_colored())
@@ -306,7 +353,7 @@ impl ir::RetInstr {
 
 impl ir::CallInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
-		let type_str = type_store.get_display_type(self.type_id);
+		let type_str = type_store.get_display_ir_type(self.type_id);
 		let dest = self.dest.as_colored();
 		let args = self.args.iter().map(|r| r.display_ir(type_store)).collect::<Vec<_>>().join(", ");
 		let instr = format!("call {} {} {} -> {}", type_str, self.fn_id, args, dest);

@@ -91,7 +91,7 @@ impl<'ckr> Checker<'ckr> {
 
 	pub fn display_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
-		type_id.display_type(&mut text, &self.ctx.type_store);
+		type_id.display_type(&mut text, &self.ctx.type_store, false);
 		text
 	}
 	pub fn display_type_value(&self, type_value: &Type) -> String {
@@ -99,15 +99,15 @@ impl<'ckr> Checker<'ckr> {
 			return format!("struct {}", struct_type.name);
 		}
 		let mut text = String::new();
-		type_value.display_type(&mut text, &self.ctx.type_store);
+		type_value.display_type(&mut text, &self.ctx.type_store, false);
 		text
 	}
 
 	pub fn display_double_type(&self, left: TypeId, right: TypeId) -> (String, String) {
 		let mut left_text = String::new();
 		let mut right_text = String::new();
-		left.display_type(&mut left_text, &self.ctx.type_store);
-		right.display_type(&mut right_text, &self.ctx.type_store);
+		left.display_type(&mut left_text, &self.ctx.type_store, false);
+		right.display_type(&mut right_text, &self.ctx.type_store, false);
 		(left_text, right_text)
 	}
 }

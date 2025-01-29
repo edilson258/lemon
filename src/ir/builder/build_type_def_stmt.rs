@@ -15,14 +15,17 @@ impl Builder<'_> {
 	}
 
 	fn build_struct_type(&mut self, type_def: &ast::StructType, ident: &ast::Ident) {
-		let fields = type_def.fields.iter().map(|field| self.build_field_type(field)).collect();
+		let mut fields = Vec::with_capacity(type_def.fields.len());
+		for field in type_def.fields.iter() {
+			let field_bind = self.build_field_type(field);
+			self.ir_ctx.add_struct_field(ident.lexeme(), field.lexeme(), field_bind.register);
+			fields.push(field_bind);
+		}
 		let dest = self.ir_ctx.new_register();
 		// let type_id = self.get_type_id(ident.get_type_id());
 		let struct_id = ident.lexeme().to_owned();
-
 		let instr = ir::StructInstr { struct_id, fields };
 		self.add_struct(instr);
-
 		self.ir_ctx.add_ir_value(ident.lexeme());
 	}
 

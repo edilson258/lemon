@@ -1,14 +1,44 @@
 use std::mem;
 
+use inkwell::values::PointerValue;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
 	checker::types::TypeId,
-	ir::ir::{self, Block, BlockId},
+	ir::{
+		ir::{self, Block, BlockId},
+		Register,
+	},
 	report::throw_ir_build_error,
 };
 
 type Scope = FxHashMap<String, ir::Register>;
+
+struct StructInfoTable {
+	pub fields: FxHashMap<String, Register>,
+	// pub methods: FxHashMap<String, FnId>,
+}
+impl StructInfoTable {
+	pub fn new() -> Self {
+		let fields = FxHashMap::default();
+		// let methods = FxHashMap::default();
+		Self { fields }
+	}
+
+	pub fn add_field(&mut self, field: &str, register: Register) {
+		self.fields.insert(field.to_string(), register);
+	}
+
+	pub fn get_field(&self, field: &str) -> Option<&Register> {
+		self.fields.get(field)
+	}
+}
+
+impl Default for StructInfoTable {
+	fn default() -> Self {
+		Self::new()
+	}
+}
 
 pub struct IrContext {
 	register: ir::Register,
@@ -17,6 +47,8 @@ pub struct IrContext {
 	types: FxHashMap<ir::Register, TypeId>,
 	values: FxHashSet<String>,
 	blocks: Vec<Block>,
+	struct_table: FxHashMap<String, StructInfoTable>,
+	struct_register: FxHashMap<Register, String>,
 	block_id: BlockId,
 }
 impl Default for IrContext {
@@ -33,9 +65,75 @@ impl IrContext {
 		let blocks = vec![];
 		let types = FxHashMap::default();
 		let values = FxHashSet::default();
-		Self { register, scopes, types, blocks, block_id, ret_type: None, values }
+		let struct_table = FxHashMap::default();
+		let ret_type = None;
+		let struct_register = FxHashMap::default();
+		Self {
+			register,
+			scopes,
+			types,
+			blocks,
+			block_id,
+			ret_type,
+			values,
+			struct_table,
+			struct_register,
+		}
 	}
 
+	// =================
+	// structs
+	//
+
+	pub fn register_struct(&mut self, self_value: Register, atual: Register) {
+		if let Some(struct_name) = self.get_struct_register(self_value) {
+			self.struct_register.insert(atual, struct_name.to_owned());
+		}
+	}
+
+	pub fn register_struct_name(&mut self, register: Register, name: &str) {
+		self.struct_register.insert(register, name.into());
+	}
+
+	pub fn get_struct_register(&self, register: Register) -> Option<&str> {
+		self.struct_register.get(&register).map(|s| s.as_str())
+	}
+
+	pub fn resolve_register_struct(&self, register: Register) -> String {
+		if let Some(name) = self.get_struct_register(register) {
+			return name.to_string();
+		}
+		throw_ir_build_error(format!("struct register '{}' not found", register.as_string()));
+	}
+
+	pub fn add_struct(&mut self, name: &str) {
+		self.struct_table.insert(name.to_string(), StructInfoTable::new());
+	}
+
+	pub fn add_struct_field(&mut self, name: &str, field: &str, register: Register) {
+		if !self.struct_table.contains_key(name) {
+			self.add_struct(name);
+		}
+		self.struct_table.get_mut(name).unwrap().add_field(field, register);
+	}
+
+	pub fn get_struct_field_by_register(&self, reg: Register, filed: &str) -> Register {
+		let self_name = self.resolve_register_struct(reg);
+		self.get_struct_field_register(&self_name, filed)
+	}
+
+	pub fn get_struct_field_register(&self, name: &str, filed: &str) -> Register {
+		if let Some(struct_table) = self.struct_table.get(name) {
+			if let Some(register) = struct_table.get_field(filed) {
+				return *register;
+			}
+			throw_ir_build_error(format!("field '{}' not found in struct '{}'", filed, name));
+		}
+		throw_ir_build_error(format!("struct '{}' not found", name));
+	}
+
+	// ===========
+	//
 	pub fn add_ir_value(&mut self, name: &str) {
 		self.values.insert(name.to_string());
 	}

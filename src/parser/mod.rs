@@ -324,14 +324,6 @@ impl<'lex> Parser<'lex> {
 
 	fn parse_for_stmt(&mut self) -> PResult<'lex, ast::ForStmt> {
 		todo!("parse for stmt");
-		// let range = self.expect(Token::For)?;
-		// let value = self.parse_ident()?;
-		// self.expect(Token::In)?;
-		// let iterable = Box::new(self.parse_expr(MIN_PDE)?);
-		// self.expect(Token::LBrace)?;
-		// let body = self.parse_stmt()?;
-		// self.expect(Token::RBrace)?;
-		// Ok(ast::Stmt::For(ast::ForStmt { value, index: None, iterable, body, range }))
 	}
 
 	fn parse_expr(&mut self, min_pde: u8) -> PResult<'lex, ast::Expr> {
@@ -442,7 +434,7 @@ impl<'lex> Parser<'lex> {
 				}
 			}
 			range.merge(&self.expect(Token::RBrace)?);
-			let init = ast::StructInitExpr { name, fields, range };
+			let init = ast::StructInitExpr { name, fields, range, type_id: None };
 			return Ok(ast::Expr::StructInit(init));
 		}
 		//

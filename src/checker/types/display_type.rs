@@ -4,7 +4,7 @@ use super::{
 };
 
 impl Type {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		match self {
 			Type::Void => *text += "void",
 			Type::Bool => *text += "bool",
@@ -15,13 +15,16 @@ impl Type {
 			Type::Any => *text += "any",
 			Type::Number(number) => number.display_type(text),
 			Type::NumRange(num_range) => num_range.display_type(text),
-			Type::Infer(infer) => infer.display_type(text, type_store),
-			Type::Borrow(borrow) => borrow.display_type(text, type_store),
-			Type::Const(const_type) => const_type.display_type(text, type_store),
-			Type::Fn(fn_type) => fn_type.display_type(text, type_store),
-			Type::ExternFn(extern_fn_type) => extern_fn_type.display_type(text, type_store),
-			Type::Struct(struct_type) => struct_type.display_type(text, type_store),
+			Type::Infer(infer) => infer.display_type(text, type_store, omit),
+			Type::Borrow(borrow) => borrow.display_type(text, type_store, omit),
+			Type::Const(const_type) => const_type.display_type(text, type_store, omit),
+			Type::Fn(fn_type) => fn_type.display_type(text, type_store, omit),
+			Type::ExternFn(extern_fn_type) => extern_fn_type.display_type(text, type_store, omit),
+			Type::Struct(struct_type) => struct_type.display_type(text, type_store, omit),
 		}
+	}
+	pub fn display_ir_type(&self, text: &mut String, type_store: &TypeStore) {
+		self.display_type(text, type_store, true);
 	}
 }
 
@@ -45,7 +48,11 @@ impl Number {
 }
 
 impl StructType {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
+		if omit {
+			*text += &self.name;
+			return;
+		}
 		*text += "struct ";
 		*text += &self.name;
 		// if !self.generics.is_empty() {
@@ -104,51 +111,51 @@ impl MethodType {
 }
 
 impl BorrowType {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		*text += "&";
 		if self.mutable {
 			*text += "mut ";
 		}
 		let value = type_store.get_type(self.value).unwrap();
-		value.display_type(text, type_store);
+		value.display_type(text, type_store, omit);
 	}
 }
 impl ConstType {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		// match self.kind {
 		// 	ConstKind::Fn => *text += "fn",
 		// 	ConstKind::Del => *text += "del",
 		// }
 		let type_value = type_store.get_type(self.value).unwrap();
-		type_value.display_type(text, type_store);
+		type_value.display_type(text, type_store, omit);
 	}
 }
 
 impl FnType {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		*text += "fn(";
 		for (i, arg) in self.args.iter().enumerate() {
 			if i > 0 {
 				*text += ", ";
 			}
 			let type_value = type_store.get_type(*arg).unwrap();
-			type_value.display_type(text, type_store);
+			type_value.display_type(text, type_store, omit);
 		}
 		*text += ") -> ";
 		let type_value = type_store.get_type(self.ret).unwrap();
-		type_value.display_type(text, type_store);
+		type_value.display_type(text, type_store, omit);
 	}
 }
 
 impl ExternFnType {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		*text += "extern fn(";
 		for (i, arg) in self.args.iter().enumerate() {
 			if i > 0 {
 				*text += ", ";
 			}
 			let type_value = type_store.get_type(*arg).unwrap();
-			type_value.display_type(text, type_store);
+			type_value.display_type(text, type_store, omit);
 		}
 
 		if self.var_packed {
@@ -156,7 +163,7 @@ impl ExternFnType {
 		}
 		*text += ") -> ";
 		let type_value = type_store.get_type(self.ret).unwrap();
-		type_value.display_type(text, type_store);
+		type_value.display_type(text, type_store, omit);
 	}
 }
 
@@ -173,17 +180,17 @@ impl NumRange {
 }
 
 impl InferType {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		*text += &self.id;
 		if let Some(extend) = &self.extend {
 			*text += ": ";
-			extend.display_type(text, type_store);
+			extend.display_type(text, type_store, omit);
 		}
 	}
 }
 
 impl TypeId {
-	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		match *self {
 			TypeId::VOID => *text += "void",
 			TypeId::BOOL => *text += "bool",
@@ -204,7 +211,7 @@ impl TypeId {
 			TypeId::F64 => *text += "f64",
 			_ => {
 				let type_value = type_store.get_type(*self).unwrap();
-				type_value.display_type(text, type_store);
+				type_value.display_type(text, type_store, omit);
 			}
 		}
 	}

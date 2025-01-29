@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_variables)]
 
-use inkwell::values::BasicValueEnum;
+use inkwell::{types::StructType, values::BasicValueEnum};
 
 use crate::{
 	checker::types::TypeId,
@@ -9,9 +9,31 @@ use crate::{
 
 use super::Llvm;
 impl<'ll> Llvm<'ll> {
+	pub fn llvm_own_struct(&mut self, instr: &ir::OwnInstr, llvm_type: StructType<'ll>) {
+		// ref pointer to dest using  Bitcast... check if this is the best way to represent owner without overhead
+		// let adress = self.ctx.ptr_type(AddressSpace::default());
+		// let ptr = *self.stack.get_value(instr.value);
+		// #[rustfmt::skip]
+		// let dest_ptr = self.builder.build_bit_cast(ptr, adress, &instr.dest.as_string()).unwrap_or_else(|_| {
+		// let error = format!("failed to cast {} to {}", instr.value.as_string(), instr.dest.as_string());
+		// 	throw_llvm_error(error);
+		// });
+		// self.stack.set_value(instr.dest, dest_ptr);
+
+		// // call free
+
+		// let free_fn = self.get_free_fun();
+		// let temp = self.stack.get_temp_reg();
+		// self.builder.build_call(free_fn, &[dest_ptr.into()], &temp).unwrap();
+	}
+
 	// own
 	//
 	pub fn llvm_own(&mut self, instr: &ir::OwnInstr) {
+		if let Some(llvm_type) = self.stack.get_struct_type(instr.type_id) {
+			self.llvm_own_struct(instr, *llvm_type);
+			return;
+		}
 		let value = self.get_value_or_load(instr.value, instr.type_id);
 		if self.stack.has_value(instr.dest) {
 			let ptr = self.stack.get_ptr_value(instr.dest);
@@ -54,6 +76,10 @@ impl<'ll> Llvm<'ll> {
 	//
 	pub fn llvm_load(&mut self, instr: &ir::UnaryInstr) {
 		let ptr = self.stack.get_ptr_value(instr.value);
+		// if let Some(type_id) = self.stack.get_struct_type(instr.type_id) {
+		// 	let value = self.load(t, ptr, &instr.dest.as_string());
+		// 	self.stack.set_value(instr.dest, value);
+		// }
 		let t = self.resolve_llvm_type(instr.type_id);
 		let value = self.load(t, ptr, &instr.dest.as_string());
 		self.stack.set_value(instr.dest, value);
@@ -79,7 +105,7 @@ impl<'ll> Llvm<'ll> {
 		if self.stack.has_ptr_value(reg) {
 			let ptr = self.stack.get_ptr_value(reg);
 			let t = self.resolve_llvm_type(type_id);
-			let temp = self.stack.get_temp_reg();
+			let temp = self.stack.temp_register();
 			return self.load(t, ptr, &temp);
 		}
 		self.stack.get_basic_value(reg)

@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 use inkwell::{
 	basic_block::BasicBlock,
+	types::StructType,
 	values::{BasicValueEnum, PointerValue},
 };
 use rustc_hash::FxHashMap;
 
 use crate::{
-	ir::{self},
+	checker::types::TypeId,
+	ir::{self, Register},
 	report::throw_llvm_error,
 };
 
@@ -15,23 +17,52 @@ pub struct Stack<'ll> {
 	pub structs: FxHashMap<String, FxHashMap<ir::Register, usize>>,
 	pub global_values: FxHashMap<ir::Register, BasicValueEnum<'ll>>,
 	pub blocks: FxHashMap<ir::BlockId, BasicBlock<'ll>>,
-	pub temp_reg_count: usize,
+	pub llvm_type_store: FxHashMap<TypeId, StructType<'ll>>,
+	frees: FxHashMap<Register, PointerValue<'ll>>,
+	pub temp_count: usize,
 }
 
 impl<'ll> Stack<'ll> {
 	pub fn new() -> Self {
-		Self {
-			values: FxHashMap::default(),
-			blocks: FxHashMap::default(),
-			structs: FxHashMap::default(),
-			global_values: FxHashMap::default(),
-			temp_reg_count: 0,
-		}
+		let frees = FxHashMap::default();
+		let values = FxHashMap::default();
+		let blocks = FxHashMap::default();
+		let structs = FxHashMap::default();
+		let global_values = FxHashMap::default();
+		let llvm_type_store = FxHashMap::default();
+		let temp_count = 0;
+		Self { frees, values, blocks, structs, global_values, llvm_type_store, temp_count }
+	}
+	// trance pointer
+	pub fn set_free_ptr(&mut self, register: Register, pointer: PointerValue<'ll>) {
+		self.frees.insert(register, pointer);
 	}
 
-	pub fn get_temp_reg(&mut self) -> String {
-		let reg = format!("t{}", self.temp_reg_count);
-		self.temp_reg_count += 1;
+	pub fn get_free_ptr(&self, register: Register) -> Option<&PointerValue<'ll>> {
+		self.frees.get(&register)
+	}
+
+	pub fn take_frees(&mut self) -> FxHashMap<Register, PointerValue<'ll>> {
+		let mut frees = FxHashMap::default();
+		std::mem::swap(&mut frees, &mut self.frees);
+		frees
+	}
+
+	pub fn reset_frees(&mut self) {
+		self.frees.clear();
+	}
+
+	pub fn get_struct_type(&self, type_id: TypeId) -> Option<&StructType<'ll>> {
+		self.llvm_type_store.get(&type_id)
+	}
+
+	pub fn set_struct_type(&mut self, type_id: TypeId, struct_type: StructType<'ll>) {
+		self.llvm_type_store.insert(type_id, struct_type);
+	}
+
+	pub fn temp_register(&mut self) -> String {
+		let reg = format!("ter{}", self.temp_count);
+		self.temp_count += 1;
 		reg
 	}
 
@@ -40,8 +71,8 @@ impl<'ll> Stack<'ll> {
 		fields.insert(reg, index);
 	}
 
-	pub fn get_struct_field(&self, struct_id: String, reg: ir::Register) -> Option<usize> {
-		let fields = self.structs.get(&struct_id)?;
+	pub fn get_struct_field(&self, struct_id: &str, reg: ir::Register) -> Option<usize> {
+		let fields = self.structs.get(struct_id)?;
 		fields.get(&reg).copied()
 	}
 
@@ -99,7 +130,7 @@ impl<'ll> Stack<'ll> {
 	pub fn get_value(&self, reg: ir::Register) -> &BasicValueEnum<'ll> {
 		match self.values.get(&reg) {
 			Some(value) => value,
-			None => throw_llvm_error(format!("not found '{}'", reg.as_string())),
+			None => throw_llvm_error(format!("not found value at '{}'", reg.as_string())),
 		}
 	}
 }
