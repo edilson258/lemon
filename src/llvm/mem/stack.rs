@@ -15,6 +15,7 @@ use crate::{
 pub struct Stack<'ll> {
 	pub values: FxHashMap<ir::Register, BasicValueEnum<'ll>>,
 	pub structs: FxHashMap<String, FxHashMap<ir::Register, usize>>,
+	pub struct_table_type: FxHashMap<ir::Register, StructType<'ll>>,
 	pub global_values: FxHashMap<ir::Register, BasicValueEnum<'ll>>,
 	pub blocks: FxHashMap<ir::BlockId, BasicBlock<'ll>>,
 	pub llvm_type_store: FxHashMap<TypeId, StructType<'ll>>,
@@ -31,8 +32,27 @@ impl<'ll> Stack<'ll> {
 		let global_values = FxHashMap::default();
 		let llvm_type_store = FxHashMap::default();
 		let temp_count = 0;
-		Self { frees, values, blocks, structs, global_values, llvm_type_store, temp_count }
+		let struct_table_type = FxHashMap::default();
+		Self {
+			frees,
+			values,
+			blocks,
+			structs,
+			global_values,
+			llvm_type_store,
+			temp_count,
+			struct_table_type,
+		}
 	}
+
+	pub fn set_register_type(&mut self, register: Register, struct_type: StructType<'ll>) {
+		self.struct_table_type.insert(register, struct_type);
+	}
+
+	pub fn get_register_type(&self, register: Register) -> Option<&StructType<'ll>> {
+		self.struct_table_type.get(&register)
+	}
+
 	// trance pointer
 	pub fn set_free_ptr(&mut self, register: Register, pointer: PointerValue<'ll>) {
 		self.frees.insert(register, pointer);

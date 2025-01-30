@@ -453,7 +453,7 @@ impl<'lex> Parser<'lex> {
 	fn parse_member_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let range = self.expect(Token::Dot)?;
 		let method = self.parse_ident()?;
-		let member = ast::MemberExpr { left: Box::new(expr), method, range };
+		let member = ast::MemberExpr { left: Box::new(expr), method, range, method_type: None };
 		Ok(ast::Expr::Member(member))
 	}
 

@@ -10,25 +10,11 @@ use crate::{
 use super::Llvm;
 impl<'ll> Llvm<'ll> {
 	pub fn llvm_own_struct(&mut self, instr: &ir::OwnInstr, llvm_type: StructType<'ll>) {
-		// ref pointer to dest using  Bitcast... check if this is the best way to represent owner without overhead
-		// let adress = self.ctx.ptr_type(AddressSpace::default());
-		// let ptr = *self.stack.get_value(instr.value);
-		// #[rustfmt::skip]
-		// let dest_ptr = self.builder.build_bit_cast(ptr, adress, &instr.dest.as_string()).unwrap_or_else(|_| {
-		// let error = format!("failed to cast {} to {}", instr.value.as_string(), instr.dest.as_string());
-		// 	throw_llvm_error(error);
-		// });
-		// self.stack.set_value(instr.dest, dest_ptr);
-
-		// // call free
-
-		// let free_fn = self.get_free_fun();
-		// let temp = self.stack.get_temp_reg();
-		// self.builder.build_call(free_fn, &[dest_ptr.into()], &temp).unwrap();
+		let value = self.stack.get_ptr_value(instr.value);
+		self.stack.set_register_type(instr.dest, llvm_type);
+		self.stack.set_value(instr.dest, value.into());
 	}
 
-	// own
-	//
 	pub fn llvm_own(&mut self, instr: &ir::OwnInstr) {
 		if let Some(llvm_type) = self.stack.get_struct_type(instr.type_id) {
 			self.llvm_own_struct(instr, *llvm_type);

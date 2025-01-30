@@ -16,6 +16,7 @@ mod llvm_call;
 mod llvm_cmp;
 mod llvm_free;
 mod llvm_function;
+mod llvm_get_field;
 mod llvm_init_struct;
 mod llvm_instr;
 mod llvm_jump;
@@ -53,6 +54,7 @@ impl<'ll> Llvm<'ll> {
 		for struct_ir in root.structs.iter() {
 			self.llvm_struct(struct_ir);
 		}
+
 		for fn_ir in root.fns.iter() {
 			self.llvm_function(fn_ir);
 			self.stack.block_clear();

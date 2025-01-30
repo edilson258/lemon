@@ -9,6 +9,7 @@ impl Checker<'_> {
 		self.ctx.enter_scope(ScopeType::new_accessor_method(self_type));
 		let ret = self.check_ident_expr(&mut member_expr.method)?;
 		self.ctx.exit_scope();
+		member_expr.set_method_type(ret);
 		Ok(ret)
 	}
 }

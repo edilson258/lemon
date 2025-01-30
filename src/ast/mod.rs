@@ -652,11 +652,19 @@ impl AssociateExpr {
 pub struct MemberExpr {
 	pub left: Box<Expr>,
 	pub method: Ident,
+	pub method_type: Option<TypeId>,
 	pub range: Range, // .
 }
 impl MemberExpr {
 	pub fn get_range(&self) -> Range {
 		self.left.get_range().merged_with(&self.method.get_range())
+	}
+
+	pub fn set_method_type(&mut self, method_type: TypeId) {
+		self.method_type = Some(method_type);
+	}
+	pub fn get_method_type(&self) -> Option<TypeId> {
+		self.method_type
 	}
 }
 

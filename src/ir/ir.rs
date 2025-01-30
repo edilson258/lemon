@@ -140,6 +140,7 @@ pub enum Instr {
 pub struct GetFieldInstr {
 	pub self_reg: Register,
 	pub field: Register,
+	pub field_type: TypeId,
 	pub dest: Register,
 }
 
