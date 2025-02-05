@@ -13,51 +13,17 @@ use crate::{
 use super::Builder;
 
 impl Builder<'_> {
-	// pub fn call_built_in(&mut self, expr: &ast::CallExpr, dest: Register) -> Option<Register> {
-	// 	let fn_id = self.build_callee(expr);
-	// 	let args = self.build_args(&expr.args, &expr.args_type);
-
-	// 	let mut type_id = None;
-	// 	if let Some(first) = args.first() {
-	// 		type_id = self.ir_ctx.get_type(first.register);
-	// 	}
-	// 	match fn_id.as_string() {
-	// 		"is_float" => {
-	// 			let value = type_id.map(|type_id| type_id.is_float()).unwrap_or(false).into();
-	// 			let instr = ir::StoreInstr { type_id: TypeId::BOOL, value, dest };
-	// 			self.ir_ctx.add_instr(ir::Instr::Store(instr));
-	// 			Some(dest)
-	// 		}
-	// 		"is_int" => {
-	// 			let value = type_id.map(|type_id| type_id.is_int()).unwrap_or(false).into();
-	// 			let instr = ir::StoreInstr { type_id: TypeId::BOOL, value, dest };
-	// 			self.ir_ctx.add_instr(ir::Instr::Store(instr));
-	// 			Some(dest)
-	// 		}
-	// 		"is_str" => {
-	// 			let value = type_id.map(|type_id| type_id.is_str()).unwrap_or(false).into();
-	// 			let instr = ir::StoreInstr { type_id: TypeId::BOOL, value, dest };
-	// 			self.ir_ctx.add_instr(ir::Instr::Store(instr));
-	// 			Some(dest)
-	// 		}
-	// 		"is_char" => {
-	// 			let value = type_id.map(|type_id| type_id.is_char()).unwrap_or(false).into();
-	// 			let instr = ir::StoreInstr { type_id: TypeId::BOOL, value, dest };
-	// 			self.ir_ctx.add_instr(ir::Instr::Store(instr));
-	// 			Some(dest)
-	// 		}
-	// 		_ => None,
-	// 	}
-	// }
-
 	pub fn build_call_expr(&mut self, expr: &ast::CallExpr) -> Register {
 		let dest = self.ir_ctx.new_register();
-		// if let Some(dest) = self.call_built_in(expr, dest) {
-		// 	return dest;
-		// }
 		let fn_id = self.build_callee(expr);
 		let args = self.build_args(&expr.args, &expr.args_type);
 		let type_id = self.get_type_id(expr.get_type_id());
+
+		// todo: make it easier
+		if let Some(owner) = self.ir_ctx.get_ret_owner() {
+			self.ir_ctx.register_struct(*owner, dest);
+		}
+
 		let instr = ir::CallInstr { type_id, fn_id, args, dest };
 		self.ir_ctx.add_instr(ir::Instr::Call(instr));
 		dest
@@ -67,8 +33,23 @@ impl Builder<'_> {
 	fn build_callee(&mut self, expr: &ast::CallExpr) -> String {
 		match expr.callee.as_ref() {
 			ast::Expr::Ident(ident) => self.build_ident_callee(ident, &expr.args_type),
-			_ => todo!(),
+			ast::Expr::Associate(associate) => self.build_associate_callee(associate),
+			ast::Expr::Member(member) => self.build_member_callee(member),
+			_ => todo!("callee not found {:?}", expr.callee),
 		}
+	}
+
+	fn build_member_callee(&mut self, member: &ast::MemberExpr) -> String {
+		let self_type = self.get_type_id(member.left_type);
+		let self_name = self.type_store.get_struct_name(self_type);
+		self.create_bind_method_name(self_name, member.method.lexeme())
+	}
+
+	fn build_associate_callee(&mut self, associate: &ast::AssociateExpr) -> String {
+		let method = associate.method.lexeme();
+		let self_type = self.get_type_id(associate.left_type);
+		let self_name = self.type_store.get_struct_name(self_type);
+		self.create_bind_method_name(self_name, method)
 	}
 
 	#[inline(always)]
@@ -104,7 +85,6 @@ impl Builder<'_> {
 				Some(type_id) => type_id,
 				None => self.ir_ctx.get_type(reg).expect("type not found"),
 			};
-
 			binds.push(Bind::new(reg, *arg_type));
 		}
 		binds

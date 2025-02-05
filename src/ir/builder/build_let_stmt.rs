@@ -8,15 +8,13 @@ impl Builder<'_> {
 		let type_id = self.get_type_id(let_stmt.get_type_id());
 		let value = self.build_expr(&let_stmt.expr);
 		let register = self.ir_ctx.new_register();
-
-		self.ir_ctx.register_struct(value, register);
-
 		if type_id.is_known() {
-			// we don't need to transfer ownership jus copy
+			// we don't need to transfer ownership just copy
 			let value = value.into();
 			let instr = ir::StoreInstr { type_id, value, dest: register };
 			self.ir_ctx.add_instr(instr.into());
 		} else {
+			self.ir_ctx.register_struct(value, register);
 			let instr = ir::OwnInstr { type_id, value, dest: register };
 			self.ir_ctx.add_instr(instr.into());
 		}

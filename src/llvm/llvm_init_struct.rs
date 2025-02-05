@@ -26,8 +26,10 @@ impl Llvm<'_> {
 		let struct_size = self.calculate_struct_size(struct_type);
 		let struct_ptr = self.allocate_struct(struct_size, &instr.dest);
 
-		self.store_struct_fields(&final_values, struct_ptr, struct_type);
-
+		final_values.iter().enumerate().for_each(|(at, value)| {
+			self.store_struct_field(struct_type, struct_ptr, *value, at);
+		});
+		self.stack.set_register_type(instr.dest, struct_type);
 		self.stack.set_value(instr.dest, struct_ptr.into());
 	}
 }

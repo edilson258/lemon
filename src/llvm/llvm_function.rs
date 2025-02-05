@@ -36,7 +36,6 @@ impl<'ll> Llvm<'ll> {
 		for block in &ln_fn.blocks {
 			self.llvm_instr_block(block);
 		}
-		self.free_end_of_scope();
 		self.llvm_void_ret_value(ln_fn.ret, ln_fn.is_main());
 	}
 
@@ -50,6 +49,7 @@ impl<'ll> Llvm<'ll> {
 		if type_id.is_unit() || type_id.is_void() {
 			if is_main {
 				let sucess = self.ctx.i32_type().const_int(0, false);
+				self.free_end_of_scope();
 				if let Err(err) = self.builder.build_return(Some(&sucess)) {
 					throw_llvm_error(format!("void return, error: {}", err));
 				}
@@ -80,8 +80,16 @@ impl<'ll> Llvm<'ll> {
 	) -> FunctionType<'ll> {
 		let mut param_types: Vec<_> = Vec::with_capacity(binds.len());
 		for param in binds {
+			if let Some(struct_type) = self.try_find_struct_type(param.type_id) {
+				param_types.push(struct_type.into());
+				continue;
+			}
 			let param_type = self.resolve_llvm_type(param.type_id);
 			param_types.push(param_type.into());
+		}
+
+		if let Some(struct_type) = self.try_find_struct_type(ret) {
+			return struct_type.fn_type(&param_types, is_packed);
 		}
 		if let TypeId::UNIT = ret {
 			return self.ctx.void_type().fn_type(&param_types, is_packed);

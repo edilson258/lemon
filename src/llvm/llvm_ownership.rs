@@ -5,20 +5,38 @@ use inkwell::{types::StructType, values::BasicValueEnum};
 use crate::{
 	checker::types::TypeId,
 	ir::{self, Register},
+	report::throw_llvm_error,
 };
 
 use super::Llvm;
 impl<'ll> Llvm<'ll> {
 	pub fn llvm_own_struct(&mut self, instr: &ir::OwnInstr, llvm_type: StructType<'ll>) {
-		let value = self.stack.get_ptr_value(instr.value);
-		self.stack.set_register_type(instr.dest, llvm_type);
-		self.stack.set_value(instr.dest, value.into());
+		let value = *self.stack.get_value(instr.value);
+		if value.is_pointer_value() {
+			self.stack.set_register_type(instr.dest, llvm_type);
+			return self.stack.set_value(instr.dest, value);
+		}
+
+		let value_type = value.get_type();
+		if value_type.is_struct_type() {
+			let struct_type = value_type.into_struct_type();
+			let struct_size = self.calculate_struct_size(struct_type);
+			let ptr = self.allocate_struct(struct_size, &instr.dest);
+			match self.builder.build_store(ptr, value) {
+				#[rustfmt::skip]
+				Ok(sucess) => sucess.set_alignment(4).unwrap_or_else(|err| {
+					throw_llvm_error(format!("store error: {}", err))
+				}),
+				Err(err) => throw_llvm_error(format!("store error: {}", err)),
+			}
+			self.stack.set_register_type(instr.dest, llvm_type);
+			self.stack.set_value(instr.dest, ptr.into());
+		}
 	}
 
 	pub fn llvm_own(&mut self, instr: &ir::OwnInstr) {
 		if let Some(llvm_type) = self.stack.get_struct_type(instr.type_id) {
-			self.llvm_own_struct(instr, *llvm_type);
-			return;
+			return self.llvm_own_struct(instr, *llvm_type);
 		}
 		let value = self.get_value_or_load(instr.value, instr.type_id);
 		if self.stack.has_value(instr.dest) {
@@ -76,8 +94,7 @@ impl<'ll> Llvm<'ll> {
 	pub fn llvm_store(&mut self, instr: &ir::StoreInstr) {
 		let basic_value = self.get_basic_value(&instr.value);
 		if instr.type_id.is_string() || instr.type_id.is_str() {
-			self.stack.set_global_value(instr.dest, basic_value);
-			return;
+			return self.stack.set_global_value(instr.dest, basic_value);
 		}
 		self.alloc_and_store(instr.type_id, basic_value, instr.dest);
 	}

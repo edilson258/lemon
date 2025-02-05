@@ -23,6 +23,7 @@ impl Checker<'_> {
 
 		for (bind, bind_type_id) in fn_stmt.params.iter().zip(fn_arg_types.iter()) {
 			let type_value = self.get_stored_type(*bind_type_id);
+			let lexeme = bind.lexeme();
 			self.ctx.add_value(bind.lexeme(), *bind_type_id, type_value.is_borrow_mut());
 		}
 
@@ -42,6 +43,8 @@ impl Checker<'_> {
 			if struct_type.has_fn(fn_name) {
 				return Err(SyntaxErr::redefine_fn_in_same_scope(fn_name, range));
 			}
+			// todo: check ir is associated like no self is passed
+			struct_type.add_fn(fn_name.to_string(), type_id);
 			struct_type.add_associate(fn_name.to_string(), type_id);
 			return Ok(());
 		}

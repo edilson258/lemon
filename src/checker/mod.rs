@@ -82,6 +82,18 @@ impl<'ckr> Checker<'ckr> {
 		}
 	}
 
+	pub fn get_stored_type_without_borrow(&self, type_id: TypeId) -> &Type {
+		match self.ctx.type_store.get_type(type_id) {
+			Some(type_value) => {
+				if let Type::Borrow(borrow) = type_value {
+					return self.get_stored_type_without_borrow(borrow.value);
+				}
+				type_value
+			}
+			None => panic!("error: type not found"), // TODO: error handling
+		}
+	}
+
 	pub fn get_stored_mut_type(&mut self, type_id: TypeId) -> &mut Type {
 		match self.ctx.type_store.get_mut_type(type_id) {
 			Some(type_value) => type_value,

@@ -48,7 +48,6 @@ pub enum SyntaxErr<'tce> {
 	// const errors
 	ConstOutsideGlobalScope { range: Range },
 	ConstRedefinition { range: Range },
-	ConstRequiredTypeNotation { range: Range },
 	// type alias / struct / enum...  errors
 	NotFoundType { name: &'tce str, range: Range },
 
@@ -73,10 +72,6 @@ impl<'tce> SyntaxErr<'tce> {
 
 	pub fn const_redefinition(range: Range) -> Diag {
 		Self::ConstRedefinition { range }.into()
-	}
-
-	pub fn const_required_type_notation(range: Range) -> Diag {
-		Self::ConstRequiredTypeNotation { range }.into()
 	}
 
 	pub fn immutable(name: &'tce str, range: Range) -> Diag {
@@ -310,10 +305,6 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 			}
 			SyntaxErr::ConstRedefinition { range } => {
 				let text = "const already defined".to_string();
-				diag::Diag::new(Severity::Err, text, range)
-			}
-			SyntaxErr::ConstRequiredTypeNotation { range } => {
-				let text = "required type notation, cannot infer type".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
 			SyntaxErr::NotFoundModule { name, range } => {

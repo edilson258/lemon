@@ -9,6 +9,7 @@ impl Checker<'_> {
 		self.ctx.enter_scope(ScopeType::new_accessor_associate(self_type_id));
 		let ret_type = self.check_ident_expr(&mut associate.method)?;
 		self.ctx.exit_scope();
+		associate.set_left_type(self_type_id);
 		Ok(ret_type)
 	}
 }

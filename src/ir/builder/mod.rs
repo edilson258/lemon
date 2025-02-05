@@ -23,6 +23,7 @@ mod build_fn_stmt;
 mod build_for_stmt;
 mod build_ident_expr;
 mod build_if_expr;
+mod build_impl_stmt;
 mod build_let_stmt;
 mod build_literal;
 mod build_member_expr;
@@ -82,7 +83,7 @@ impl<'br> Builder<'br> {
 	fn build_stmt(&mut self, stmt: &ast::Stmt) {
 		match stmt {
 			ast::Stmt::Let(let_stmt) => self.build_let_stmt(let_stmt),
-			ast::Stmt::Fn(fn_stmt) => self.build_fn_stmt(fn_stmt),
+			ast::Stmt::Fn(fn_stmt) => self.build_fn_stmt(fn_stmt, None),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
 			ast::Stmt::While(while_stmt) => self.build_while_stmt(while_stmt),
 			ast::Stmt::For(for_stmt) => self.build_for_stmt(for_stmt),
@@ -91,10 +92,10 @@ impl<'br> Builder<'br> {
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
 			ast::Stmt::ExternFn(extern_fn) => self.build_extern_fn(extern_fn),
 			ast::Stmt::TypeDef(type_def) => self.build_type_def_stmt(type_def),
+			ast::Stmt::Impl(impl_stmt) => self.build_impl_stmt(impl_stmt),
 			ast::Stmt::Expr(expr) => {
 				self.build_expr(expr);
 			}
-			_ => todo!("code {:?}", stmt),
 		}
 	}
 }

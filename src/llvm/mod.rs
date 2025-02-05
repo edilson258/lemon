@@ -24,6 +24,7 @@ mod llvm_math;
 mod llvm_mem;
 mod llvm_ownership;
 mod llvm_ret;
+mod llvm_set_field;
 mod llvm_struct;
 mod llvm_type;
 mod llvm_value;

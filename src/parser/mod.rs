@@ -1,6 +1,6 @@
 use logos::Lexer;
 
-use crate::ast::{self, OperatorKind, BASE_BIN, BASE_DECIMAL, BASE_HEX, MIN_PDE};
+use crate::ast::{self, AstType, OperatorKind, BASE_BIN, BASE_DECIMAL, BASE_HEX, MIN_PDE};
 use crate::diag::Diag;
 use crate::lexer::Token;
 use crate::loader::FileId;
@@ -123,7 +123,7 @@ impl<'lex> Parser<'lex> {
 
 		let mut params = vec![];
 		while !self.match_token(Token::RParen) {
-			params.push(self.parse_binding()?);
+			params.push(self.parse_binding(false)?);
 			if !self.match_token(Token::RParen) {
 				self.expect(Token::Comma)?;
 			}
@@ -141,7 +141,7 @@ impl<'lex> Parser<'lex> {
 	}
 
 	fn parse_const_del_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstDelStmt> {
-		let name = self.parse_binding()?;
+		let name = self.parse_binding(false)?;
 		self.expect(Token::Assign)?; // take '='
 		let expr = self.parse_expr(MIN_PDE)?;
 		Ok(ast::ConstDelStmt { name, expr, range, type_id: None })
@@ -185,7 +185,7 @@ impl<'lex> Parser<'lex> {
 			mutable = Some(self.expect(Token::Mut)?);
 		}
 
-		let bind = self.parse_binding()?;
+		let bind = self.parse_binding(false)?;
 		self.expect(Token::Assign)?; // =
 		let expr = self.parse_expr(MIN_PDE)?;
 		Ok(ast::LetStmt { bind, mutable, expr, range, type_id: None })
@@ -198,7 +198,7 @@ impl<'lex> Parser<'lex> {
 		self.expect(Token::LParen)?;
 		let mut params = vec![];
 		while !self.match_token(Token::RParen) {
-			params.push(self.parse_binding()?);
+			params.push(self.parse_binding(true)?);
 			if !self.match_token(Token::RParen) {
 				self.expect(Token::Comma)?;
 			}
@@ -279,7 +279,7 @@ impl<'lex> Parser<'lex> {
 				var_packed = Some(self.expect(Token::DotDotDot)?);
 				break;
 			}
-			params.push(self.parse_binding()?);
+			params.push(self.parse_binding(false)?);
 			if !self.match_token(Token::RParen) {
 				self.expect(Token::Comma)?;
 			}
@@ -446,14 +446,19 @@ impl<'lex> Parser<'lex> {
 	fn parse_associate_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let range = self.expect(Token::ColonColon)?;
 		let method = self.parse_ident()?;
-		Ok(ast::Expr::Associate(ast::AssociateExpr { left: Box::new(expr), method, range }))
+		Ok(ast::Expr::Associate(ast::AssociateExpr {
+			left: Box::new(expr),
+			method,
+			range,
+			left_type: None,
+		}))
 	}
 
 	// exper.<expr>
 	fn parse_member_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
 		let range = self.expect(Token::Dot)?;
 		let method = self.parse_ident()?;
-		let member = ast::MemberExpr { left: Box::new(expr), method, range, method_type: None };
+		let member = ast::MemberExpr { left: Box::new(expr), method, left_type: None, range };
 		Ok(ast::Expr::Member(member))
 	}
 
@@ -557,7 +562,7 @@ impl<'lex> Parser<'lex> {
 		let mut params = vec![];
 		self.expect(Token::LParen)?; // take '('
 		while !self.match_token(Token::RParen) {
-			params.push(self.parse_binding()?);
+			params.push(self.parse_binding(false)?);
 			if !self.match_token(Token::RParen) {
 				self.expect(Token::Comma)?;
 			}
@@ -662,7 +667,25 @@ impl<'lex> Parser<'lex> {
 		(BASE_DECIMAL, text.to_string())
 	}
 
-	fn parse_binding(&mut self) -> PResult<'lex, ast::Binding> {
+	fn parse_binding(&mut self, with_self: bool) -> PResult<'lex, ast::Binding> {
+		// suport &self or &mut self
+		if self.match_token(Token::And) {
+			if !with_self {
+				let diag = self.custom_diag("unexpected token '&'", &self.range);
+				return Err(diag.with_file_id(self.file_id));
+			}
+
+			let ast_type = self.parse_type()?;
+			if let AstType::Borrow(borrow) = &ast_type {
+				if let Some((lexeme, range)) = borrow.extract_ident() {
+					let ident = ast::Ident { text: lexeme, range, type_id: None };
+					return Ok(ast::Binding { ident, ty: Some(ast_type), type_id: None });
+				}
+			}
+			let diag = self.custom_diag("expected ident", &self.range);
+			return Err(diag.with_file_id(self.file_id));
+		}
+
 		let ident = self.parse_ident()?;
 		let mut ty = None;
 		if self.match_token(Token::Colon) {

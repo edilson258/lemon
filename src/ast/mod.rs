@@ -639,6 +639,7 @@ impl AssignExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssociateExpr {
 	pub left: Box<Expr>,
+	pub left_type: Option<TypeId>,
 	pub method: Ident,
 	pub range: Range, // ::
 }
@@ -646,13 +647,20 @@ impl AssociateExpr {
 	pub fn get_range(&self) -> Range {
 		self.range.clone()
 	}
+
+	pub fn set_left_type(&mut self, left_type: TypeId) {
+		self.left_type = Some(left_type);
+	}
+	pub fn get_left_type(&self) -> Option<TypeId> {
+		self.left_type
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MemberExpr {
 	pub left: Box<Expr>,
+	pub left_type: Option<TypeId>,
 	pub method: Ident,
-	pub method_type: Option<TypeId>,
 	pub range: Range, // .
 }
 impl MemberExpr {
@@ -660,11 +668,11 @@ impl MemberExpr {
 		self.left.get_range().merged_with(&self.method.get_range())
 	}
 
-	pub fn set_method_type(&mut self, method_type: TypeId) {
-		self.method_type = Some(method_type);
+	pub fn set_left_type(&mut self, left_type: TypeId) {
+		self.left_type = Some(left_type);
 	}
-	pub fn get_method_type(&self) -> Option<TypeId> {
-		self.method_type
+	pub fn get_left_type(&self) -> Option<TypeId> {
+		self.left_type
 	}
 }
 

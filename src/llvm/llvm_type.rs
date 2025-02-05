@@ -1,6 +1,12 @@
-use inkwell::{types::BasicTypeEnum, AddressSpace};
+use inkwell::{
+	types::{BasicTypeEnum, StructType},
+	AddressSpace,
+};
 
-use crate::{checker::types::TypeId, report::throw_llvm_error};
+use crate::{
+	checker::types::{Type, TypeId},
+	report::throw_llvm_error,
+};
 
 use super::Llvm;
 impl<'ll> Llvm<'ll> {
@@ -17,8 +23,22 @@ impl<'ll> Llvm<'ll> {
 			TypeId::STRING | TypeId::STR => Some(self.ctx.ptr_type(AddressSpace::default()).into()),
 			TypeId::UNIT | TypeId::VOID => None, // void
 			found => {
+				// let struct_type = self.stack.get_struct_type(found);
 				throw_llvm_error(format!("type '{}' not found", self.type_store.get_display_type(found)))
 			}
 		}
+	}
+
+	pub fn try_find_struct_type(&self, type_id: TypeId) -> Option<StructType<'ll>> {
+		if type_id.is_known() {
+			return None;
+		}
+		if let Some(struct_type) = self.stack.get_struct_type(type_id) {
+			return Some(*struct_type);
+		}
+		if let Some(Type::Struct(struct_type)) = self.type_store.get_type(type_id) {
+			return self.module.get_struct_type(&struct_type.name);
+		}
+		None
 	}
 }

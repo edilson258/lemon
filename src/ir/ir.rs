@@ -138,7 +138,7 @@ pub enum Instr {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GetFieldInstr {
-	pub self_reg: Register,
+	pub self_value: Register,
 	pub field: Register,
 	pub field_type: TypeId,
 	pub dest: Register,
@@ -152,8 +152,9 @@ impl From<GetFieldInstr> for Instr {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SetFieldInstr {
-	pub struct_reg: Register,
+	pub self_value: Register,
 	pub field: Register,
+	pub value_type: TypeId,
 	pub value: Register,
 }
 

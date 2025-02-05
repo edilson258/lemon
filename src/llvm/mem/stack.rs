@@ -21,6 +21,7 @@ pub struct Stack<'ll> {
 	pub llvm_type_store: FxHashMap<TypeId, StructType<'ll>>,
 	frees: FxHashMap<Register, PointerValue<'ll>>,
 	pub temp_count: usize,
+	pub ret_owner: Option<PointerValue<'ll>>,
 }
 
 impl<'ll> Stack<'ll> {
@@ -33,18 +34,27 @@ impl<'ll> Stack<'ll> {
 		let llvm_type_store = FxHashMap::default();
 		let temp_count = 0;
 		let struct_table_type = FxHashMap::default();
+		let ret_owner = None;
 		Self {
 			frees,
 			values,
 			blocks,
 			structs,
 			global_values,
+			ret_owner,
 			llvm_type_store,
 			temp_count,
 			struct_table_type,
 		}
 	}
 
+	pub fn set_ret_owner(&mut self, ret_owner: PointerValue<'ll>) {
+		self.ret_owner = Some(ret_owner);
+	}
+
+	pub fn get_ret_owner(&self) -> Option<&PointerValue<'ll>> {
+		self.ret_owner.as_ref()
+	}
 	pub fn set_register_type(&mut self, register: Register, struct_type: StructType<'ll>) {
 		self.struct_table_type.insert(register, struct_type);
 	}

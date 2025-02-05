@@ -118,6 +118,14 @@ impl TypeStore {
 		text
 	}
 
+	pub fn get_struct_name(&self, type_id: TypeId) -> &str {
+		let type_value = self.get_type(type_id).unwrap();
+		match type_value {
+			Type::Struct(struct_type) => &struct_type.name,
+			_ => panic!("not a struct type"),
+		}
+	}
+
 	// checks if needs to free
 	pub fn needs_free(&self, type_id: TypeId) -> bool {
 		if type_id.is_known() {

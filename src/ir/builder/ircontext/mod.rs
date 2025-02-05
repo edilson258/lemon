@@ -50,6 +50,7 @@ pub struct IrContext {
 	struct_table: FxHashMap<String, StructInfoTable>,
 	struct_register: FxHashMap<Register, String>,
 	block_id: BlockId,
+	pub ret_owner: Option<Register>,
 }
 impl Default for IrContext {
 	fn default() -> Self {
@@ -68,7 +69,9 @@ impl IrContext {
 		let struct_table = FxHashMap::default();
 		let ret_type = None;
 		let struct_register = FxHashMap::default();
+		let ret_owner = None;
 		Self {
+			ret_owner,
 			register,
 			scopes,
 			types,
@@ -88,7 +91,17 @@ impl IrContext {
 	pub fn register_struct(&mut self, self_value: Register, atual: Register) {
 		if let Some(struct_name) = self.get_struct_register(self_value) {
 			self.struct_register.insert(atual, struct_name.to_owned());
+			return;
 		}
+		println!("not found {}", self_value.as_string());
+	}
+
+	pub fn set_ret_owner(&mut self, register: Register) {
+		self.ret_owner = Some(register);
+	}
+
+	pub fn get_ret_owner(&self) -> Option<&Register> {
+		self.ret_owner.as_ref()
 	}
 
 	pub fn register_struct_name(&mut self, register: Register, name: &str) {

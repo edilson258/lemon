@@ -142,7 +142,7 @@ impl ir::Instr {
 impl ir::GetFieldInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let _ = type_store;
-		let id = self.self_reg.as_colored();
+		let id = self.self_value.as_colored();
 		let field = self.field.as_colored();
 		let dest = self.dest.as_colored();
 		let instr = format!("get_field {} {} -> {}", id, field, dest);
@@ -154,7 +154,7 @@ impl ir::GetFieldInstr {
 impl ir::SetFieldInstr {
 	pub fn display_ir(&self, type_store: &TypeStore, text: &mut String) {
 		let _ = type_store;
-		let id = self.struct_reg.as_colored();
+		let id = self.self_value.as_colored();
 		let field = self.field.as_colored();
 		let value = self.value.as_colored();
 		let instr = format!("set_field {} {} {}", id, field, value);

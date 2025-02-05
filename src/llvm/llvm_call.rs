@@ -27,6 +27,9 @@ impl Llvm<'_> {
 		};
 
 		if let Some(return_value) = result.try_as_basic_value().left() {
+			if self.stack.get_struct_type(call_instr.type_id).is_some() {
+				self.stack.set_value(call_instr.dest, return_value);
+			}
 			self.stack.set_value(call_instr.dest, return_value);
 		} else if !call_instr.type_id.is_unit() && !call_instr.type_id.is_void() {
 			let mut type_text = String::new();

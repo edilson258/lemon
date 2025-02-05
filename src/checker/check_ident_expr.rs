@@ -29,14 +29,13 @@ impl Checker<'_> {
 		let lexeme = ident.lexeme();
 		let self_type = self.ctx.accessor_scope_type().expect("error: accessor scope not found");
 
-		let is_associate = self.ctx.is_acessor_associate_scope();
-		let self_type = self.get_stored_type(self_type);
+		let self_type = self.get_stored_type_without_borrow(self_type);
 
 		if let Type::Struct(struct_type) = self_type {
 			let found = self.display_type_value(self_type);
 			let name = ident.lexeme().to_owned();
 
-			if is_associate {
+			if self.ctx.is_acessor_associate_scope() {
 				if let Some(field_id) = struct_type.get_associate(lexeme) {
 					ident.set_type_id(*field_id);
 					return Ok(*field_id);
@@ -49,8 +48,14 @@ impl Checker<'_> {
 				return Ok(field.type_id);
 			}
 
+			if let Some(method) = struct_type.get_fn(lexeme) {
+				ident.set_type_id(*method);
+				return Ok(*method);
+			}
+
 			return Err(SyntaxErr::not_found_method_named(name, found, ident.get_range()));
 		}
+
 		todo!("error: self type not found: {:?}", self_type)
 	}
 }

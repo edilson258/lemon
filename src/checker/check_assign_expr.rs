@@ -65,6 +65,7 @@ impl Checker<'_> {
 					return Err(SyntaxErr::cannot_assign_immutable(&name, member.get_range()));
 				}
 				let found = self.infer_type(field.type_id, found)?;
+				member.method.set_type_id(found);
 				self.equal_type_expected(field.type_id, found, member.get_range())?;
 				return Ok(field.type_id);
 			}
