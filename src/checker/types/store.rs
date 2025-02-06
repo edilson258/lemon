@@ -114,6 +114,9 @@ impl TypeStore {
 	pub fn get_display_ir_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
 		let type_value = self.get_type(type_id).unwrap();
+		if type_value.is_borrow() {
+			return "ptr".to_owned();
+		}
 		type_value.display_ir_type(&mut text, self);
 		text
 	}

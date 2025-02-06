@@ -1,552 +1,226 @@
-#![allow(dead_code)]
+use crate::checker::types::TypeId;
 
-use crate::{
-	checker::types::TypeId,
-	report::{text_green, text_red},
-};
+pub struct IrBind {
+	pub name: String,
+	pub kind: TypeId,
+}
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct BlockId(pub usize);
-impl BlockId {
-	pub fn new(id: usize) -> Self {
-		Self(id)
-	}
-	pub fn as_usize(&self) -> usize {
-		self.0
-	}
-	pub fn as_string(&self) -> String {
-		format!("l{}", self.0)
-	}
-
-	pub fn as_colored(&self) -> String {
-		text_green(format!("l{}", self.0).as_str())
-	}
-	pub fn next_block(&self) -> Self {
-		Self(self.0 + 1)
+impl IrBind {
+	pub fn new(name: String, kind: TypeId) -> Self {
+		Self { name, kind }
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Register(pub usize);
-impl Register {
-	pub fn new(id: usize) -> Self {
-		Self(id)
-	}
-	pub fn as_usize(&self) -> usize {
-		self.0
-	}
-	pub fn next_register(&mut self) -> Self {
-		Self(self.0 + 1)
-	}
-	pub fn as_string(&self) -> String {
-		format!("r{}", self.0)
-	}
-	pub fn as_colored(&self) -> String {
-		text_red(format!("R{}", self.0).as_str())
-	}
-}
-
-impl From<u64> for Register {
-	fn from(value: u64) -> Self {
-		Self(value as usize)
-	}
-}
-
-impl From<Register> for u64 {
-	fn from(value: Register) -> Self {
-		value.0 as u64
-	}
-}
-
-impl From<Register> for IrValue {
-	fn from(value: Register) -> Self {
-		IrValue::Reg(value)
-	}
-}
-
-// == Intructions ==
-#[derive(Debug, Clone)]
-pub enum Instr {
-	// Binary
-	// add i32 lhs, rhs -> dest
-	Add(BinaryInstr),
-	// sub i32 lhs, rhs -> dest
-	Sub(BinaryInstr),
-	Div(BinaryInstr),
-	Mul(BinaryInstr),
-	Mod(BinaryInstr),
-	CmpGt(BinaryInstr),
-	CmpEq(BinaryInstr),
-	CmpLt(BinaryInstr),
-	CmpLe(BinaryInstr),
-	CmpGe(BinaryInstr),
-	// Control flow
-	// jumpif lhs, l0, l1
-	JmpIf(JmpIfInstr),
-	Goto(GotoInstr),
-
-	// Memory
-	// load i32 value -> dest
-	Load(UnaryInstr),
-	// store i32 value -> dest
-	Store(StoreInstr),
-	// heap i32 value -> dest size=4
-	Heap(HeapInstr),
-	// free register
-	Free(FreeInstr),
-	// own_ i32 register -> dest
-	Own(OwnInstr),
-	// own_heap register -> dest
-	OwnHeap(OwnHeapInstr),
-	// borrow i32 register -> dest
-	Borrow(UnaryInstr),
-	// borrow_mut i32 register -> dest
-	BorrowMut(UnaryInstr),
-	// deref i32 register -> dest
-	Deref(UnaryInstr),
-
-	// drop i32 register -> dest
-	Drop(DropInstr),
-
-	// load_field struct register, field -> dest
-	LoadField(LoadFieldInstr),
-
-	// store_field struct register, field, dest
-	StoreField(StoreFieldInstr),
-
-	// cache i32 register -> dest
-	Cache(SetCacheInstr),
-
-	StructInit(StructInitInstr),
-
-	// get_field register, field -> dest
-	GetField(GetFieldInstr),
-
-	// set_field register, field, value
-	SetField(SetFieldInstr),
-
-	// Async Cache
-	// cache_async i32 register -> dest
-	// CacheAsync(SetCacheAsyncInstr),
-
-	// Other
-	// ret i32 register
-	Ret(RetInstr),
-	// call fn_id(args) -> dest
-	Call(CallInstr),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct GetFieldInstr {
-	pub self_value: Register,
-	pub field: Register,
-	pub field_type: TypeId,
-	pub dest: Register,
-}
-
-impl From<GetFieldInstr> for Instr {
-	fn from(get_field: GetFieldInstr) -> Self {
-		Self::GetField(get_field)
-	}
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SetFieldInstr {
-	pub self_value: Register,
-	pub field: Register,
-	pub value_type: TypeId,
-	pub value: Register,
-}
-
-impl From<SetFieldInstr> for Instr {
-	fn from(set_field: SetFieldInstr) -> Self {
-		Self::SetField(set_field)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct StructInitInstr {
-	pub struct_id: String,
-	// field, value
-	pub binds: Vec<(Register, Bind)>,
-	pub dest: Register,
-	pub type_id: TypeId,
-}
-
-#[derive(Debug, Clone)]
-pub struct DropInstr {
-	pub value: Register,
-}
-
-impl From<DropInstr> for Instr {
-	fn from(drop: DropInstr) -> Self {
-		Self::Drop(drop)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct LoadFieldInstr {
-	pub type_id: TypeId,
-	pub value: Register,
-	pub field: String,
-	pub dest: Register,
-}
-
-impl From<LoadFieldInstr> for Instr {
-	fn from(load_field: LoadFieldInstr) -> Self {
-		Self::LoadField(load_field)
-	}
-}
-#[derive(Debug, Clone)]
-pub struct StoreFieldInstr {
-	pub type_id: TypeId,
-	pub value: Register,
-	pub field: String,
-	pub dest: Register,
-}
-
-impl From<StoreFieldInstr> for Instr {
-	fn from(store_field: StoreFieldInstr) -> Self {
-		Self::StoreField(store_field)
-	}
-}
-
-// == structures ==
-#[derive(Debug, Clone)]
-pub struct BinaryInstr {
-	pub type_id: TypeId,
-	pub lhs: Register,
-	pub rhs: Register,
-	pub dest: Register,
-}
-impl BinaryInstr {
-	pub fn new(type_id: TypeId, lhs: Register, rhs: Register, dest: Register) -> Self {
-		Self { type_id, lhs, rhs, dest }
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct UnaryInstr {
-	pub type_id: TypeId,
-	pub value: Register,
-	pub dest: Register,
-}
-impl UnaryInstr {
-	pub fn new(type_id: TypeId, value: Register, dest: Register) -> Self {
-		Self { type_id, value, dest }
-	}
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FreeInstr {
-	pub register: Register,
-}
-impl FreeInstr {
-	pub fn new(register: Register) -> Self {
-		Self { register }
-	}
-}
-
-impl From<FreeInstr> for Instr {
-	fn from(free: FreeInstr) -> Self {
-		Self::Free(free)
-	}
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SetCacheInstr {
-	pub register: Register,
-}
-impl SetCacheInstr {
-	pub fn new(register: Register) -> Self {
-		Self { register }
-	}
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct LoadCacheInstr {
-	pub register: Register,
-}
-impl LoadCacheInstr {
-	pub fn new(register: Register) -> Self {
-		Self { register }
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct RetInstr {
-	pub value: Option<Register>,
-	pub type_id: TypeId,
-}
-
-impl From<RetInstr> for Instr {
-	fn from(ret: RetInstr) -> Self {
-		Self::Ret(ret)
-	}
-}
-
-impl RetInstr {
-	pub fn new(type_id: Option<TypeId>, value: Option<Register>) -> Self {
-		Self { type_id: type_id.unwrap_or(TypeId::UNIT), value }
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct JmpIfInstr {
-	pub cond: Register,
-	pub l0: BlockId,
-	pub l1: BlockId,
-}
-
-impl From<JmpIfInstr> for Instr {
-	fn from(jmp_if: JmpIfInstr) -> Self {
-		Self::JmpIf(jmp_if)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct CallInstr {
-	pub type_id: TypeId,
-	pub fn_id: String,
-	pub args: Vec<Bind>,
-	pub dest: Register,
-}
-
-impl From<CallInstr> for Instr {
-	fn from(call: CallInstr) -> Self {
-		Self::Call(call)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct GotoInstr {
-	pub block_id: BlockId,
-}
-
-impl From<GotoInstr> for Instr {
-	fn from(goto: GotoInstr) -> Self {
-		Self::Goto(goto)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct StoreInstr {
-	pub type_id: TypeId,
-	pub value: IrValue,
-	pub dest: Register,
-}
-
-impl StoreInstr {
-	pub fn new(value: IrValue, type_id: TypeId, dest: Register) -> Self {
-		Self { value, type_id, dest }
-	}
-}
-
-impl From<StoreInstr> for Instr {
-	fn from(store: StoreInstr) -> Self {
-		Self::Store(store)
-	}
-}
-#[derive(Debug, Clone)]
-pub struct HeapInstr {
-	pub type_id: TypeId,
-	pub value: IrValue,
-	pub dest: Register,
-	pub size: usize,
-}
-
-impl From<HeapInstr> for Instr {
-	fn from(store: HeapInstr) -> Self {
-		Self::Heap(store)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct OwnInstr {
-	pub type_id: TypeId,
-	pub value: Register,
-	pub dest: Register,
-}
-
-impl From<OwnInstr> for Instr {
-	fn from(own_stack: OwnInstr) -> Self {
-		Self::Own(own_stack)
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct OwnHeapInstr {
-	pub type_id: TypeId,
-	pub value: Register,
-	pub dest: Register,
-	pub size: usize,
-}
-
-impl From<OwnHeapInstr> for Instr {
-	fn from(own_heap: OwnHeapInstr) -> Self {
-		Self::OwnHeap(own_heap)
-	}
-}
-
-// == ir values ==
-#[derive(Debug, Clone)]
-pub enum IrValue {
-	Int(i64),
-	Float(f64),
-	Bool(bool),
-	String(String),
-	Char(char),
-	Reg(Register),
-	Value(String),
+pub struct IrValue {
+	pub value: String,
+	pub kind: TypeId,
 }
 
 impl IrValue {
-	pub fn new_int(value: i64) -> Self {
-		Self::Int(value)
+	pub fn new(value: String, kind: TypeId) -> Self {
+		Self { value, kind }
 	}
-	pub fn new_float(value: f64) -> Self {
-		Self::Float(value)
-	}
-	pub fn new_bool(value: bool) -> Self {
-		Self::Bool(value)
-	}
-	pub fn new_string(value: &str) -> Self {
-		Self::String(value.to_string())
-	}
-	pub fn new_char(value: char) -> Self {
-		Self::Char(value)
-	}
-	pub fn new_fn(value: String) -> Self {
-		Self::Value(value)
+
+	pub fn with_new_type(&self, kind: TypeId) -> Self {
+		let value = self.value.clone();
+		Self { value, kind }
 	}
 }
 
-// == blocks ==
-#[derive(Debug, Clone)]
-pub struct Block {
-	pub block_id: BlockId,
-	pub instrs: Vec<Instr>,
-	pub preds_ids: Vec<BlockId>,
-	pub succs_ids: Vec<BlockId>,
+pub enum Instr {
+	//
+	Add(BinInstr), // r0 = add r1, r2
+	Sub(BinInstr), // r0 = sub r1, r2
+	Mul(BinInstr), // r0 = mul r1, r2
+	Div(BinInstr), // r0 = div r1, r2
+	Mod(BinInstr), // r0 = mod r1, r2
+
+	Neg(BinInstr), // r0 = neg r1
+	Not(BinInstr), // r0 = not r1
+
+	CmpEq(BinInstr), // r0 = cmp_eq r1, r2
+	CmpNe(BinInstr), // r0 = cmp_ne r1, r2
+	CmpLt(BinInstr), // r0 = cmp_lt r1, r2
+	CmpGt(BinInstr), // r0 = cmp_gt r1, r2
+	CmpLe(BinInstr), // r0 = cmp_le r1, r2
+	CmpGe(BinInstr), // r0 = cmp_ge r1, r2
+
+	And(BinInstr), // r0 = and r1, r2
+	Or(BinInstr),  // r0 = or r1, r2
+	Shl(BinInstr), // r0 = shl r1, r2
+	Shr(BinInstr), // r0 = shr r1, r2
+
+	Jmp(JmpInstr),     // jmp l1
+	JmpIf(JmpIfInstr), // jmp_if r1, l1, l2
+
+	Ret(IrValue),    // ret r1
+	Call(CallInstr), // r0 = call fn_name, r1, r2, ...
+
+	// memory
+	Load(BinInstr), // r0 = load r1
+	Mov(UnInstr),   // mov r0, r1 # only stack
+	Drop(IrValue),  // drop r1 # only heap alloc
+	Set(UnInstr),   // set r0, r1 # only heap alloc
+
+	Salloc(SallocInstr), // r0 = salloc r1 # only stack
+	Halloc(UnInstr),     // r0 = halloc r1 # only heap
 }
-impl Block {
-	pub fn new(block_id: BlockId) -> Self {
-		Self { block_id, instrs: vec![], preds_ids: vec![], succs_ids: vec![] }
+
+pub struct SallocInstr {
+	pub dest: IrValue,
+	pub size: TypeId,
+}
+
+impl SallocInstr {
+	pub fn new(dest: IrValue, size: TypeId) -> Self {
+		Self { dest, size }
 	}
+}
+
+impl From<SallocInstr> for Instr {
+	fn from(value: SallocInstr) -> Self {
+		Instr::Salloc(value)
+	}
+}
+
+pub struct BinInstr {
+	pub dest: IrValue,
+	pub left: IrValue,
+	pub right: IrValue,
+}
+
+impl BinInstr {
+	pub fn new(dest: IrValue, left: IrValue, right: IrValue) -> Self {
+		Self { dest, left, right }
+	}
+}
+
+pub struct UnInstr {
+	pub dest: IrValue,
+	pub src: IrValue,
+}
+
+impl UnInstr {
+	pub fn new(dest: IrValue, src: IrValue) -> Self {
+		Self { dest, src }
+	}
+}
+
+pub struct JmpInstr {
+	pub label: String,
+}
+
+impl JmpInstr {
+	pub fn new(label: String) -> Self {
+		Self { label }
+	}
+}
+
+pub struct JmpIfInstr {
+	pub cond: IrValue,
+	pub true_label: String,
+	pub false_label: String,
+}
+
+impl JmpIfInstr {
+	pub fn new(cond: IrValue, true_label: String, false_label: String) -> Self {
+		Self { cond, true_label, false_label }
+	}
+}
+
+pub struct CallInstr {
+	pub dest: IrValue,
+	pub callee: String,
+	pub args: Vec<IrValue>,
+}
+
+impl CallInstr {
+	pub fn new(dest: IrValue, callee: String, args: Vec<IrValue>) -> Self {
+		Self { dest, callee, args }
+	}
+}
+
+pub struct IrBlock {
+	pub label: usize,
+	pub instrs: Vec<Instr>,
+}
+
+impl Default for IrBlock {
+	fn default() -> Self {
+		Self::new(0)
+	}
+}
+
+impl IrBlock {
+	pub fn new(label: usize) -> Self {
+		Self { label, instrs: Vec::new() }
+	}
+
 	pub fn add_instr(&mut self, instr: Instr) {
 		self.instrs.push(instr);
 	}
+
+	pub fn format_label(&self) -> String {
+		format!("l{}", self.label)
+	}
 }
 
-#[derive(Debug, Clone)]
-pub struct StructInstr {
-	pub struct_id: String,
-	pub fields: Vec<Bind>,
-}
-
-#[derive(Debug, Clone)]
-pub struct LnFn {
-	pub fn_id: String,
-	pub args: Vec<Bind>,
+pub struct Function {
+	pub name: String,
+	pub comptime: bool,
 	pub ret: TypeId,
-	pub blocks: Vec<Block>,
+	pub args: Vec<IrBind>,
+	pub blocks: Vec<IrBlock>,
 }
-impl LnFn {
-	pub fn new(fn_id: String, args: Vec<Bind>, ret: TypeId) -> Self {
-		Self { fn_id, args, ret, blocks: vec![] }
+
+impl Function {
+	pub fn new(name: String, comptime: bool, args: Vec<IrBind>, ret: TypeId) -> Self {
+		Self { name, comptime, args, blocks: Vec::new(), ret }
 	}
 
-	pub fn is_main(&self) -> bool {
-		self.fn_id == "main"
-	}
-
-	pub fn add_block(&mut self, block: Block) {
+	pub fn add_block(&mut self, block: IrBlock) {
 		self.blocks.push(block);
 	}
 
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
+	pub fn extend_blocks(&mut self, blocks: Vec<IrBlock>) {
 		self.blocks.extend(blocks);
 	}
 }
 
-#[derive(Debug, Clone)]
-pub struct ExFn {
-	pub fn_id: String,
-	pub args: Vec<Bind>,
-	pub ret: TypeId,
-	pub var_packed: bool,
+pub struct IR {
+	pub funcs: Vec<Function>,
 }
 
-#[derive(Debug, Clone)]
-pub enum Fn {
-	Ln(LnFn),
-	Ex(ExFn),
-}
-
-impl Fn {
-	pub fn new_ln(fn_id: String, args: Vec<Bind>, ret: TypeId) -> Self {
-		Self::Ln(LnFn { fn_id, args, ret, blocks: vec![] })
-	}
-	pub fn new_ex(fn_id: String, args: Vec<Bind>, ret: TypeId, var_packed: bool) -> Self {
-		Self::Ex(ExFn { fn_id, args, ret, var_packed })
-	}
-
-	pub fn is_extern_fn(&self) -> bool {
-		matches!(self, Self::Ex(_))
-	}
-
-	pub fn is_ln_fn(&self) -> bool {
-		matches!(self, Self::Ln(_))
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct Bind {
-	pub register: Register,
-	pub type_id: TypeId,
-}
-
-impl Bind {
-	pub fn new(register: Register, type_id: TypeId) -> Self {
-		Self { register, type_id }
-	}
-}
-
-#[derive(Debug, Clone)]
-pub struct Root {
-	reg_size: usize,
-	pub fns: Vec<Fn>,
-	pub structs: Vec<StructInstr>,
-}
-
-impl Default for Root {
+impl Default for IR {
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
-impl Root {
+impl IR {
 	pub fn new() -> Self {
-		Self { fns: Vec::new(), reg_size: 0, structs: Vec::new() }
-	}
-	pub fn add_fn(&mut self, fn_ir: Fn) {
-		self.fns.push(fn_ir);
+		Self { funcs: Vec::new() }
 	}
 
-	pub fn add_struct(&mut self, struct_ir: StructInstr) {
-		self.structs.push(struct_ir);
+	pub fn add_func(&mut self, func: Function) {
+		self.funcs.push(func);
 	}
+}
 
-	pub fn add_blocks(&mut self, blocks: Vec<Block>) {
-		if let Some(Fn::Ln(fn_ir)) = self.fns.last_mut() {
-			fn_ir.add_blocks(blocks);
-		}
+impl From<CallInstr> for Instr {
+	fn from(value: CallInstr) -> Self {
+		Instr::Call(value)
 	}
+}
 
-	pub fn set_reg_size(&mut self, size: usize) {
-		self.reg_size = size;
+impl From<JmpIfInstr> for Instr {
+	fn from(value: JmpIfInstr) -> Self {
+		Instr::JmpIf(value)
 	}
-	pub fn get_reg_size(&self) -> usize {
-		self.reg_size
+}
+
+impl From<JmpInstr> for Instr {
+	fn from(value: JmpInstr) -> Self {
+		Instr::Jmp(value)
 	}
 }

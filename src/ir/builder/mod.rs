@@ -32,7 +32,6 @@ mod build_struct_init_expr;
 mod build_type_def_stmt;
 mod build_while_stmt;
 pub mod ircontext;
-
 pub struct Builder<'br> {
 	pub type_store: &'br types::TypeStore,
 	pub ir_ctx: IrContext,

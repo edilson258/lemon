@@ -1,14 +1,17 @@
 mod ast;
+mod builder;
 mod checker;
 mod cli;
 mod compiler;
+mod disassembler;
+mod optimize;
 // mod comptime;
 mod cross;
 mod diag;
 mod ir;
 mod lexer;
 mod linker;
-mod llvm;
+// mod llvm;
 mod loader;
 mod parser;
 mod range;
