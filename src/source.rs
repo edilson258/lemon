@@ -5,6 +5,12 @@ pub struct Source {
 	pub pathbuf: PathBuf,
 }
 
+impl Default for Source {
+	fn default() -> Self {
+		Self { raw: String::new(), pathbuf: PathBuf::new() }
+	}
+}
+
 impl Source {
 	pub fn new(raw: String, pathbuf: PathBuf) -> Self {
 		Self { raw, pathbuf }

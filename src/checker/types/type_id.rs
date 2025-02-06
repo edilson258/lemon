@@ -80,6 +80,28 @@ impl TypeId {
 		self.0 == TypeId::ANY.0
 	}
 
+	pub fn get_size(&self) -> usize {
+		match *self {
+			TypeId::I8 | TypeId::U8 | TypeId::BOOL | TypeId::CHAR => 1,
+			TypeId::I16 | TypeId::U16 => 2,
+			TypeId::I32 | TypeId::U32 | TypeId::ISIZE | TypeId::USIZE => 4,
+			TypeId::I64 | TypeId::U64 | TypeId::F32 => 8,
+			TypeId::F64 => 16,
+			_ => 0,
+		}
+	}
+
+	pub fn get_align(&self) -> usize {
+		match *self {
+			TypeId::I8 | TypeId::U8 => 1,
+			TypeId::I16 | TypeId::U16 => 2,
+			TypeId::I32 | TypeId::U32 | TypeId::ISIZE | TypeId::USIZE => 4,
+			TypeId::I64 | TypeId::U64 | TypeId::F32 => 8,
+			TypeId::F64 => 16,
+			_ => 0,
+		}
+	}
+
 	// pub fn is_infer(&self) -> bool {
 	// 	self.0 >= TypeId::INFER.0
 	// }

@@ -13,10 +13,9 @@ impl Builder<'_> {
 		if let Some(register) = self.ir_ctx.get_value(lexeme) {
 			return *register;
 		}
-
 		let dest = self.ir_ctx.new_register();
 		if let Some(fn_id) = self.ir_ctx.get_fn_id(lexeme) {
-			let value = IrValue::Fn(fn_id.clone());
+			let value = IrValue::Value(fn_id);
 			let instr = StoreInstr { type_id: TypeId::UNIT, value, dest };
 			self.ir_ctx.add_instr(instr.into());
 			return dest;

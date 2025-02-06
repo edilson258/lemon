@@ -23,6 +23,9 @@ impl Llvm<'_> {
 			ir::Instr::Ret(ret) => self.llvm_ret(ret),
 			ir::Instr::JmpIf(jump_if) => self.llvm_jmp_if(jump_if),
 			ir::Instr::Goto(goto) => self.llvm_goto(goto),
+			ir::Instr::StructInit(struct_init) => self.llvm_init_struct(struct_init),
+			ir::Instr::GetField(get_field) => self.llvm_get_field(get_field),
+			ir::Instr::SetField(set_field) => self.llvm_set_field(set_field),
 			_ => todo!("code {:?}", instr),
 		}
 	}

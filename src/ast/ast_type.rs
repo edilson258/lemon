@@ -84,6 +84,16 @@ impl BorrowType {
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.value.get_range())
 	}
+
+	pub fn extract_ident(&self) -> Option<(String, Range)> {
+		if let AstType::Ident(ident) = &*self.value {
+			return Some((ident.text.clone(), ident.range.clone()));
+		}
+		if let AstType::Borrow(borrow) = &*self.value {
+			return borrow.extract_ident();
+		}
+		None
+	}
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DerefType {

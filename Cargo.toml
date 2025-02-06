@@ -17,6 +17,7 @@ inkwell = { version = "0.5.0", features = ["llvm18-0"] }
 which = "7.0.1"
 target-lexicon = "0.13.1"
 console = "0.15.10"
+rustc-hash = "2.1.0"
 
 
 [dev-dependencies]

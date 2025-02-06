@@ -2,6 +2,10 @@ mod display_type;
 pub mod monomorphic;
 mod store;
 mod type_id;
+
+use std::hash::{Hash, Hasher};
+
+use rustc_hash::FxHashMap;
 pub use store::*;
 pub use type_id::*;
 
@@ -21,9 +25,11 @@ pub enum Type {
 	Fn(FnType),
 	ExternFn(ExternFnType),
 
+	// struct
+	Struct(StructType),
+
 	// internal
 	Unit,
-
 	// e.g. T
 	Infer(InferType),
 }
@@ -31,6 +37,24 @@ pub enum Type {
 impl Type {
 	pub fn is_numeric(&self) -> bool {
 		matches!(self, Type::Number(_) | Type::NumRange(_))
+	}
+	pub fn is_struct(&self) -> bool {
+		matches!(self, Type::Struct(_))
+	}
+
+	pub fn can_implemented(&self) -> bool {
+		// all of types that can be implemented
+		self.is_struct()
+	}
+
+	pub fn is_impl(&self) -> bool {
+		matches!(self, Type::Struct(StructType { implemeted: true, .. }))
+	}
+
+	pub fn set_impl(&mut self, is_impl: bool) {
+		if let Type::Struct(struct_type) = self {
+			struct_type.set_implemented(is_impl);
+		}
 	}
 
 	pub fn is_float(&self) -> bool {
@@ -66,6 +90,17 @@ impl Type {
 			Type::Number(number) => Some(TypeId::from(number)),
 			_ => None,
 		}
+	}
+
+	pub fn get_struct_type(&mut self) -> Option<&mut StructType> {
+		if let Type::Struct(struct_type) = self {
+			return Some(struct_type);
+		}
+		None
+	}
+
+	pub fn needs_free(&self) -> bool {
+		matches!(self, Type::Struct(_))
 	}
 }
 
@@ -237,6 +272,132 @@ impl ConstType {
 	}
 }
 
+// === struct ===
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructType {
+	pub name: String,
+	// hashmap? name -> FieldType
+	pub fields: FxHashMap<String, FieldType>,
+	// hasmap? name -> MethodType
+	pub fns: FxHashMap<String, TypeId>,
+	pub associated: FxHashMap<String, TypeId>,
+	pub implemeted: bool,
+	pub mutable: bool,
+}
+
+impl Hash for StructType {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		self.name.hash(state);
+		// ignore internal hash... is it ok?
+		for (key, value) in &self.fields {
+			key.hash(state);
+			value.hash(state);
+		}
+	}
+}
+
+impl StructType {
+	pub fn new(name: String) -> Self {
+		let associated = FxHashMap::default();
+		let fields = FxHashMap::default();
+		let fns = FxHashMap::default();
+		Self { name, fields, fns, associated, implemeted: false, mutable: false }
+	}
+
+	pub fn has_implemented(&self) -> bool {
+		self.implemeted
+	}
+
+	pub fn is_mutable(&self) -> bool {
+		self.mutable
+	}
+
+	pub fn set_mutable(&mut self, is_mut: bool) {
+		self.mutable = is_mut;
+	}
+
+	pub fn set_implemented(&mut self, is_impl: bool) {
+		self.implemeted = is_impl;
+	}
+
+	pub fn add_field(&mut self, field: FieldType) {
+		self.fields.insert(field.name.clone(), field);
+	}
+	pub fn with_fields(&mut self, fields: Vec<FieldType>) {
+		self.fields = fields.into_iter().map(|field| (field.name.clone(), field)).collect();
+	}
+	pub fn add_fn(&mut self, name: String, fn_id: TypeId) {
+		self.fns.insert(name, fn_id);
+	}
+
+	pub fn add_associate(&mut self, name: String, type_id: TypeId) {
+		self.associated.insert(name, type_id);
+	}
+
+	// ceck methods
+	//
+
+	pub fn has_fn(&self, name: &str) -> bool {
+		self.fns.contains_key(name)
+	}
+
+	pub fn has_field(&self, name: &str) -> bool {
+		self.fields.contains_key(name)
+	}
+
+	// get methods
+	pub fn get_field(&self, name: &str) -> Option<&FieldType> {
+		self.fields.get(name)
+	}
+
+	pub fn get_associate(&self, name: &str) -> Option<&TypeId> {
+		self.associated.get(name)
+	}
+
+	pub fn get_fn(&self, name: &str) -> Option<&TypeId> {
+		self.fns.get(name)
+	}
+
+	#[rustfmt::skip]
+	pub fn get_type(&self, name: &str) -> Option<TypeId> {
+		self.get_field(name).map(|field| field.type_id)
+			.or_else(|| self.get_fn(name).copied())
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FieldType {
+	pub name: String,
+	pub type_id: TypeId,
+	pub is_mut: bool,
+	pub is_pub: bool,
+}
+
+impl FieldType {
+	pub fn new(name: String, type_id: TypeId) -> Self {
+		Self { name, type_id, is_mut: false, is_pub: false }
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MethodType {
+	pub name: String,
+	pub args: Vec<TypeId>,
+	pub ret: TypeId,
+	pub is_pub: bool,
+	pub self_id: Option<TypeId>,
+}
+
+impl MethodType {
+	pub fn new(name: String, args: Vec<TypeId>, ret: TypeId, is_pub: bool) -> Self {
+		Self { name, args, ret, is_pub, self_id: None }
+	}
+
+	pub fn set_self_id(&mut self, self_id: TypeId) {
+		self.self_id = Some(self_id);
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ConstKind {
 	Fn,
@@ -261,11 +422,12 @@ pub struct FnType {
 	pub args: Vec<TypeId>,
 	pub ret: TypeId,
 	pub generics: Vec<TypeId>,
+	pub is_pub: bool,
 }
 
 impl FnType {
 	pub fn new(args: Vec<TypeId>, ret: TypeId) -> Self {
-		Self { args, ret, generics: vec![] }
+		Self { args, ret, generics: vec![], is_pub: false }
 	}
 	pub fn extend_generics(&mut self, generics: Vec<TypeId>) {
 		self.generics.extend(generics);
@@ -326,5 +488,11 @@ impl From<ExternFnType> for Type {
 impl From<InferType> for Type {
 	fn from(value: InferType) -> Self {
 		Type::Infer(value)
+	}
+}
+
+impl From<StructType> for Type {
+	fn from(value: StructType) -> Self {
+		Type::Struct(value)
 	}
 }

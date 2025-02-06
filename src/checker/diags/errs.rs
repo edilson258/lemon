@@ -4,7 +4,8 @@ use crate::{
 	range::Range,
 };
 
-#[derive(Debug, Clone)]
+// todo: improve this...
+#[derive(Debug)]
 pub enum SyntaxErr<'tce> {
 	// type errors
 	TypeMismatch { expected: String, found: String, range: Range },
@@ -43,11 +44,25 @@ pub enum SyntaxErr<'tce> {
 	InvalidFloat { range: Range },
 	NumberTooLarge { range: Range },
 	ExpectedNumber { range: Range },
-	NotAllPathsReturn { range: Range },
+	LeftHandCannotBeAssigned { range: Range },
 	// const errors
 	ConstOutsideGlobalScope { range: Range },
 	ConstRedefinition { range: Range },
-	ConstRequiredTypeNotation { range: Range },
+	// type alias / struct / enum...  errors
+	NotFoundType { name: &'tce str, range: Range },
+
+	// instaced impl
+	ExpectInstacedType { found: String, range: Range },
+	NotFoundField { name: &'tce str, range: Range },
+	NotImpl { found: String, range: Range },
+
+	// member and associated fn errors
+	NotFoundMethodNamed { name: String, found: String, range: Range },
+	NotFoundAssociateField { name: String, found: String, range: Range },
+	// module errors
+	// InvalidModulePath { path: String, range: Range },
+	// ModuleRedefined { name: String, range: Range },
+	// ModuleImportFailed { name: String, range: Range },
 }
 
 impl<'tce> SyntaxErr<'tce> {
@@ -57,10 +72,6 @@ impl<'tce> SyntaxErr<'tce> {
 
 	pub fn const_redefinition(range: Range) -> Diag {
 		Self::ConstRedefinition { range }.into()
-	}
-
-	pub fn const_required_type_notation(range: Range) -> Diag {
-		Self::ConstRequiredTypeNotation { range }.into()
 	}
 
 	pub fn immutable(name: &'tce str, range: Range) -> Diag {
@@ -97,10 +108,6 @@ impl<'tce> SyntaxErr<'tce> {
 
 	pub fn return_outside_fn(range: Range) -> Diag {
 		Self::ReturnOutsideFn { range }.into()
-	}
-
-	pub fn not_all_paths_return(range: Range) -> Diag {
-		Self::NotAllPathsReturn { range }.into()
 	}
 
 	pub fn invalid_float(range: Range) -> Diag {
@@ -173,6 +180,33 @@ impl<'tce> SyntaxErr<'tce> {
 
 	pub fn cannot_assign_immutable(name: &str, range: Range) -> Diag {
 		Self::CannotAssignImmutable { name: name.to_string(), range }.into()
+	}
+
+	pub fn not_found_type(name: &'tce str, range: Range) -> Diag {
+		Self::NotFoundType { name, range }.into()
+	}
+
+	pub fn expect_instaced_type(found: String, range: Range) -> Diag {
+		Self::ExpectInstacedType { found, range }.into()
+	}
+
+	pub fn not_found_field(name: &'tce str, range: Range) -> Diag {
+		Self::NotFoundField { name, range }.into()
+	}
+
+	pub fn not_impl(found: String, range: Range) -> Diag {
+		Self::NotImpl { found, range }.into()
+	}
+
+	pub fn not_found_method_named(name: String, found: String, range: Range) -> Diag {
+		Self::NotFoundMethodNamed { name, found, range }.into()
+	}
+	pub fn not_found_associate_field(name: String, found: String, range: Range) -> Diag {
+		Self::NotFoundAssociateField { name, found, range }.into()
+	}
+
+	pub fn left_hand_cannot_be_assigned(range: Range) -> Diag {
+		Self::LeftHandCannotBeAssigned { range }.into()
 	}
 }
 impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
@@ -249,8 +283,7 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 			}
 			SyntaxErr::CannotDereference { type_name, range } => {
 				let text = format!("'{}' cannot be dereferenced, expected a reference", type_name);
-				diag::Diag::new(Severity::Err, text, range)
-					.with_note("try to use a reference instead".to_string())
+				diag::Diag::new(Severity::Err, text, range).with_note("try to use a reference instead")
 			}
 			SyntaxErr::ReturnOutsideFn { range } => {
 				let text = "cannot return outside of a fn".to_string();
@@ -274,23 +307,13 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 				let text = "const already defined".to_string();
 				diag::Diag::new(Severity::Err, text, range)
 			}
-			SyntaxErr::ConstRequiredTypeNotation { range } => {
-				let text = "required type notation, cannot infer type".to_string();
-				diag::Diag::new(Severity::Err, text, range)
-			}
-			SyntaxErr::NotAllPathsReturn { range } => {
-				let text = "expected return value in all cases".to_string();
-				diag::Diag::new(Severity::Err, text, range)
-					.with_note("ensure every path returns a value".to_string())
-			}
 			SyntaxErr::NotFoundModule { name, range } => {
 				let text = format!("module '{}' not found", name);
 				diag::Diag::new(Severity::Err, text, range)
 			}
 			SyntaxErr::RedefineFnInSameScope { name, range } => {
 				let text = format!("function '{}' is already defined in this scope", name);
-				diag::Diag::new(Severity::Err, text, range)
-					.with_note("consider renaming the function".to_string())
+				diag::Diag::new(Severity::Err, text, range).with_note("consider renaming the function")
 			}
 			SyntaxErr::ReturnLocalBorrow { range } => {
 				let text = "cannot return a local borrow".to_string();
@@ -313,8 +336,35 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 			}
 			SyntaxErr::CannotAssignImmutable { name, range } => {
 				let text = format!("cannot assign immutable '{}'", name);
+				diag::Diag::new(Severity::Err, text, range).with_note("consider making it mutable")
+			}
+			SyntaxErr::NotFoundType { name, range } => {
+				let text = format!("type '{}' not found in current scope", name);
 				diag::Diag::new(Severity::Err, text, range)
-					.with_note("consider making it mutable".to_string())
+			}
+			SyntaxErr::ExpectInstacedType { found, range } => {
+				let text = format!("expected `struct` or `enum`, found '{}'", found);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::NotFoundField { name, range } => {
+				let text = format!("field '{}' not found", name);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::NotImpl { found, range } => {
+				let text = format!("'{}' is not implemented", found);
+				diag::Diag::new(Severity::Err, text, range).with_note("try to implement it, or instace it")
+			}
+			SyntaxErr::NotFoundMethodNamed { name, found, range } => {
+				let text = format!("'{}' has no method named '{}'", found, name);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::NotFoundAssociateField { name, found, range } => {
+				let text = format!("'{}' has no associated field named '{}'", found, name);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::LeftHandCannotBeAssigned { range } => {
+				let text = "left-hand side can't be assigned".to_string();
+				diag::Diag::new(Severity::Err, text, range)
 			}
 		}
 	}

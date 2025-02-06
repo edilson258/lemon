@@ -2,6 +2,7 @@ use console::Style;
 
 use crate::{
 	diag::{Diag, Severity},
+	range::Range,
 	source::Source,
 };
 
@@ -43,7 +44,16 @@ pub fn report_syntax_err(diag: &Diag, source: &Source) {
 	report(diag, ReportKind::SyntaxErr, source);
 	std::process::exit(1);
 }
-
+pub fn throw_error_with_range(text: impl Into<String>, range: Range, source: &Source) -> ! {
+	let start = range.start;
+	let end = range.end;
+	let err = codelighter::highlight_error(start, end, source.raw());
+	let slug = text_red("error");
+	println!("{}: {}", slug, text.into()); // -- message
+	println!("---> {}", text_white(source.path_str().as_str())); // -- filename
+	println!("{}", err);
+	std::process::exit(1);
+}
 fn report(diag: &Diag, kind: ReportKind, source: &Source) {
 	let slug = match diag.severity {
 		Severity::Err => text_red(kind.to_string().as_str()),
@@ -69,6 +79,7 @@ pub fn throw_error(text: impl Into<String>) -> ! {
 	println!("{} {}", text_red("error:"), text_white(text.into().as_str()));
 	std::process::exit(1);
 }
+
 // pub fn throw_engine_error(text: impl Into<String>) -> ! {
 // 	println!("{} {}", text_red("  comptime error:"), text_white(text.into().as_str()));
 // 	std::process::exit(1);

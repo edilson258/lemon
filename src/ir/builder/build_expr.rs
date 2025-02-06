@@ -16,6 +16,8 @@ impl Builder<'_> {
 			ast::Expr::Deref(deref) => self.build_deref_expr(deref),
 			ast::Expr::Borrow(borrow) => self.build_borrow_expr(borrow),
 			ast::Expr::Assign(assign) => self.build_assign_expr(assign),
+			ast::Expr::StructInit(struct_init) => self.build_struct_init_expr(struct_init),
+			ast::Expr::Member(member) => self.build_member_expr(member),
 			_ => todo!("expr: {:?}", expr),
 		}
 	}

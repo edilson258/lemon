@@ -1,7 +1,6 @@
-use std::{
-	collections::HashMap,
-	hash::{DefaultHasher, Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
+
+use rustc_hash::{FxHashMap, FxHasher};
 
 use super::{
 	monomorphic::MonomorphicStore, type_id::TypeId, ExternFnType, FnType, InferType, Number, Type,
@@ -10,16 +9,20 @@ use super::{
 #[derive(Debug)]
 pub struct TypeStore {
 	types: Vec<Type>,
-	generics: HashMap<String, TypeId>,
+	types_by_name: FxHashMap<String, TypeId>,
+	generics: FxHashMap<String, TypeId>,
 	// is good?
-	cache: HashMap<u64, TypeId>,
+	cache: FxHashMap<u64, TypeId>,
 	pub monomorphic_store: MonomorphicStore,
 }
 
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
 		let monomorphic_store = MonomorphicStore::default();
-		Self { types, cache: HashMap::new(), generics: HashMap::new(), monomorphic_store }
+		let types_by_name = FxHashMap::default();
+		let cache = FxHashMap::default();
+		let generics = FxHashMap::default();
+		Self { types, types_by_name, cache, generics, monomorphic_store }
 	}
 
 	pub fn add_monomo_fn(&mut self, fn_type: FnType) {
@@ -57,6 +60,14 @@ impl TypeStore {
 		self.generics.get(id)
 	}
 
+	pub fn get_type_by_name(&self, name: &str) -> Option<&TypeId> {
+		self.types_by_name.get(name)
+	}
+
+	pub fn add_type_by_name(&mut self, name: String, type_id: TypeId) {
+		self.types_by_name.insert(name, type_id);
+	}
+
 	pub fn add_type(&mut self, ty: Type) -> TypeId {
 		// todo: is faster to generate hash and compare?
 		let hash = self.type_hash(&ty);
@@ -71,13 +82,15 @@ impl TypeStore {
 	}
 
 	pub fn type_hash(&self, ty: &Type) -> u64 {
-		let mut hasher = DefaultHasher::new();
-		ty.hash::<DefaultHasher>(&mut hasher);
+		let mut hasher = FxHasher::default();
+		ty.hash(&mut hasher);
 		hasher.finish()
 	}
-
 	pub fn get_type(&self, type_id: TypeId) -> Option<&Type> {
 		self.types.get(type_id.as_usize())
+	}
+	pub fn get_mut_type(&mut self, type_id: TypeId) -> Option<&mut Type> {
+		self.types.get_mut(type_id.as_usize())
 	}
 
 	pub fn resolve_borrow_type(&self, type_id: TypeId) -> TypeId {
@@ -94,8 +107,38 @@ impl TypeStore {
 	pub fn get_display_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
 		let type_value = self.get_type(type_id).unwrap();
-		type_value.display_type(&mut text, self);
+		type_value.display_type(&mut text, self, false);
 		text
+	}
+
+	pub fn get_display_ir_type(&self, type_id: TypeId) -> String {
+		let mut text = String::new();
+		let type_value = self.get_type(type_id).unwrap();
+		if type_value.is_borrow() {
+			return "ptr".to_owned();
+		}
+		type_value.display_ir_type(&mut text, self);
+		text
+	}
+
+	pub fn get_struct_name(&self, type_id: TypeId) -> &str {
+		let type_value = self.get_type(type_id).unwrap();
+		match type_value {
+			Type::Struct(struct_type) => &struct_type.name,
+			_ => panic!("not a struct type"),
+		}
+	}
+
+	// checks if needs to free
+	pub fn needs_free(&self, type_id: TypeId) -> bool {
+		if type_id.is_known() {
+			return false;
+		}
+		let type_value = self.get_type(type_id).expect("type not found");
+		if let Type::Borrow(borrow) = type_value {
+			return self.needs_free(borrow.value);
+		}
+		type_value.needs_free()
 	}
 }
 

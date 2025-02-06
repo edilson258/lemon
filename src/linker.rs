@@ -30,6 +30,7 @@ impl Linker {
 		if !output.status.success() {
 			throw_linker_error(format!("{}", String::from_utf8_lossy(&output.stderr)));
 		}
+		// remove object file
 		std::fs::remove_file(input).unwrap_or_else(|err| throw_linker_error(format!("{}", err)));
 		output_path.to_string()
 	}

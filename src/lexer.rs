@@ -60,6 +60,9 @@ pub enum Token {
 	#[token("pub")]
 	Pub,
 
+	#[token("impl")]
+	Impl,
+
 	#[token("mod")]
 	Mod,
 
@@ -174,6 +177,8 @@ pub enum Token {
 
 	// types
 	//
+	#[token("type")]
+	Type,
 
 	// usize
 	#[token("usize")]
@@ -325,6 +330,8 @@ impl fmt::Display for Token {
 			Token::Tilde => write!(f, "~"),
 			Token::Const => write!(f, "const"),
 			Token::VoidType => write!(f, "void"),
+			Token::Type => write!(f, "type"),
+			Token::Impl => write!(f, "impl"),
 		}
 	}
 }

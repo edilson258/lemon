@@ -10,14 +10,20 @@ use crate::{
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_fn_stmt(&mut self, fn_stmt: &ast::FnStmt) {
+	pub fn build_fn_stmt(&mut self, fn_stmt: &ast::FnStmt, with_name: Option<String>) {
 		if fn_stmt.is_generic() {
 			return self.build_generics_fns_stmt(fn_stmt);
 		}
 		let ret_id = self.get_type_id(fn_stmt.get_ret_id());
-		let fn_id = ir::FnId::new(fn_stmt.name.lexeme());
+
+		let self_name = with_name.clone();
+		let fn_id = if let Some(name) = &self_name {
+			self.create_bind_method_name(name, fn_stmt.name.lexeme())
+		} else {
+			fn_stmt.name.lexeme().to_string()
+		};
 		self.ir_ctx.enter_scope();
-		let binds = self.build_fn_binds(&fn_stmt.params);
+		let binds = self.build_fn_binds(&fn_stmt.params, self_name);
 		let fn_native = ir::Fn::new_ln(fn_id, binds, ret_id);
 		self.root.add_fn(fn_native);
 		self.ir_ctx.add_fn(fn_stmt.name.lexeme());
@@ -40,7 +46,7 @@ impl Builder<'_> {
 	pub fn build_generic_fn_stmt(&mut self, fn_stmt: &ast::FnStmt, fn_type: FnType) {
 		let fn_name = fn_stmt.lexeme();
 		let fn_name_hashed = format!("{fn_name}_{}", self.create_hash_type(&fn_type.generics));
-		let fn_id = ir::FnId::new(fn_name_hashed.as_str());
+		let fn_id = fn_name_hashed.as_str().to_string();
 		let ret_id = fn_type.ret;
 		self.ir_ctx.set_ret_type(Some(ret_id));
 		self.ir_ctx.enter_scope();
@@ -76,11 +82,20 @@ impl Builder<'_> {
 	}
 
 	#[inline(always)]
-	pub fn build_fn_binds(&mut self, params: &[ast::Binding]) -> Vec<ir::Bind> {
+	pub fn build_fn_binds(
+		&mut self,
+		params: &[ast::Binding],
+		self_name: Option<String>,
+	) -> Vec<ir::Bind> {
 		let mut binds = Vec::with_capacity(params.len());
 		for param in params {
 			let register = self.ir_ctx.new_register();
 			let type_id = self.get_type_id(param.type_id);
+			if !type_id.is_known() {
+				if let Some(self_name) = &self_name {
+					self.ir_ctx.register_struct_name(register, self_name.as_str());
+				}
+			}
 			self.ir_ctx.add_value(param.lexeme(), register);
 			self.ir_ctx.add_type(register, type_id);
 			binds.push(ir::Bind { register, type_id });
