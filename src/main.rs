@@ -11,7 +11,7 @@ mod diag;
 mod ir;
 mod lexer;
 mod linker;
-// mod llvm;
+mod llvm;
 mod loader;
 mod parser;
 mod range;

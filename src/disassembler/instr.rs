@@ -23,7 +23,7 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::Shl(bin_instr) => self.disassemble_bin_inst("shl", bin_instr, output),
 			ir::Instr::Shr(bin_instr) => self.disassemble_bin_inst("shr", bin_instr, output),
 
-			ir::Instr::Load(un_instr) => self.disassemble_bin_inst("load", un_instr, output),
+			ir::Instr::Load(un_instr) => self.disassemble_un_instr("load", un_instr, output),
 
 			ir::Instr::Not(instr) => self.disassemble_bin_inst("not", instr, output),
 			ir::Instr::Neg(instr) => self.disassemble_bin_inst("neg", instr, output),
@@ -41,37 +41,37 @@ impl<'ir> Disassembler<'ir> {
 	}
 
 	pub fn disassemble_salloc_instr(&self, instr: &'ir ir::SallocInstr, output: &mut String) {
-		let dest = self.disassemble_value_size(&instr.dest);
+		let dest = self.disassemble_basic_value(&instr.dest);
 		let size = self.type_store.get_display_ir_type(instr.size);
 		output.push_str(&format!("{} = salloc {}", dest, size));
 	}
 	pub fn disassemble_halloc_instr(&self, instr: &'ir ir::UnInstr, output: &mut String) {
-		let dest = self.disassemble_value_size(&instr.dest);
-		let size = self.disassemble_value_size(&instr.src);
+		let dest = self.disassemble_basic_value(&instr.dest);
+		let size = self.disassemble_basic_value(&instr.src);
 		output.push_str(&format!("{} = halloc {}", dest, size));
 	}
 	pub fn disassemble_mov_instr(&self, instr: &'ir ir::UnInstr, output: &mut String) {
-		let dest = self.disassemble_value_size(&instr.dest);
+		let dest = self.disassemble_basic_value(&instr.dest);
 		let src = self.disassemble_value(&instr.src);
 		output.push_str(&format!("mov {}, {}", dest, src));
 	}
-	pub fn disassemble_drop_instr(&self, instr: &'ir ir::IrValue, output: &mut String) {
+	pub fn disassemble_drop_instr(&self, instr: &'ir ir::IrBasicValue, output: &mut String) {
 		let dest = self.disassemble_value(instr);
 		output.push_str(&format!("drop {}", dest));
 	}
-	pub fn disassemble_ret_instr(&self, instr: &'ir ir::IrValue, output: &mut String) {
+	pub fn disassemble_ret_instr(&self, instr: &'ir ir::IrBasicValue, output: &mut String) {
 		let dest = self.disassemble_value(instr);
 		output.push_str(&format!("ret {}", dest));
 	}
 
 	pub fn disassemble_un_instr(&self, name: &'ir str, instr: &'ir UnInstr, output: &mut String) {
-		let dest = self.disassemble_value_size(&instr.dest);
+		let dest = self.disassemble_basic_value(&instr.dest);
 		let src = self.disassemble_value(&instr.src);
 		output.push_str(&format!("{} {}, {}", name, dest, src));
 	}
 
 	pub fn disassemble_bin_inst(&self, name: &'ir str, instr: &'ir BinInstr, output: &mut String) {
-		let dest = self.disassemble_value_size(&instr.dest);
+		let dest = self.disassemble_basic_value(&instr.dest);
 		let left = self.disassemble_value(&instr.left);
 		let right = self.disassemble_value(&instr.right);
 		output.push_str(&format!("{} = {} {}, {}", dest, name, left, right));
@@ -91,7 +91,7 @@ impl<'ir> Disassembler<'ir> {
 		for arg in &instr.args {
 			args.push(self.disassemble_value(arg));
 		}
-		let dest = self.disassemble_value_size(&instr.dest);
+		let dest = self.disassemble_basic_value(&instr.dest);
 		output.push_str(&format!("{} = call {}({})", dest, instr.callee, args.join(", ")));
 	}
 }

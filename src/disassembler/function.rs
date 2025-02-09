@@ -3,19 +3,22 @@ use crate::ir;
 use super::Disassembler;
 
 impl<'ir> Disassembler<'ir> {
-	pub fn disassemble_function(&self, func: &'ir ir::Function, output: &mut String) {
-		output.push_str(&format!("fn {}(", func.name));
-		for arg in &func.args {
+	pub fn disassemble_function(&self, function: &'ir ir::Function, output: &mut String) {
+		output.push_str(&format!("fn {}(", function.name));
+		for arg in &function.args {
 			self.disassemble_bind(arg, output);
 			output.push_str(", ");
 		}
 
-		let type_name = self.type_store.get_display_type(func.ret);
+		let type_name = self.type_store.get_display_type(function.ret);
 		output.push_str(&format!("): {} = ", type_name));
 
 		output.push_str("{\n");
-		for block in &func.blocks {
+		for (index, block) in function.blocks.iter().enumerate() {
 			self.disassemble_block(block, output);
+			if index != function.blocks.len() - 1 {
+				output.push('\n');
+			}
 		}
 
 		output.push_str("\n}\n");

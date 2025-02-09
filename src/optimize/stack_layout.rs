@@ -79,7 +79,7 @@ impl StackLayout {
 		}
 	}
 	pub fn optimize(&mut self, ir: &mut ir::IR) {
-		ir.funcs.iter_mut().for_each(|function| self.optimize_function(function));
+		ir.functions.iter_mut().for_each(|function| self.optimize_function(function));
 	}
 }
 impl Default for StackLayout {

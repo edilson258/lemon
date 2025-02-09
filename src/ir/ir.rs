@@ -1,5 +1,8 @@
 use crate::checker::types::TypeId;
 
+use super::value::IrBasicValue;
+
+#[derive(Debug)]
 pub struct IrBind {
 	pub name: String,
 	pub kind: TypeId,
@@ -11,22 +14,7 @@ impl IrBind {
 	}
 }
 
-pub struct IrValue {
-	pub value: String,
-	pub kind: TypeId,
-}
-
-impl IrValue {
-	pub fn new(value: String, kind: TypeId) -> Self {
-		Self { value, kind }
-	}
-
-	pub fn with_new_type(&self, kind: TypeId) -> Self {
-		let value = self.value.clone();
-		Self { value, kind }
-	}
-}
-
+#[derive(Debug)]
 pub enum Instr {
 	//
 	Add(BinInstr), // r0 = add r1, r2
@@ -53,26 +41,26 @@ pub enum Instr {
 	Jmp(JmpInstr),     // jmp l1
 	JmpIf(JmpIfInstr), // jmp_if r1, l1, l2
 
-	Ret(IrValue),    // ret r1
-	Call(CallInstr), // r0 = call fn_name, r1, r2, ...
+	Ret(IrBasicValue), // ret r1
+	Call(CallInstr),   // r0 = call fn_name, r1, r2, ...
 
 	// memory
-	Load(BinInstr), // r0 = load r1
-	Mov(UnInstr),   // mov r0, r1 # only stack
-	Drop(IrValue),  // drop r1 # only heap alloc
-	Set(UnInstr),   // set r0, r1 # only heap alloc
-
+	Load(UnInstr),       // r0 = load r1
+	Mov(UnInstr),        // mov r0, r1 # only stack
+	Drop(IrBasicValue),  // drop r1 # only heap alloc
+	Set(UnInstr),        // set r0, r1 # only heap alloc
 	Salloc(SallocInstr), // r0 = salloc r1 # only stack
 	Halloc(UnInstr),     // r0 = halloc r1 # only heap
 }
 
+#[derive(Debug)]
 pub struct SallocInstr {
-	pub dest: IrValue,
+	pub dest: IrBasicValue,
 	pub size: TypeId,
 }
 
 impl SallocInstr {
-	pub fn new(dest: IrValue, size: TypeId) -> Self {
+	pub fn new(dest: IrBasicValue, size: TypeId) -> Self {
 		Self { dest, size }
 	}
 }
@@ -82,30 +70,30 @@ impl From<SallocInstr> for Instr {
 		Instr::Salloc(value)
 	}
 }
-
+#[derive(Debug)]
 pub struct BinInstr {
-	pub dest: IrValue,
-	pub left: IrValue,
-	pub right: IrValue,
+	pub dest: IrBasicValue,
+	pub left: IrBasicValue,
+	pub right: IrBasicValue,
 }
 
 impl BinInstr {
-	pub fn new(dest: IrValue, left: IrValue, right: IrValue) -> Self {
+	pub fn new(dest: IrBasicValue, left: IrBasicValue, right: IrBasicValue) -> Self {
 		Self { dest, left, right }
 	}
 }
-
+#[derive(Debug)]
 pub struct UnInstr {
-	pub dest: IrValue,
-	pub src: IrValue,
+	pub dest: IrBasicValue,
+	pub src: IrBasicValue,
 }
 
 impl UnInstr {
-	pub fn new(dest: IrValue, src: IrValue) -> Self {
+	pub fn new(dest: IrBasicValue, src: IrBasicValue) -> Self {
 		Self { dest, src }
 	}
 }
-
+#[derive(Debug)]
 pub struct JmpInstr {
 	pub label: String,
 }
@@ -115,31 +103,32 @@ impl JmpInstr {
 		Self { label }
 	}
 }
-
+#[derive(Debug)]
 pub struct JmpIfInstr {
-	pub cond: IrValue,
+	pub cond: IrBasicValue,
 	pub true_label: String,
 	pub false_label: String,
 }
 
 impl JmpIfInstr {
-	pub fn new(cond: IrValue, true_label: String, false_label: String) -> Self {
+	pub fn new(cond: IrBasicValue, true_label: String, false_label: String) -> Self {
 		Self { cond, true_label, false_label }
 	}
 }
-
+#[derive(Debug)]
 pub struct CallInstr {
-	pub dest: IrValue,
+	pub dest: IrBasicValue,
 	pub callee: String,
-	pub args: Vec<IrValue>,
+	pub args: Vec<IrBasicValue>,
 }
 
 impl CallInstr {
-	pub fn new(dest: IrValue, callee: String, args: Vec<IrValue>) -> Self {
+	pub fn new(dest: IrBasicValue, callee: String, args: Vec<IrBasicValue>) -> Self {
 		Self { dest, callee, args }
 	}
 }
 
+#[derive(Debug)]
 pub struct IrBlock {
 	pub label: usize,
 	pub instrs: Vec<Instr>,
@@ -147,10 +136,9 @@ pub struct IrBlock {
 
 impl Default for IrBlock {
 	fn default() -> Self {
-		Self::new(0)
+		Self::new(1)
 	}
 }
-
 impl IrBlock {
 	pub fn new(label: usize) -> Self {
 		Self { label, instrs: Vec::new() }
@@ -163,8 +151,16 @@ impl IrBlock {
 	pub fn format_label(&self) -> String {
 		format!("l{}", self.label)
 	}
-}
 
+	pub fn llvm_name(&self) -> String {
+		// blcoks start from 1
+		if self.label == 1 {
+			return "entry".to_string();
+		}
+		format!("l{}", self.label)
+	}
+}
+#[derive(Debug)]
 pub struct Function {
 	pub name: String,
 	pub comptime: bool,
@@ -178,6 +174,14 @@ impl Function {
 		Self { name, comptime, args, blocks: Vec::new(), ret }
 	}
 
+	pub fn is_main(&self) -> bool {
+		self.name == "main"
+	}
+
+	pub fn is_packed(&self) -> bool {
+		false
+	}
+
 	pub fn add_block(&mut self, block: IrBlock) {
 		self.blocks.push(block);
 	}
@@ -188,7 +192,7 @@ impl Function {
 }
 
 pub struct IR {
-	pub funcs: Vec<Function>,
+	pub functions: Vec<Function>,
 }
 
 impl Default for IR {
@@ -199,11 +203,11 @@ impl Default for IR {
 
 impl IR {
 	pub fn new() -> Self {
-		Self { funcs: Vec::new() }
+		Self { functions: Vec::new() }
 	}
 
-	pub fn add_func(&mut self, func: Function) {
-		self.funcs.push(func);
+	pub fn add_function(&mut self, function: Function) {
+		self.functions.push(function);
 	}
 }
 

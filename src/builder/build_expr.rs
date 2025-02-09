@@ -1,9 +1,9 @@
-use crate::{ast, ir::IrValue};
+use crate::{ast, ir::IrBasicValue};
 
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_expr(&mut self, expr: &mut ast::Expr) -> IrValue {
+	pub fn build_expr(&mut self, expr: &mut ast::Expr) -> IrBasicValue {
 		match expr {
 			ast::Expr::Assign(assign_expr) => self.build_assign_expr(assign_expr),
 			ast::Expr::Binary(binary_expr) => self.build_binary_expr(binary_expr),

@@ -1,12 +1,17 @@
 use scope::{Local, Scope};
 
-use crate::checker::types::TypeId;
+use crate::{
+	checker::types::TypeId,
+	ir::{BasicValue, IrBasicValue},
+};
 mod block;
+mod label;
 mod scope;
 
 pub struct Context {
 	pub scopes: Vec<Scope>,
 	pub block: block::Block,
+	pub register_count: usize,
 }
 impl Default for Context {
 	fn default() -> Self {
@@ -16,11 +21,19 @@ impl Default for Context {
 
 impl Context {
 	pub fn new() -> Context {
-		Context { scopes: Vec::new(), block: block::Block::new() }
+		Context { scopes: Vec::new(), block: block::Block::new(), register_count: 0 }
 	}
 
 	pub fn push_scope(&mut self) {
 		self.scopes.push(Scope::new());
+	}
+
+	pub fn new_register(&mut self, type_id: TypeId) -> IrBasicValue {
+		let register = format!("r{}", self.register_count);
+		self.register_count += 1;
+		let register_value = BasicValue::Register(register);
+
+		IrBasicValue::new(register_value, type_id)
 	}
 
 	pub fn pop_scope(&mut self) {
@@ -35,15 +48,15 @@ impl Context {
 		self.scopes.last_mut().unwrap()
 	}
 
-	pub fn add_local(&mut self, name: String, type_id: TypeId) {
-		self.get_current_scope_mut().add_local(name, type_id);
+	pub fn add_local(&mut self, key: String, basic_value: IrBasicValue) {
+		self.get_current_scope_mut().add_local(key, basic_value);
 	}
 
-	pub fn get_local(&self, name: &str) -> Option<&Local> {
+	pub fn get_local(&self, name: &str) -> Option<&IrBasicValue> {
 		self.get_current_scope().get_local(name)
 	}
 
-	pub fn get_local_mut(&mut self, name: &str) -> Option<&mut Local> {
+	pub fn get_local_mut(&mut self, name: &str) -> Option<&mut IrBasicValue> {
 		self.get_current_scope_mut().get_local_mut(name)
 	}
 }
