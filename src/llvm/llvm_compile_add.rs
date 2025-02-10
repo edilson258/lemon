@@ -2,7 +2,7 @@ use crate::{ir, report::throw_llvm_error};
 
 use super::Llvm;
 
-impl<'ll> Llvm<'ll> {
+impl Llvm<'_> {
 	pub fn llvm_compile_add(&mut self, binary: &ir::BinInstr) {
 		let left = self.llvm_compile_value(&binary.left);
 		let right = self.llvm_compile_value(&binary.right);

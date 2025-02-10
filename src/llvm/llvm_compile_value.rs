@@ -36,6 +36,6 @@ impl<'ll> Llvm<'ll> {
 		if let Some(value) = self.env.get_value(name) {
 			return *value;
 		}
-		throw_llvm_error(format!("register not found: {:?}", name));
+		throw_llvm_error(format!("register not found '{}'", name));
 	}
 }

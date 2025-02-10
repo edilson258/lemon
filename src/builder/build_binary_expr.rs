@@ -13,6 +13,8 @@ impl Builder<'_> {
 		let type_id = self.build_type(binary_expr.get_type_id(), binary_expr.get_range());
 
 		let dest = self.ctx.new_register(type_id);
+		let lhs = self.resolve_value(lhs);
+		let rhs = self.resolve_value(rhs);
 
 		let instr = BinInstr::new(dest.clone(), lhs, rhs);
 
@@ -36,7 +38,17 @@ impl Builder<'_> {
 			_ => todo!("code {:?}", binary_expr.operator.kind),
 		};
 		self.ctx.block.add_instr(instr);
-
+		self.ctx.add_dont_load(dest.value.as_str());
 		dest
+	}
+
+	pub fn resolve_value(&mut self, value: IrBasicValue) -> IrBasicValue {
+		if value.is_register() && !self.ctx.is_dont_load(value.value.as_str()) {
+			let register = self.ctx.new_register(value.get_type());
+			let instr = ir::UnInstr::new(register.clone(), value.clone());
+			self.ctx.block.add_instr(ir::Instr::Load(instr));
+			return register;
+		}
+		value
 	}
 }

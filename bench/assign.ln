@@ -1,3 +1,7 @@
 fn main() = {
  let mut age = 10;
+
+ if (age > 20) {
+  age = age + 1;
+ }
 }

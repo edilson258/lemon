@@ -158,32 +158,32 @@ pub fn run(path_name: &str) {
 	let mut ir_builder = Builder::new(&ctx.type_store, source);
 	let ir = ir_builder.build(&mut ast);
 
-	// println!("emit llvm...");
-	// let llvm_context = inkwell::context::Context::create();
-	// let llvm_module = llvm::create_module_from_source(&llvm_context, source);
-	// let mut llvm = Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
-	// llvm.compile(&ir);
+	println!("emit llvm...");
+	let llvm_context = inkwell::context::Context::create();
+	let llvm_module = llvm::create_module_from_source(&llvm_context, source);
+	let mut llvm = llvm::Llvm::new(&llvm_context, llvm_module, &ctx.type_store);
+	llvm.compile_ir(&ir);
 
 	// cross compile
+
+	println!("emit '{}' binary...", HOST.architecture);
+	let triple = HOST.to_string();
+	let cross = Cross::new(&triple);
+
+	let output = generate_output_filename(&source.pathbuf);
+	let output_path = Path::new(&output);
+
+	match cross.emit(&llvm.module, FileType::Object, output_path) {
+		Ok(_) => {}
+		Err(err) => throw_cross_compile_error(err),
+	}
+
+	// link
 	//
-	// println!("emit '{}' binary...", HOST.architecture);
-	// let triple = HOST.to_string();
-	// let cross = Cross::new(&triple);
-
-	// let output = generate_output_filename(&source.pathbuf);
-	// let output_path = Path::new(&output);
-
-	// match cross.emit(&llvm.module, FileType::Object, output_path) {
-	// 	Ok(_) => {}
-	// 	Err(err) => throw_cross_compile_error(err),
-	// }
-
-	// // link
-	// //
-	// println!("linking...");
-	// let linker = Linker::new(output_path.to_path_buf());
-	// let bin = linker.link();
-	// let command = format!("./{}", bin);
-	// println!("running...");
-	// std::process::Command::new("sh").arg("-c").arg(command).status().unwrap();
+	println!("linking...");
+	let linker = Linker::new(output_path.to_path_buf());
+	let bin = linker.link();
+	let command = format!("./{}", bin);
+	println!("running...");
+	std::process::Command::new("sh").arg("-c").arg(command).status().unwrap();
 }

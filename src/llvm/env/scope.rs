@@ -1,6 +1,7 @@
 use inkwell::{basic_block::BasicBlock, values::PointerValue};
 use rustc_hash::FxHashMap;
 
+#[derive(Debug)]
 pub struct Scope<'ll> {
 	block_store: FxHashMap<String, BasicBlock<'ll>>,
 	value_store: FxHashMap<String, inkwell::values::BasicValueEnum<'ll>>,

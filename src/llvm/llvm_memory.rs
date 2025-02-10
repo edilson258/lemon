@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValue, FunctionValue};
 use inkwell::AddressSpace;

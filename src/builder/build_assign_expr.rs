@@ -1,6 +1,6 @@
 use crate::{
 	ast,
-	ir::{self, Instr, IrBasicValue, UnInstr},
+	ir::{self, IrBasicValue, UnInstr},
 	report::throw_ir_build_error,
 };
 
@@ -18,10 +18,13 @@ impl Builder<'_> {
 			);
 		});
 
-		if !basic_type.is_borrow() || !basic_type.is_borrow_mut() {
-			let dest_value = UnInstr::new(dest.clone(), src.clone());
-			self.ctx.block.add_instr(Instr::Load(dest_value));
+		if src.is_register() && !basic_type.is_borrow() {
+			let register = self.resolve_value(src);
+			let instr = UnInstr::new(dest, register);
+			self.ctx.block.add_instr(ir::Instr::Set(instr));
+			return IrBasicValue::default();
 		}
+
 		let instr = UnInstr::new(dest, src);
 		self.ctx.block.add_instr(ir::Instr::Set(instr));
 		IrBasicValue::default()

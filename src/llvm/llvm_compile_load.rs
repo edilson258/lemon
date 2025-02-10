@@ -2,7 +2,7 @@ use crate::{ir, report::throw_llvm_error};
 
 use super::Llvm;
 
-impl<'ll> Llvm<'ll> {
+impl Llvm<'_> {
 	pub fn llvm_compile_load(&mut self, binary: &ir::UnInstr) {
 		let value = self.llvm_compile_value(&binary.src);
 		if value.is_pointer_value() {

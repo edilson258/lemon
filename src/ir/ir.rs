@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::checker::types::TypeId;
 
 use super::value::IrBasicValue;

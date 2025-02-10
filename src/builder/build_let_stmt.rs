@@ -16,15 +16,11 @@ impl Builder<'_> {
 
 		if let Some(basic_type) = self.type_store.get_type(type_id) {
 			if !basic_type.is_borrow() && src.is_register() {
-				let load_dest = self.ctx.new_register(type_id);
-				let instr = UnInstr::new(load_dest.clone(), src);
-				let load_instr = Instr::Load(instr);
-				self.ctx.block.add_instr(load_instr);
-
+				let value = self.resolve_value(src);
 				let salloc = SallocInstr::new(dest.clone(), type_id);
 
 				self.ctx.block.add_instr(salloc.into());
-				self.ctx.block.add_instr(Instr::Set(UnInstr::new(dest, load_dest)));
+				self.ctx.block.add_instr(Instr::Set(UnInstr::new(dest, value)));
 				return;
 			}
 		}

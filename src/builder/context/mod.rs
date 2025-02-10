@@ -1,4 +1,4 @@
-use scope::{Local, Scope};
+use scope::Scope;
 
 use crate::{
 	checker::types::TypeId,
@@ -56,7 +56,11 @@ impl Context {
 		self.get_current_scope().get_local(name)
 	}
 
-	pub fn get_local_mut(&mut self, name: &str) -> Option<&mut IrBasicValue> {
-		self.get_current_scope_mut().get_local_mut(name)
+	pub fn add_dont_load(&mut self, key: impl Into<String>) {
+		self.get_current_scope_mut().add_dont_load(key);
+	}
+
+	pub fn is_dont_load(&self, key: &str) -> bool {
+		self.get_current_scope().is_dont_load(key)
 	}
 }

@@ -2,7 +2,7 @@ use crate::{ir, report::throw_llvm_error};
 
 use super::Llvm;
 
-impl<'ll> Llvm<'ll> {
+impl Llvm<'_> {
 	pub fn llvm_compile_jmp_if(&mut self, jump_if: &ir::JmpIfInstr) {
 		let cond = self.llvm_compile_value(&jump_if.cond);
 		// todo: is trow a error when cond is not bool(e.g: 1 or 0)
