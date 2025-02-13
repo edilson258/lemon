@@ -1,12 +1,10 @@
-extern fn printf(fmt: str, ...): i32 = {};
+// extern fn printf(fmt: str, ...): i32 = {};
 
 fn println(value: f32) = {
-	printf("%f\n", value);
+	// printf("%f\n", value);
 }
 
 fn main() = {
-  let mut age: f32 = 1.9;
-  println(age);
-  age = age + 1.0;
+  let age: f32 = 1.9;
   println(age);
 }

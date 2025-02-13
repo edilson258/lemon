@@ -14,6 +14,7 @@ use crate::{
 	parser::Parser,
 	report::throw_cross_compile_error,
 };
+
 use clap::ArgMatches;
 use console::{Style, Term};
 use inkwell::targets::FileType;

@@ -14,7 +14,7 @@ impl Checker<'_> {
 				self.args_mismatch(fn_type.args.len(), call_args.len(), call_expr.get_range())?;
 				self.call_args_match(&fn_type.args, &call_args)?;
 				self.monomorphic_call(fn_type.clone().into())?;
-				call_expr.set_type_id(fn_type.ret);
+				call_expr.set_ret_type_id(fn_type.ret);
 				call_expr.set_args_type(fn_type.args);
 				return Ok(fn_type.ret);
 			}
@@ -24,7 +24,7 @@ impl Checker<'_> {
 					self.call_args_match(&fn_type.args, &call_args)?;
 				}
 				self.monomorphic_call(fn_type.clone().into())?;
-				call_expr.set_type_id(fn_type.ret);
+				call_expr.set_ret_type_id(fn_type.ret);
 				call_expr.set_args_type(fn_type.args);
 				return Ok(fn_type.ret);
 			}

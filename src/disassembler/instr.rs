@@ -92,6 +92,9 @@ impl<'ir> Disassembler<'ir> {
 			args.push(self.disassemble_value(arg));
 		}
 		let dest = self.disassemble_basic_value(&instr.dest);
-		output.push_str(&format!("{} = call {}({})", dest, instr.callee, args.join(", ")));
+		let type_name = self.type_store.get_display_ir_type(instr.ret_id);
+
+		let fmt = format!("{} = call {} {}({})", dest, type_name, instr.callee, args.join(", "));
+		output.push_str(&fmt);
 	}
 }

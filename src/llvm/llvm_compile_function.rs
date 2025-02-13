@@ -64,9 +64,9 @@ impl<'ll> Llvm<'ll> {
 
 	fn build_llvm_return_function(&mut self, function: &ir::Function) {
 		let ret_type = self.type_store.resolve_borrow_type(function.ret);
-		let function_main_return_void = function.is_main() && ret_type.is_unit() || ret_type.is_void();
+		let is_main_return_void = function.is_main() && (ret_type.is_unit() || ret_type.is_void());
 
-		if function_main_return_void {
+		if is_main_return_void {
 			let sucess = self.ctx.i32_type().const_int(0, false);
 			if let Err(err) = self.builder.build_return(Some(&sucess)) {
 				throw_llvm_error(format!("cannot build success void return, error: {}", err));

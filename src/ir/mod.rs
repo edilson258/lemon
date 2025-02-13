@@ -120,12 +120,13 @@ impl JmpIfInstr {
 pub struct CallInstr {
 	pub dest: IrBasicValue,
 	pub callee: String,
+	pub ret_id: TypeId,
 	pub args: Vec<IrBasicValue>,
 }
 
 impl CallInstr {
-	pub fn new(dest: IrBasicValue, callee: String, args: Vec<IrBasicValue>) -> Self {
-		Self { dest, callee, args }
+	pub fn new(dest: IrBasicValue, callee: String, ret_id: TypeId, args: Vec<IrBasicValue>) -> Self {
+		Self { dest, callee, ret_id, args }
 	}
 }
 
