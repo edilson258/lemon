@@ -1,7 +1,7 @@
-// extern fn printf(fmt: str, ...): i32 = {};
+extern fn printf(fmt: str, ...): i32 = {};
 
 fn println(value: f32) = {
-	// printf("%f\n", value);
+	printf("%f\n", value);
 }
 
 fn main() = {

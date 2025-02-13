@@ -16,6 +16,7 @@ mod build_deref_expr;
 mod build_expr;
 
 mod build_block_stmt;
+mod build_extern_fn_stmt;
 mod build_fn_stmt;
 mod build_ident_expr;
 mod build_if_expr;
@@ -62,6 +63,7 @@ impl<'br> Builder<'br> {
 		match stmt {
 			ast::Stmt::Let(let_stmt) => self.build_let_stmt(let_stmt),
 			ast::Stmt::Fn(fn_stmt) => self.build_fn_stmt(fn_stmt),
+			ast::Stmt::ExternFn(extern_fn_stmt) => self.build_extern_fn_stmt(extern_fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
 			// ast::Stmt::While(while_stmt) => self.build_while_stmt(while_stmt),
 			// ast::Stmt::For(for_stmt) => self.build_for_stmt(for_stmt),
@@ -73,9 +75,16 @@ impl<'br> Builder<'br> {
 			// ast::Stmt::Impl(impl_stmt) => self.build_impl_stmt(impl_stmt),
 			ast::Stmt::Expr(expr) => {
 				let rest = self.build_expr(expr);
-				if !rest.is_none() || !rest.get_type().is_unit() {
-					println!("{:?}", rest);
+				if rest.is_none() || rest.get_type().is_nothing() {
+					return;
 				}
+				if !rest.is_register() {
+					println!("stmt expr: {:?}", rest);
+					return;
+				}
+				let name = rest.value.as_str();
+				let type_name = self.type_store.get_display_type(rest.get_type());
+				println!("stmt expr: {} {}", name, type_name);
 			}
 			_ => todo!("code {:#?}", stmt),
 		}

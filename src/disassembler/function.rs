@@ -4,14 +4,28 @@ use super::Disassembler;
 
 impl<'ir> Disassembler<'ir> {
 	pub fn disassemble_function(&self, function: &'ir ir::Function, output: &mut String) {
+		if function.is_extern_function() {
+			output.push_str("extern ");
+		}
 		output.push_str(&format!("fn {}(", function.name));
-		for arg in &function.args {
+		for (arg_position, arg) in function.args.iter().enumerate() {
 			self.disassemble_bind(arg, output);
-			output.push_str(", ");
+			if arg_position != function.args.len() - 1 {
+				output.push_str(", ");
+			}
+		}
+
+		if function.is_variadic_args() {
+			output.push_str("...");
 		}
 
 		let type_name = self.type_store.get_display_type(function.ret);
 		output.push_str(&format!("): {} = ", type_name));
+
+		if function.is_extern_function() {
+			output.push_str("{}\n");
+			return;
+		}
 
 		output.push_str("{\n");
 		for (index, block) in function.blocks.iter().enumerate() {

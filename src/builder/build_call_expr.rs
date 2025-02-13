@@ -29,9 +29,12 @@ impl Builder<'_> {
 	#[rustfmt::skip]
 	fn build_function_args(&mut self, args_expr: &mut [ast::Expr], args_type: &[TypeId]) -> Vec<IrBasicValue>  {
 		let mut basic_values = Vec::with_capacity(args_type.len());
-		for (expr, expr_type) in args_expr.iter_mut().zip(args_type) {
-			let basic_value = self.build_expr(expr).with_new_type(*expr_type);
-			basic_values.push(basic_value);
+		for (position, expr) in args_expr.iter_mut().enumerate() {
+			let mut basic_value = self.build_expr(expr);
+		  if 	let Some(expr_type) = args_type.get(position){
+		    basic_value = basic_value.with_new_type(*expr_type);
+		  }
+		  basic_values.push(basic_value);
 		}
 		basic_values
 	}

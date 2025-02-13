@@ -164,8 +164,11 @@ impl IrBlock {
 }
 #[derive(Debug)]
 pub struct Function {
+	pub extern_function: bool,
 	pub name: String,
 	pub comptime: bool,
+	// only for extern fn
+	pub variadic_args: bool,
 	pub ret: TypeId,
 	pub args: Vec<IrBind>,
 	pub blocks: Vec<IrBlock>,
@@ -173,15 +176,32 @@ pub struct Function {
 
 impl Function {
 	pub fn new(name: String, comptime: bool, args: Vec<IrBind>, ret: TypeId) -> Self {
-		Self { name, comptime, args, blocks: Vec::new(), ret }
+		Self {
+			name,
+			comptime,
+			args,
+			blocks: Vec::new(),
+			ret,
+			variadic_args: false,
+			extern_function: false,
+		}
 	}
 
 	pub fn is_main(&self) -> bool {
 		self.name == "main"
 	}
 
-	pub fn is_packed(&self) -> bool {
-		false
+	pub fn is_variadic_args(&self) -> bool {
+		self.variadic_args
+	}
+
+	pub fn is_extern_function(&self) -> bool {
+		self.extern_function
+	}
+
+	pub fn as_extern_function(&mut self, variadic_args: bool) {
+		self.extern_function = true;
+		self.variadic_args = variadic_args;
 	}
 
 	pub fn add_block(&mut self, block: IrBlock) {

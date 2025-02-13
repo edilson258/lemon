@@ -17,10 +17,11 @@ impl<'ll> Llvm<'ll> {
 			self.llvm_register_block(block.llvm_name().as_str(), &function_value);
 		});
 
-		function.blocks.iter().for_each(|block| {
-			self.llvm_compile_block(block);
-		});
-
+		if !function.is_extern_function() {
+			function.blocks.iter().for_each(|block| {
+				self.llvm_compile_block(block);
+			});
+		}
 		self.build_llvm_return_function(function);
 		self.env.exit_function_scope();
 	}
@@ -37,10 +38,10 @@ impl<'ll> Llvm<'ll> {
 		let ret_type = if function.is_main() { TypeId::I32 } else { function.ret };
 		let ret_type = self.type_store.resolve_borrow_type(ret_type);
 		if ret_type.is_unit() || ret_type.is_void() {
-			return self.ctx.void_type().fn_type(&args_type, function.is_packed());
+			return self.ctx.void_type().fn_type(&args_type, function.is_variadic_args());
 		}
 		let llvm_type = self.compile_type_to_basic_type(ret_type);
-		llvm_type.fn_type(&args_type, function.is_packed())
+		llvm_type.fn_type(&args_type, function.is_variadic_args())
 	}
 
 	fn create_llvm_param_types(&mut self, fun: &ir::Function) -> Vec<BasicMetadataTypeEnum<'ll>> {
