@@ -11,7 +11,7 @@ mod llvm_compile_cmp_ge;
 mod llvm_compile_cmp_gt;
 mod llvm_compile_cmp_le;
 mod llvm_compile_cmp_lt;
-
+mod llvm_compile_string;
 // logic
 // mod llvm_compile_neg;
 // mod llvm_compile_not;

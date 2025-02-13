@@ -10,6 +10,13 @@ impl<'ll> Llvm<'ll> {
 	pub fn llvm_compile_function(&mut self, function: &ir::Function) {
 		self.env.enter_function_scope();
 
+		if function.is_extern_function() {
+			let function_value = self.create_llvm_function_value(function);
+			self.register_function_param(&function_value, &function.args);
+			self.env.exit_function_scope();
+			return;
+		}
+
 		let function_value = self.create_llvm_function_value(function);
 		self.register_function_param(&function_value, &function.args);
 
@@ -17,11 +24,10 @@ impl<'ll> Llvm<'ll> {
 			self.llvm_register_block(block.llvm_name().as_str(), &function_value);
 		});
 
-		if !function.is_extern_function() {
-			function.blocks.iter().for_each(|block| {
-				self.llvm_compile_block(block);
-			});
-		}
+		function.blocks.iter().for_each(|block| {
+			self.llvm_compile_block(block);
+		});
+
 		self.build_llvm_return_function(function);
 		self.env.exit_function_scope();
 	}
@@ -47,19 +53,20 @@ impl<'ll> Llvm<'ll> {
 	fn create_llvm_param_types(&mut self, fun: &ir::Function) -> Vec<BasicMetadataTypeEnum<'ll>> {
 		let mut args_type = Vec::with_capacity(fun.args.len());
 		for arg in &fun.args {
-			let arg_type = self.compile_type_to_basic_type(arg.kind);
+			let arg_type = self.compile_type_to_basic_type(arg.get_type());
 			args_type.push(arg_type.into());
 		}
 		args_type
 	}
 
-	fn register_function_param(&mut self, function: &FunctionValue<'ll>, params: &[ir::IrBind]) {
+	fn register_function_param(&mut self, func: &FunctionValue<'ll>, params: &[ir::IrBasicValue]) {
 		params.iter().enumerate().for_each(|(i, param)| {
-			let param_value = match function.get_nth_param(i as u32) {
+			let value_str = param.value.as_str();
+			let param_value = match func.get_nth_param(i as u32) {
 				Some(param_value) => param_value,
-				None => throw_llvm_error(format!("param {} not found", param.name)),
+				None => throw_llvm_error(format!("param {} not found", value_str)),
 			};
-			self.env.set_value(param.name.as_str(), param_value);
+			self.env.set_value(value_str, param_value);
 		});
 	}
 

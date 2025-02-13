@@ -81,6 +81,16 @@ impl IrBasicValue {
 	pub fn is_register(&self) -> bool {
 		matches!(self.value, BasicValue::Register(_))
 	}
+
+	pub fn is_raw_value(&self) -> bool {
+		self.is_int() || self.is_float() || self.is_string() || self.is_char() || self.is_bool()
+	}
+}
+
+impl From<u64> for IrBasicValue {
+	fn from(value: u64) -> Self {
+		Self::new(BasicValue::Int(value), TypeId::I64)
+	}
 }
 
 impl From<i64> for IrBasicValue {

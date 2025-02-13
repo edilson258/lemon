@@ -6,19 +6,15 @@ impl Llvm<'_> {
 	pub fn llvm_compile_call(&mut self, call: &ir::CallInstr) {
 		let llvm_callee = match self.module.get_function(&call.callee) {
 			Some(llvm_callee) => llvm_callee,
-			None => throw_llvm_error(format!("Function '{}' not found", call.callee)),
+			None => throw_llvm_error(format!("function '{}' not found", call.callee)),
 		};
 
-		#[rustfmt::skip]
-		let args: Vec<_> = call.args.iter().map(|arg| {
-		  // todo: don't load if argument is reference
-				self.llvm_compile_value_and_load(arg).into()
-		}).collect();
+		let args: Vec<_> = call.args.iter().map(|arg| self.llvm_compile_value(arg).into()).collect();
 
 		let dest = call.dest.value.as_str();
 		let call_result = match self.builder.build_call(llvm_callee, &args, dest) {
 			Ok(result) => result,
-			Err(err) => throw_llvm_error(format!("Call error: {}", err)),
+			Err(err) => throw_llvm_error(format!("call '{}'", err)),
 		};
 
 		if let Some(return_value) = call_result.try_as_basic_value().left() {

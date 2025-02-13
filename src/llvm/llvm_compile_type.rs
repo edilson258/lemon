@@ -19,12 +19,14 @@ impl<'ll> Llvm<'ll> {
 			TypeId::I16    | TypeId::U16 => Some(self.ctx.i16_type().into()),
 			TypeId::I32    | TypeId::U32 => Some(self.ctx.i32_type().into()),
 			TypeId::I64    | TypeId::U64 => Some(self.ctx.i64_type().into()),
-			TypeId::STRING | TypeId::STR => Some(self.ctx.ptr_type(AddressSpace::default()).into()),
+
 			TypeId::UNIT   | TypeId::VOID => None, // void
 
-			TypeId::F32  => Some(self.ctx.f32_type().into()),
-			TypeId::F64  => Some(self.ctx.f64_type().into()),
-			TypeId::BOOL => Some(self.ctx.bool_type().into()),
+		  TypeId::STR    => Some(self.ctx.ptr_type(AddressSpace::default()).into()),
+			TypeId::STRING => Some(self.ctx.ptr_type(AddressSpace::default()).into()),
+			TypeId::F32    => Some(self.ctx.f32_type().into()),
+			TypeId::F64    => Some(self.ctx.f64_type().into()),
+			TypeId::BOOL   => Some(self.ctx.bool_type().into()),
 			found => {
 				throw_llvm_error(format!("type '{}' not found", self.type_store.get_display_type(found)))
 			}

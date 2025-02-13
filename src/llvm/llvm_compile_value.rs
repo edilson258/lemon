@@ -1,19 +1,45 @@
 use inkwell::values::BasicValueEnum;
 
-use crate::{ir, report::throw_llvm_error};
+use crate::{checker::types::TypeId, ir, report::throw_llvm_error};
 
 use super::Llvm;
 
 impl<'ll> Llvm<'ll> {
 	pub fn llvm_compile_value(&mut self, ir_basic_value: &ir::IrBasicValue) -> BasicValueEnum<'ll> {
 		match &ir_basic_value.value {
-			ir::BasicValue::Int(value) => self.ctx.i64_type().const_int(*value, false).into(),
-			ir::BasicValue::Float(value) => self.ctx.f64_type().const_float(*value).into(),
+			ir::BasicValue::Int(value) => self.llvm_compile_int(ir_basic_value.get_type(), *value),
+			ir::BasicValue::Float(value) => self.llvm_compile_float(ir_basic_value.get_type(), *value),
 			ir::BasicValue::Bool(value) => self.ctx.bool_type().const_int(*value as u64, false).into(),
-			ir::BasicValue::String(_) => throw_llvm_error("unsupported string value"),
+			ir::BasicValue::String(value) => self.llvm_compile_string(value),
 			ir::BasicValue::Char(_) => throw_llvm_error("unsupported char value"),
 			ir::BasicValue::None => throw_llvm_error("unsupported none value"),
 			ir::BasicValue::Register(name) => self.llvm_compile_register(name),
+			// ir::BasicValue::String(value) => self.ctx.const_string(value.as_bytes(), true).into(),
+		}
+	}
+
+	fn llvm_compile_int(&mut self, type_id: TypeId, value: u64) -> BasicValueEnum<'ll> {
+		match type_id {
+			TypeId::I8 => self.ctx.i8_type().const_int(value, false).into(),
+			TypeId::U8 => self.ctx.i8_type().const_int(value, true).into(),
+
+			TypeId::I16 => self.ctx.i16_type().const_int(value, false).into(),
+			TypeId::U16 => self.ctx.i16_type().const_int(value, true).into(),
+
+			TypeId::I32 => self.ctx.i32_type().const_int(value, false).into(),
+			TypeId::U32 => self.ctx.i32_type().const_int(value, true).into(),
+
+			TypeId::I64 => self.ctx.i64_type().const_int(value, false).into(),
+			TypeId::U64 => self.ctx.i64_type().const_int(value, true).into(),
+			_ => throw_llvm_error("unsupported int type"),
+		}
+	}
+
+	fn llvm_compile_float(&mut self, type_id: TypeId, value: f64) -> BasicValueEnum<'ll> {
+		match type_id {
+			TypeId::F32 => self.ctx.f32_type().const_float(value).into(),
+			TypeId::F64 => self.ctx.f64_type().const_float(value).into(),
+			_ => throw_llvm_error("unsupported float type"),
 		}
 	}
 

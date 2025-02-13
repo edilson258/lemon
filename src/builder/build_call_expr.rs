@@ -25,18 +25,28 @@ impl Builder<'_> {
 			_ => todo!("unrecognized callee: {:?}", expr.callee),
 		}
 	}
-
 	#[rustfmt::skip]
-	fn build_function_args(&mut self, args_expr: &mut [ast::Expr], args_type: &[TypeId]) -> Vec<IrBasicValue>  {
+	fn build_function_args(&mut self, args_expr: &mut [ast::Expr], args_type: &[TypeId]) -> Vec<IrBasicValue> {
 		let mut basic_values = Vec::with_capacity(args_type.len());
 		for (position, expr) in args_expr.iter_mut().enumerate() {
 			let mut basic_value = self.build_expr(expr);
-		  if 	let Some(expr_type) = args_type.get(position){
-		    basic_value = basic_value.with_new_type(*expr_type);
-		  }
-		  basic_values.push(basic_value);
+
+			if let Some(expr_type) = args_type.get(position) {
+				basic_value = self.build_param_load(basic_value.with_new_type(*expr_type), *expr_type);
+			}
+			basic_values.push(basic_value);
 		}
 		basic_values
+	}
+
+	fn build_param_load(&mut self, value: IrBasicValue, type_id: TypeId) -> IrBasicValue {
+		if !value.is_raw_value() {
+			let dest = self.ctx.new_register(type_id);
+			let instr = ir::UnInstr::new(dest.clone(), value);
+			self.ctx.block.add_instr(ir::Instr::Load(instr));
+			return dest;
+		}
+		value
 	}
 
 	// fn build_member_callee(&mut self, member: &ast::MemberExpr) -> String {

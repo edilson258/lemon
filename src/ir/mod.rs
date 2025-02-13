@@ -170,12 +170,12 @@ pub struct Function {
 	// only for extern fn
 	pub variadic_args: bool,
 	pub ret: TypeId,
-	pub args: Vec<IrBind>,
+	pub args: Vec<IrBasicValue>,
 	pub blocks: Vec<IrBlock>,
 }
 
 impl Function {
-	pub fn new(name: String, comptime: bool, args: Vec<IrBind>, ret: TypeId) -> Self {
+	pub fn new(name: String, comptime: bool, args: Vec<IrBasicValue>, ret: TypeId) -> Self {
 		Self {
 			name,
 			comptime,

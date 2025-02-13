@@ -9,7 +9,7 @@ impl<'ir> Disassembler<'ir> {
 		}
 		output.push_str(&format!("fn {}(", function.name));
 		for (arg_position, arg) in function.args.iter().enumerate() {
-			self.disassemble_bind(arg, output);
+			self.disassemble_args(arg, output);
 			if arg_position != function.args.len() - 1 {
 				output.push_str(", ");
 			}
@@ -38,9 +38,9 @@ impl<'ir> Disassembler<'ir> {
 		output.push_str("\n}\n");
 	}
 
-	pub fn disassemble_bind(&self, bind: &'ir ir::IrBind, output: &mut String) {
-		output.push_str(bind.name.as_str());
-		let type_name = self.type_store.get_display_type(bind.kind);
+	pub fn disassemble_args(&self, bind: &'ir ir::IrBasicValue, output: &mut String) {
+		output.push_str(bind.value.as_str());
+		let type_name = self.type_store.get_display_type(bind.get_type());
 		output.push_str(&format!(": {}", type_name));
 	}
 }

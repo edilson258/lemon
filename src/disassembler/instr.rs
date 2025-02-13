@@ -23,10 +23,10 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::Shl(bin_instr) => self.disassemble_bin_inst("shl", bin_instr, output),
 			ir::Instr::Shr(bin_instr) => self.disassemble_bin_inst("shr", bin_instr, output),
 
-			ir::Instr::Load(un_instr) => self.disassemble_un_instr("load", un_instr, output),
-
 			ir::Instr::Not(instr) => self.disassemble_bin_inst("not", instr, output),
 			ir::Instr::Neg(instr) => self.disassemble_bin_inst("neg", instr, output),
+
+			ir::Instr::Load(un_instr) => self.disassemble_un_instr("load", un_instr, output),
 			ir::Instr::Set(un_instr) => self.disassemble_un_instr("set", un_instr, output),
 
 			ir::Instr::Mov(un_instr) => self.disassemble_mov_instr(un_instr, output),

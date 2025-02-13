@@ -3,6 +3,7 @@ use scope::Scope;
 use crate::{
 	checker::types::TypeId,
 	ir::{BasicValue, IrBasicValue},
+	report::throw_ir_build_error,
 };
 mod block;
 mod label;
@@ -21,7 +22,7 @@ impl Default for Context {
 
 impl Context {
 	pub fn new() -> Context {
-		Context { scopes: Vec::new(), block: block::Block::new(), register_count: 0 }
+		Context { scopes: Vec::new(), block: block::Block::new(), register_count: 1 }
 	}
 
 	pub fn push_scope(&mut self) {
@@ -41,11 +42,17 @@ impl Context {
 	}
 
 	pub fn get_current_scope(&self) -> &Scope {
-		self.scopes.last().unwrap()
+		match self.scopes.last() {
+			Some(scope) => scope,
+			None => throw_ir_build_error("scope not found"),
+		}
 	}
 
 	pub fn get_current_scope_mut(&mut self) -> &mut Scope {
-		self.scopes.last_mut().unwrap()
+		match self.scopes.last_mut() {
+			Some(scope) => scope,
+			None => throw_ir_build_error("scope not found"),
+		}
 	}
 
 	pub fn add_local(&mut self, key: String, basic_value: IrBasicValue) {

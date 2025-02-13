@@ -140,6 +140,14 @@ impl TypeStore {
 		}
 		type_value.needs_free()
 	}
+
+	pub fn is_borrow(&self, type_id: TypeId) -> bool {
+		if type_id.is_known() {
+			return false;
+		}
+		let type_value = self.get_type(type_id).expect("type not found");
+		type_value.is_borrow()
+	}
 }
 
 impl Default for TypeStore {
