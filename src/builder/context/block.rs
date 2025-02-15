@@ -19,8 +19,7 @@ impl Default for Block {
 
 impl Block {
 	pub fn new() -> Self {
-		let label = Label::default();
-
+		let label = Label::default(); // start from 1
 		let block = IrBlock::new(label.into());
 		Self { label, blocks: vec![block], next: label, returned: false }
 	}
@@ -35,13 +34,13 @@ impl Block {
 	pub fn new_block(&mut self) -> Label {
 		let label = self.next.increment();
 		self.next = label;
-		// start from 0, but label starts from 1
 		self.blocks.push(IrBlock::new(label.into()));
 		label
 	}
 
 	pub fn take_blocks(&mut self) -> Vec<IrBlock> {
 		self.label = Label::default();
+		self.next = self.label;
 		let blocks = std::mem::take(&mut self.blocks);
 		self.blocks = vec![IrBlock::new(self.label.into())];
 		blocks
@@ -59,11 +58,9 @@ impl Block {
 		self.returned = false;
 		let value = label.value.wrapping_sub(1);
 		if self.blocks.len() <= value {
-			throw_error(format!(
-				"block index out of range: {}, blocks: {}",
-				label.value,
-				self.blocks.len()
-			));
+			let len = self.blocks.len();
+			let value = label.value;
+			throw_error(format!("block index out of range: {}, blocks: {}", value, len));
 		}
 		self.label = label;
 	}
@@ -71,11 +68,9 @@ impl Block {
 	pub fn get_block_mut(&mut self, label: Label) -> &mut IrBlock {
 		let value = label.value.wrapping_sub(1);
 		if self.blocks.len() <= value {
-			throw_error(format!(
-				"block index out of range: {}, blocks: {}",
-				label.value,
-				self.blocks.len()
-			));
+			let len = self.blocks.len();
+			let value = label.value;
+			throw_error(format!("block index out of range: {}, blocks: {}", value, len));
 		}
 		match self.blocks.get_mut(value) {
 			Some(block) => block,
