@@ -14,8 +14,9 @@ impl<'ir> Disassembler<'ir> {
 	}
 
 	pub fn disassemble_program(&self, program: &'ir ir::IR, output: &mut String) {
-		for func in &program.funcs {
+		program.functions.iter().for_each(|func| {
 			self.disassemble_function(func, output);
-		}
+			output.push('\n');
+		});
 	}
 }

@@ -747,22 +747,22 @@ pub struct CallExpr {
 	pub args_type: Vec<TypeId>,
 	pub range: Range, // (args...)
 	pub generics: Vec<AstType>,
-	pub type_id: Option<TypeId>,
+	pub ret_type_id: Option<TypeId>,
 }
 
 impl CallExpr {
 	pub fn new(callee: Expr, args: Vec<Expr>, range: Range, generics: Vec<AstType>) -> Self {
-		Self { callee: Box::new(callee), args, range, generics, type_id: None, args_type: vec![] }
+		Self { callee: Box::new(callee), args, range, generics, ret_type_id: None, args_type: vec![] }
 	}
 
 	pub fn get_range(&self) -> Range {
 		self.callee.get_range().merged_with(&self.range)
 	}
-	pub fn set_type_id(&mut self, type_id: TypeId) {
-		self.type_id = Some(type_id);
+	pub fn set_ret_type_id(&mut self, ret_type_id: TypeId) {
+		self.ret_type_id = Some(ret_type_id);
 	}
-	pub fn get_type_id(&self) -> Option<TypeId> {
-		self.type_id
+	pub fn get_ret_type_id(&self) -> Option<TypeId> {
+		self.ret_type_id
 	}
 	pub fn set_args_type(&mut self, args_type: Vec<TypeId>) {
 		self.args_type = args_type;

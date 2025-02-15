@@ -1,35 +1,51 @@
+use crate::checker::types::TypeStore;
+use crate::ir::{self};
+use crate::source::Source;
+use env::Env;
 use inkwell::{builder::Builder, context::Context, module::Module};
-use mem::stack::Stack;
 
-use crate::{
-	checker::types::TypeStore,
-	ir::{self},
-	source::Source,
-};
+// cmp
+mod llvm_cmp_utils;
+mod llvm_compile_cmp_eq;
+mod llvm_compile_cmp_ge;
+mod llvm_compile_cmp_gt;
+mod llvm_compile_cmp_le;
+mod llvm_compile_cmp_lt;
+mod llvm_compile_string;
+// logic
+// mod llvm_compile_neg;
+// mod llvm_compile_not;
+mod llvm_compile_and;
+mod llvm_compile_or;
+mod llvm_compile_shl;
+mod llvm_compile_shr;
 
-mod allocate_struct;
-mod bind;
-mod calculate_struct_size;
-mod fill_struct_values;
-mod llvm_block;
-mod llvm_call;
-mod llvm_cmp;
-mod llvm_free;
-mod llvm_function;
-mod llvm_get_field;
-mod llvm_init_struct;
-mod llvm_instr;
-mod llvm_jump;
-mod llvm_math;
-mod llvm_mem;
-mod llvm_ownership;
-mod llvm_ret;
-mod llvm_set_field;
-mod llvm_struct;
-mod llvm_type;
-mod llvm_value;
-mod mem;
-mod store_struct_fields;
+// math
+mod llvm_compile_add;
+mod llvm_compile_div;
+mod llvm_compile_mod;
+mod llvm_compile_mul;
+mod llvm_compile_sub;
+
+// fn
+mod llvm_compile_block;
+mod llvm_compile_call;
+mod llvm_compile_function;
+mod llvm_compile_instr;
+// control
+mod llvm_compile_jmp;
+mod llvm_compile_jmp_if;
+// mem
+mod llvm_compile_load;
+mod llvm_compile_ret;
+mod llvm_compile_salloc;
+mod llvm_compile_set;
+mod llvm_memory;
+
+// other
+mod env;
+mod llvm_compile_type;
+mod llvm_compile_value;
 
 pub fn create_module_from_source<'ll>(ctx: &'ll Context, source: &Source) -> Module<'ll> {
 	let module = ctx.create_module(source.file_name());
@@ -40,25 +56,20 @@ pub struct Llvm<'ll> {
 	pub ctx: &'ll Context,
 	pub module: Module<'ll>,
 	pub builder: Builder<'ll>,
-	pub stack: Stack<'ll>,
+	pub env: Env<'ll>,
 	pub type_store: &'ll TypeStore,
 }
 
 impl<'ll> Llvm<'ll> {
 	pub fn new(ctx: &'ll Context, module: Module<'ll>, type_store: &'ll TypeStore) -> Self {
 		let builder = ctx.create_builder();
-		let stack = mem::stack::Stack::new();
-		Self { ctx, stack, module, builder, type_store }
+		let env = Env::new();
+		Self { ctx, module, builder, type_store, env }
 	}
 
-	pub fn compile(&mut self, root: &ir::Root) {
-		for struct_ir in root.structs.iter() {
-			self.llvm_struct(struct_ir);
-		}
-
-		for fn_ir in root.fns.iter() {
-			self.llvm_function(fn_ir);
-			self.stack.block_clear();
-		}
+	pub fn compile_ir(&mut self, root: &ir::IR) {
+		root.functions.iter().for_each(|function| {
+			self.llvm_compile_function(function);
+		});
 	}
 }

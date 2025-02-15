@@ -4,9 +4,10 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) {
-		self.ctx.push_scope();
+		let ret = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
+		self.ctx.push_scope(Some(ret));
 		let name = fn_stmt.name.lexeme().to_owned();
-		let args: Vec<ir::IrBind> = fn_stmt.params.iter_mut().map(|arg| self.build_bind(arg)).collect();
+		let args: Vec<_> = fn_stmt.params.iter_mut().map(|arg| self.build_bind(arg)).collect();
 		let ret = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
 		let comptime = false;
 		let func = ir::Function::new(name, comptime, args, ret);
@@ -15,10 +16,18 @@ impl Builder<'_> {
 		self.push_function_with_blocks(func);
 	}
 
-	pub fn build_bind(&mut self, bind: &mut ast::Binding) -> ir::IrBind {
-		let name = bind.lexeme();
+	pub fn build_bind(&mut self, bind: &mut ast::Binding) -> ir::IrBasicValue {
+		let lexeme = bind.lexeme().to_owned();
 		let kind = self.build_type(bind.type_id, bind.get_range());
-		ir::IrBind::new(name.to_owned(), kind)
+		let value = self.ctx.new_register(kind);
+		// fix: remove this
+		//
+		if !kind.is_str() {
+			self.ctx.add_dont_load(value.get_value().as_str());
+		}
+
+		self.ctx.add_local(lexeme, value.clone());
+		value
 	}
 
 	pub fn build_fn_body(&mut self, body: &mut ast::FnBody) {

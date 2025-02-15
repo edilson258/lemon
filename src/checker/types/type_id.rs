@@ -80,6 +80,10 @@ impl TypeId {
 		self.0 == TypeId::ANY.0
 	}
 
+	pub fn is_nothing(&self) -> bool {
+		self.is_void() || self.is_unit()
+	}
+
 	pub fn get_size(&self) -> usize {
 		match *self {
 			TypeId::I8 | TypeId::U8 | TypeId::BOOL | TypeId::CHAR => 1,

@@ -1,46 +1,37 @@
-use lemon::report::throw_engine_error;
+use rustc_hash::FxHashMap;
 
-use crate::ir;
+use crate::ir::{self};
 #[derive(Debug, Clone)]
-pub enum Value {
-	Int(i64),
-	Float(f64),
-	Bool(bool),
-	String(String),
-	Char(char),
-	Register(ir::Register),
-	Zero,
-}
+
 pub struct Frame {
-	pub registers: Vec<Value>,
-	pub return_value: Option<Value>,
+	pub locals: FxHashMap<String, ir::IrBasicValue>,
+	pub blocks: Vec<ir::IrBlock>,
+	pub fn_name: String,
+	pub stack: Vec<ir::IrBasicValue>,
+	pub index: usize,
 }
 
 impl Frame {
-	pub fn new(size: usize) -> Self {
-		let registers = Vec::from_iter(vec![Value::Zero; size]);
-		Self { registers, return_value: None }
-	}
-	pub fn set_register(&mut self, reg: &ir::Register, value: Value) {
-		self.registers[reg.as_usize()] = value;
-	}
-
-	pub fn get_register(&self, reg: &ir::Register) -> Value {
-		if let Some(value) = self.registers.get(reg.as_usize()) {
-			if let Value::Zero = value {
-				throw_engine_error("register is zero");
-			}
-			value.clone()
-		} else {
-			throw_engine_error("register not found");
+	pub fn new(fn_name: &str) -> Self {
+		Self {
+			locals: FxHashMap::default(),
+			blocks: Vec::new(),
+			stack: Vec::new(),
+			index: 0,
+			fn_name: fn_name.to_string(),
 		}
 	}
 
-	pub fn set_return_value(&mut self, value: Value) {
-		self.return_value = Some(value);
+	pub fn push(&mut self, value: ir::IrBasicValue) {
+		self.stack.push(value);
 	}
-
-	pub fn get_return_value(&self) -> Option<&Value> {
-		self.return_value.as_ref()
+	pub fn pop(&mut self) -> ir::IrBasicValue {
+		self.stack.pop().unwrap()
+	}
+	pub fn get(&self, name: &str) -> Option<ir::IrBasicValue> {
+		self.locals.get(name).cloned()
+	}
+	pub fn set(&mut self, name: &str, value: ir::IrBasicValue) {
+		self.locals.insert(name.to_string(), value);
 	}
 }
