@@ -8,6 +8,7 @@ pub struct Block {
 	pub label: Label,
 	pub next: Label,
 	pub blocks: Vec<IrBlock>,
+	pub returned: bool,
 }
 
 impl Default for Block {
@@ -21,9 +22,16 @@ impl Block {
 		let label = Label::default();
 
 		let block = IrBlock::new(label.into());
-		Self { label, blocks: vec![block], next: label }
+		Self { label, blocks: vec![block], next: label, returned: false }
 	}
 
+	pub fn is_returned(&self) -> bool {
+		self.returned
+	}
+
+	pub fn as_returned(&mut self) {
+		self.returned = true;
+	}
 	pub fn new_block(&mut self) -> Label {
 		let label = self.next.increment();
 		self.next = label;
@@ -48,6 +56,7 @@ impl Block {
 	}
 
 	pub fn switch_to_block(&mut self, label: Label) {
+		self.returned = false;
 		let value = label.value.wrapping_sub(1);
 		if self.blocks.len() <= value {
 			throw_error(format!(

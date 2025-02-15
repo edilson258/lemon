@@ -1,21 +1,26 @@
 use rustc_hash::FxHashMap;
 
-use crate::ir::IrBasicValue;
+use crate::{checker::types::TypeId, ir::IrBasicValue};
 
 pub struct Scope {
+	pub ret_type: Option<TypeId>,
 	pub locals: FxHashMap<String, IrBasicValue>,
 	pub dont_load: FxHashMap<String, bool>,
 }
 
 impl Default for Scope {
 	fn default() -> Self {
-		Self::new()
+		Self::new(None)
 	}
 }
 
 impl Scope {
-	pub fn new() -> Scope {
-		Scope { locals: FxHashMap::default(), dont_load: FxHashMap::default() }
+	pub fn new(ret_type: Option<TypeId>) -> Self {
+		Scope { ret_type, locals: FxHashMap::default(), dont_load: FxHashMap::default() }
+	}
+
+	pub fn get_ret_type(&self) -> Option<&TypeId> {
+		self.ret_type.as_ref()
 	}
 
 	pub fn add_dont_load(&mut self, key: impl Into<String>) {

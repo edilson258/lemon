@@ -81,7 +81,7 @@ pub fn throw_error(text: impl Into<String>) -> ! {
 }
 
 // pub fn throw_engine_error(text: impl Into<String>) -> ! {
-// 	println!("{} {}", text_red("  comptime error:"), text_white(text.into().as_str()));
+// 	println!("{} {}", text_red("  error:"), text_white(text.into().as_str()));
 // 	std::process::exit(1);
 // }
 

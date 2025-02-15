@@ -40,6 +40,19 @@ pub fn command_line() -> clap::ArgMatches {
 				)
 				.arg(Arg::new("lnr").help("generate lemon ir").long("lnr").action(ArgAction::SetTrue))
 				.arg(Arg::new("llr").help("generate llvm ir").long("llr").action(ArgAction::SetTrue))
+				.arg(
+					Arg::new("no-comptime")
+						.help("disable comptime")
+						.long("no-comptime")
+						.action(ArgAction::SetTrue),
+				)
+				.arg(
+					Arg::new("no-optimize")
+						.help("disable optimize")
+						.long("no-optimize")
+						.action(ArgAction::SetTrue),
+				)
+				.arg(Arg::new("no-debug").help("disable debug").long("no-debug").action(ArgAction::SetTrue))
 				.arg(Arg::new("output").help("custom output file path").short('o').long("output")),
 		)
 		.subcommand(Command::new("token").arg(Arg::new("file").required(true)).hide(true))

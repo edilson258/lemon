@@ -3,6 +3,8 @@ use inkwell::{
 	values::{BasicValueEnum, PointerValue},
 };
 use scope::Scope;
+
+use crate::report::throw_llvm_error;
 mod scope;
 
 pub struct Env<'ll> {
@@ -44,6 +46,13 @@ impl<'ll> Env<'ll> {
 
 	pub fn get_ptr_value(&mut self, name: &str) -> Option<PointerValue<'ll>> {
 		self.get_current_scope().get_ptr_value(name)
+	}
+
+	pub fn get_ptr_value_unwrap(&mut self, name: &str) -> PointerValue<'ll> {
+		if let Some(value) = self.get_ptr_value(name) {
+			return value;
+		};
+		throw_llvm_error(format!("no ptr value named {}", name));
 	}
 
 	pub fn get_temp(&mut self) -> String {

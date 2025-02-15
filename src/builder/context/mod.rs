@@ -25,8 +25,12 @@ impl Context {
 		Context { scopes: Vec::new(), block: block::Block::new(), register_count: 1 }
 	}
 
-	pub fn push_scope(&mut self) {
-		self.scopes.push(Scope::new());
+	pub fn push_scope(&mut self, ret_type: Option<TypeId>) {
+		self.scopes.push(Scope::new(ret_type));
+	}
+
+	pub fn get_ret_type(&self) -> Option<&TypeId> {
+		self.get_current_scope().get_ret_type()
 	}
 
 	pub fn new_register(&mut self, type_id: TypeId) -> IrBasicValue {

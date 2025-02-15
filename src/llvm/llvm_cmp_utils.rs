@@ -13,8 +13,8 @@ impl<'ll> Llvm<'ll> {
 		lhs: IntValue<'ll>,
 		rhs: IntValue<'ll>,
 		operator: IntPredicate,
-		dest: &str,
 	) -> IntValue<'ll> {
+		let dest = &self.env.get_temp();
 		match self.builder.build_int_compare(operator, lhs, rhs, dest) {
 			Ok(value) => value,
 			Err(err) => throw_llvm_error(format!("compare values, reason: {}", err)),
@@ -26,8 +26,8 @@ impl<'ll> Llvm<'ll> {
 		lhs: FloatValue<'ll>,
 		rhs: FloatValue<'ll>,
 		operator: FloatPredicate,
-		dest: &str,
 	) -> IntValue<'ll> {
+		let dest = &self.env.get_temp();
 		match self.builder.build_float_compare(operator, lhs, rhs, dest) {
 			Ok(value) => value,
 			Err(err) => throw_llvm_error(format!("compare values, reason: {}", err)),

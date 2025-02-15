@@ -12,15 +12,19 @@ impl Llvm<'_> {
 		if left.is_int_value() && right.is_int_value() {
 			let left_int = left.into_int_value();
 			let right_int = right.into_int_value();
-			let value = self.cmp_int_values(left_int, right_int, IntPredicate::SGT, dest);
-			return self.env.set_value(dest, value.into());
+			let value = self.cmp_int_values(left_int, right_int, IntPredicate::SGT);
+
+			let ptr = self.env.get_ptr_value_unwrap(dest);
+			return self.store(ptr, value);
 		}
 
 		if left.is_float_value() && right.is_float_value() {
 			let left_float = left.into_float_value();
 			let right_float = right.into_float_value();
-			let value = self.cmp_float_values(left_float, right_float, FloatPredicate::OGT, dest);
-			return self.env.set_value(dest, value.into());
+			let value = self.cmp_float_values(left_float, right_float, FloatPredicate::OGT);
+
+			let ptr = self.env.get_ptr_value_unwrap(dest);
+			return self.store(ptr, value);
 		}
 
 		throw_llvm_error(format!("unsupported types for comparison: {}", left.get_type()));

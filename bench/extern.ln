@@ -1,10 +1,10 @@
 extern fn printf(fmt: str, ...): i32 = {};
 
-fn println(value: str) = {
-  printf("%s\n", value);
+fn println(value: i32) = {
+  printf("%d\n", value);
 }
 
 fn main() = {
-  let age: str = "hello lemon!";
+  let age = 10;
   println(age);
 }

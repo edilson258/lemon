@@ -3,7 +3,7 @@ mod value;
 use crate::checker::types::TypeId;
 pub use value::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IrBind {
 	pub name: String,
 	pub kind: TypeId,
@@ -15,7 +15,7 @@ impl IrBind {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Instr {
 	//
 	Add(BinInstr), // r0 = add r1, r2
@@ -42,8 +42,8 @@ pub enum Instr {
 	Jmp(JmpInstr),     // jmp l1
 	JmpIf(JmpIfInstr), // jmp_if r1, l1, l2
 
-	Ret(IrBasicValue), // ret r1
-	Call(CallInstr),   // r0 = call fn_name, r1, r2, ...
+	Ret(Option<IrBasicValue>), // ret r1
+	Call(CallInstr),           // r0 = call fn_name, r1, r2, ...
 
 	// memory
 	Load(UnInstr),       // r0 = load r1
@@ -54,7 +54,7 @@ pub enum Instr {
 	Halloc(UnInstr),     // r0 = halloc r1 # only heap
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SallocInstr {
 	pub dest: IrBasicValue,
 	pub size: TypeId,
@@ -71,7 +71,7 @@ impl From<SallocInstr> for Instr {
 		Instr::Salloc(value)
 	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinInstr {
 	pub dest: IrBasicValue,
 	pub left: IrBasicValue,
@@ -83,7 +83,7 @@ impl BinInstr {
 		Self { dest, left, right }
 	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnInstr {
 	pub dest: IrBasicValue,
 	pub src: IrBasicValue,
@@ -94,29 +94,59 @@ impl UnInstr {
 		Self { dest, src }
 	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JmpInstr {
-	pub label: String,
+	pub label: usize,
 }
 
 impl JmpInstr {
-	pub fn new(label: String) -> Self {
+	pub fn new(label: usize) -> Self {
 		Self { label }
 	}
+
+	pub fn llvm_label(&self) -> String {
+		format!("lx{}", self.label)
+	}
+
+	pub fn display_label(&self) -> String {
+		format!("l_{}", self.label)
+	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JmpIfInstr {
 	pub cond: IrBasicValue,
-	pub true_label: String,
-	pub false_label: String,
+	pub true_label: usize,
+	pub false_label: usize,
 }
 
 impl JmpIfInstr {
-	pub fn new(cond: IrBasicValue, true_label: String, false_label: String) -> Self {
+	pub fn new(cond: IrBasicValue, true_label: usize, false_label: usize) -> Self {
 		Self { cond, true_label, false_label }
 	}
+
+	pub fn display_true_label(&self) -> String {
+		format!("l_{}", self.true_label)
+	}
+
+	pub fn display_false_label(&self) -> String {
+		if self.false_label == 1 {
+			return "entry".to_string();
+		}
+		format!("l_{}", self.false_label)
+	}
+
+	pub fn llvm_true_label(&self) -> String {
+		if self.true_label == 1 {
+			return "entry".to_string();
+		}
+		format!("lx{}", self.true_label)
+	}
+
+	pub fn llvm_false_label(&self) -> String {
+		format!("lx{}", self.false_label)
+	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallInstr {
 	pub dest: IrBasicValue,
 	pub callee: String,
@@ -130,7 +160,7 @@ impl CallInstr {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IrBlock {
 	pub label: usize,
 	pub instrs: Vec<Instr>,
@@ -159,10 +189,10 @@ impl IrBlock {
 		if self.label == 1 {
 			return "entry".to_string();
 		}
-		format!("l{}", self.label)
+		format!("lx{}", self.label)
 	}
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Function {
 	pub extern_function: bool,
 	pub name: String,

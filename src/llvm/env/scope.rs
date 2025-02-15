@@ -16,7 +16,7 @@ impl<'ll> Scope<'ll> {
 	}
 
 	pub fn get_temp(&mut self) -> String {
-		let name = format!("rx{}", self.temp_count);
+		let name = format!("t{}", self.temp_count);
 		self.temp_count += 1;
 		name
 	}

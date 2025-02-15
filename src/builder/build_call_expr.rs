@@ -11,6 +11,10 @@ impl Builder<'_> {
 		let dest = self.ctx.new_register(ret_type);
 		let callee = self.resolve_callee(expr);
 		let args = self.build_function_args(&mut expr.args, &expr.args_type);
+		if !ret_type.is_nothing() {
+			let alloc_instr = ir::SallocInstr::new(dest.clone(), ret_type);
+			self.ctx.block.add_instr(alloc_instr.into());
+		}
 		let call_instr = ir::CallInstr::new(dest.clone(), callee, ret_type, args);
 		self.ctx.block.add_instr(call_instr.into());
 		dest
@@ -30,23 +34,12 @@ impl Builder<'_> {
 		let mut basic_values = Vec::with_capacity(args_type.len());
 		for (position, expr) in args_expr.iter_mut().enumerate() {
 			let mut basic_value = self.build_expr(expr);
-
 			if let Some(expr_type) = args_type.get(position) {
-				basic_value = self.build_param_load(basic_value.with_new_type(*expr_type), *expr_type);
+				basic_value = basic_value.with_new_type(*expr_type)
 			}
 			basic_values.push(basic_value);
 		}
 		basic_values
-	}
-
-	fn build_param_load(&mut self, value: IrBasicValue, type_id: TypeId) -> IrBasicValue {
-		if !value.is_raw_value() {
-			let dest = self.ctx.new_register(type_id);
-			let instr = ir::UnInstr::new(dest.clone(), value);
-			self.ctx.block.add_instr(ir::Instr::Load(instr));
-			return dest;
-		}
-		value
 	}
 
 	// fn build_member_callee(&mut self, member: &ast::MemberExpr) -> String {

@@ -69,12 +69,9 @@ impl<'ll> Llvm<'ll> {
 			self.env.set_value(value_str, param_value);
 		});
 	}
-
+	#[inline(always)]
 	fn build_llvm_return_function(&mut self, function: &ir::Function) {
-		let ret_type = self.type_store.resolve_borrow_type(function.ret);
-		let is_main_return_void = function.is_main() && (ret_type.is_unit() || ret_type.is_void());
-
-		if is_main_return_void {
+		if function.is_main() {
 			let sucess = self.ctx.i32_type().const_int(0, false);
 			if let Err(err) = self.builder.build_return(Some(&sucess)) {
 				throw_llvm_error(format!("cannot build success void return, error: {}", err));
@@ -82,8 +79,10 @@ impl<'ll> Llvm<'ll> {
 			return;
 		}
 
-		if let Err(err) = self.builder.build_return(None) {
-			throw_llvm_error(format!("cannot build return, error: {}", err));
+		if function.ret.is_nothing() {
+			if let Err(err) = self.builder.build_return(None) {
+				throw_llvm_error(format!("cannot build void return, error: {}", err));
+			}
 		}
 	}
 }

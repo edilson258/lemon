@@ -17,14 +17,19 @@ impl Builder<'_> {
 
 		self.ctx.block.switch_to_block(then_block);
 		self.build_stmt(&mut if_expr.then);
-		let jump = ir::JmpInstr::new(merge_block.into());
-		self.ctx.block.add_instr(jump.into());
+		if !self.ctx.block.is_returned() {
+			let jump = ir::JmpInstr::new(merge_block.into());
+			self.ctx.block.add_instr(jump.into());
+		}
 
 		if let Some(otherwise) = &mut if_expr.otherwise {
 			self.ctx.block.switch_to_block(otherwise_block.unwrap());
 			self.build_stmt(otherwise);
-			let jump = ir::JmpInstr::new(merge_block.into());
-			self.ctx.block.add_instr(jump.into());
+
+			if !self.ctx.block.is_returned() {
+				let jump = ir::JmpInstr::new(merge_block.into());
+				self.ctx.block.add_instr(jump.into());
+			}
 		}
 		self.ctx.block.switch_to_block(merge_block);
 		IrBasicValue::default()

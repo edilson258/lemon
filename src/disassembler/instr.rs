@@ -59,9 +59,13 @@ impl<'ir> Disassembler<'ir> {
 		let dest = self.disassemble_value(instr);
 		output.push_str(&format!("drop {}", dest));
 	}
-	pub fn disassemble_ret_instr(&self, instr: &'ir ir::IrBasicValue, output: &mut String) {
-		let dest = self.disassemble_value(instr);
-		output.push_str(&format!("ret {}", dest));
+	pub fn disassemble_ret_instr(&self, value: &'ir Option<ir::IrBasicValue>, output: &mut String) {
+		if let Some(value) = value {
+			let dest = self.disassemble_value(value);
+			output.push_str(&format!("ret {}", dest));
+		} else {
+			output.push_str("ret");
+		}
 	}
 
 	pub fn disassemble_un_instr(&self, name: &'ir str, instr: &'ir UnInstr, output: &mut String) {
@@ -78,12 +82,14 @@ impl<'ir> Disassembler<'ir> {
 	}
 
 	pub fn disassemble_jmp_instr(&self, instr: &'ir ir::JmpInstr, output: &mut String) {
-		output.push_str(&format!("jmp {}", instr.label));
+		output.push_str(&format!("jmp {}", instr.display_label()));
 	}
 
 	pub fn disassemble_jmp_if_instr(&self, instr: &'ir ir::JmpIfInstr, output: &mut String) {
 		let cond = self.disassemble_value(&instr.cond);
-		output.push_str(&format!("jmp_if {}, {}, {}", cond, instr.true_label, instr.false_label));
+		let true_label = instr.display_true_label();
+		let false_label = instr.display_false_label();
+		output.push_str(&format!("jmp_if {}, {}, {}", cond, true_label, false_label));
 	}
 
 	pub fn disassemble_call_inst(&self, instr: &'ir ir::CallInstr, output: &mut String) {

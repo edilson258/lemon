@@ -4,7 +4,8 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) {
-		self.ctx.push_scope();
+		let ret = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
+		self.ctx.push_scope(Some(ret));
 		let name = fn_stmt.name.lexeme().to_owned();
 		let args: Vec<_> = fn_stmt.params.iter_mut().map(|arg| self.build_bind(arg)).collect();
 		let ret = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
@@ -19,6 +20,12 @@ impl Builder<'_> {
 		let lexeme = bind.lexeme().to_owned();
 		let kind = self.build_type(bind.type_id, bind.get_range());
 		let value = self.ctx.new_register(kind);
+		// fix: remove this
+		//
+		if !kind.is_str() {
+			self.ctx.add_dont_load(value.get_value().as_str());
+		}
+
 		self.ctx.add_local(lexeme, value.clone());
 		value
 	}
