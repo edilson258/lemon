@@ -1,8 +1,6 @@
 extern fn printf(fmt: str, ...): i32 = {};
 
-fn println(value: i32) = {
-  printf("%d\n", value);
-}
+fn println(value: i32) = printf("%d\n", value);
 
 fn min(a: i32, b: i32): i32 = {
   if (a < b) return a;
