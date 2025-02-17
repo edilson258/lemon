@@ -1,4 +1,5 @@
-extern fn printf(fmt: str, ...): i32 = {};
+// extern fn printf(fmt: str, ...): i32 = {};
+extern fn printf(fmt: str, ...) = {};
 
 fn println(value: i32) = printf("%d\n", value);
 
