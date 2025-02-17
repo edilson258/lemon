@@ -41,7 +41,7 @@ server::route("/hello/:name", fn({ params, query }) = {
 
 server::start(3003);
 ```
--->
+
 #### Lemon IR
 
 - lemon
@@ -157,7 +157,7 @@ l0: own 50 -> r0 # compute constant values at compile time
 2. wasm
 3. lemon runtime (dev mode)
 
-
+-->
 
 #### Versioning strategy
 
