@@ -58,9 +58,10 @@ impl Context {
 		self.scopes.push(Scope::new_impl(self_name.into(), self_type));
 	}
 
-	pub fn add_self_ref(&mut self, ref_name: String) {
-		self.scopes.iter_mut().rev().for_each(|scope| scope.add_self_ref(ref_name.clone()));
+	pub fn push_member_scope(&mut self) {
+		self.scopes.push(Scope::new_member());
 	}
+
 	#[allow(dead_code)]
 	pub fn is_function_scope(&self) -> bool {
 		self.scopes.iter().rev().any(|scope| scope.is_function_scope())
@@ -68,6 +69,11 @@ impl Context {
 
 	pub fn is_impl_scope(&self) -> bool {
 		self.scopes.iter().rev().any(|scope| scope.is_impl_scope())
+	}
+
+	pub fn is_member_scope(&self) -> bool {
+		// todo: we need to find all scops?
+		self.get_current_scope().is_member_scope()
 	}
 
 	pub fn get_ret_type(&self) -> Option<TypeId> {
@@ -119,7 +125,7 @@ impl Context {
 	}
 
 	pub fn get_local(&self, name: &str) -> Option<&IrBasicValue> {
-		self.get_current_scope().get_local(name)
+		self.scopes.iter().rev().find_map(|scope| scope.get_local(name))
 	}
 
 	pub fn add_dont_load(&mut self, key: impl Into<String>) {
@@ -128,5 +134,13 @@ impl Context {
 
 	pub fn is_dont_load(&self, key: &str) -> bool {
 		self.get_current_scope().is_dont_load(key)
+	}
+
+	pub fn add_free_value(&mut self, value: IrBasicValue) {
+		self.get_current_scope_mut().add_free_value(value);
+	}
+
+	pub fn get_free_values(&self) -> Vec<IrBasicValue> {
+		self.get_current_scope().get_free_values()
 	}
 }

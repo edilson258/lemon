@@ -47,7 +47,7 @@ impl<'ir> Disassembler<'ir> {
 	pub fn disassemble_salloc_instr(&self, instr: &'ir ir::SallocInstr, output: &mut String) {
 		let dest = self.disassemble_basic_value(&instr.dest);
 		let size = self.type_store.get_display_ir_type(instr.size);
-		output.push_str(&format!("{} = salloc {}", dest, size));
+		output.push_str(&format!("{} = stack {}", dest, size));
 	}
 	pub fn disassemble_halloc_instr(&self, instr: &'ir ir::UnInstr, output: &mut String) {
 		let dest = self.disassemble_basic_value(&instr.dest);

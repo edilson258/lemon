@@ -18,6 +18,7 @@ impl Builder<'_> {
 		}
 	}
 
+	#[inline(always)]
 	pub fn create_bind_method_with_selfname(&mut self, self_name: &str, method_name: &str) -> String {
 		format!("{}.{}", self_name, method_name)
 	}
@@ -29,10 +30,10 @@ impl Builder<'_> {
 
 		let args: Vec<_> = method.params.iter_mut().map(|arg| self.build_bind(arg)).collect();
 
-		if let Some(self_ref) = args.first() {
-			let ref_name = self_ref.value.as_str();
-			self.ctx.add_self_ref(ref_name.to_string());
-		}
+		// if let Some(self_ref) = args.first() {
+		// let ref_name = self_ref.value.as_str();
+		// self.ctx.add_self_ref(ref_name.to_string());
+		// }
 
 		let ret = self.build_type(method.ret_id, method.get_range());
 		let comptime = false;

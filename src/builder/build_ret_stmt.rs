@@ -12,10 +12,20 @@ impl Builder<'_> {
 			});
 			let ret = ret.with_new_type(ret_type);
 			let ret = self.resolve_value(ret);
+
+			let drop_instrs = self.drop_local_function_values(Some(ret.value.as_str()));
 			let instr = ir::Instr::Ret(Some(ret));
+			for drop_instr in drop_instrs {
+				self.ctx.block.add_instr(drop_instr);
+			}
 			self.ctx.block.add_instr(instr);
 			return;
 		}
+		let drop_instrs = self.drop_local_function_values(None);
+		for drop_instr in drop_instrs {
+			self.ctx.block.add_instr(drop_instr);
+		}
+
 		let instr = ir::Instr::Ret(None);
 		self.ctx.block.add_instr(instr);
 	}

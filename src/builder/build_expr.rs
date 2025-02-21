@@ -15,6 +15,7 @@ impl Builder<'_> {
 			ast::Expr::Literal(literal) => self.build_literal(literal),
 			ast::Expr::StructInit(struct_init_expr) => self.build_struct_init_expr(struct_init_expr),
 			ast::Expr::Member(member_expr) => self.build_member_expr(member_expr),
+			ast::Expr::Associate(associate_expr) => self.build_associate_expr(associate_expr),
 			// ast::Expr::Ret(ret_expr) => self.build_ret_expr(ret_expr),
 			// ast::Expr::StructInit(struct_init_expr) => self.build_struct_init_expr(struct_init_expr),
 			// ast::Expr::TypeDef(type_def) => self.build_type_def_expr(type_def),

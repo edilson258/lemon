@@ -29,12 +29,17 @@ impl Llvm<'_> {
 			ir::Instr::Load(unary)     => self.llvm_compile_load(unary),
 			ir::Instr::Set(unary)      => self.llvm_compile_set(unary),
 			ir::Instr::Salloc(instr)   => self.llvm_compile_salloc(instr),
+			ir::Instr::Halloc(instr)   => self.llvm_compile_halloc(instr),
+			ir::Instr::Drop(ptr_value) => self.llvm_compile_drop(ptr_value),
+			ir::Instr::Getptr(get_ptr) => self.llvm_compile_getptr(get_ptr),
 			// control
 			ir::Instr::JmpIf(jump_if)  => self.llvm_compile_jmp_if(jump_if),
 			ir::Instr::Jmp(jump)       => self.llvm_compile_jmp(jump),
 			// fn
 			ir::Instr::Call(call)      => self.llvm_compile_call(call),
 			ir::Instr::Ret(ret)        => self.llvm_compile_ret(ret),
+
+
 			_ => todo!("code {:?}", instr),
 		}
 	}

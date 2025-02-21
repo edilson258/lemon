@@ -3,17 +3,31 @@ use crate::{
 	ast::{self},
 	checker::types::TypeId,
 	ir::{self, IrBasicValue},
+	report::throw_ir_build_error,
 };
+
+type CalleeResolvedType = (String, Option<IrBasicValue>);
 
 impl Builder<'_> {
 	pub fn build_call_expr(&mut self, expr: &mut ast::CallExpr) -> IrBasicValue {
 		let ret_type = self.build_type(expr.get_ret_type_id(), expr.get_range());
 		let dest = self.ctx.new_register(ret_type);
-		let callee = self.resolve_callee(expr);
-		let args = self.build_function_args(&mut expr.args, &expr.args_type);
+		let (callee, self_value) = self.resolve_callee(expr);
+		let mut args = self.build_function_args(&mut expr.args, &expr.args_type);
+
+		if let Some(self_value) = self_value {
+			args.insert(0, self_value);
+		}
+
 		if !ret_type.is_nothing() {
-			let alloc_instr = ir::SallocInstr::new(dest.clone(), ret_type);
-			self.ctx.block.add_instr(alloc_instr.into());
+			if let Some(size) = self.is_need_heap_allocation(ret_type) {
+				self.ctx.add_free_value(dest.clone());
+				let unary_instr = ir::UnInstr::new(dest.clone(), size.into());
+				self.ctx.block.add_instr(ir::Instr::Halloc(unary_instr));
+			} else {
+				let salloc = ir::SallocInstr::new(dest.clone(), ret_type);
+				self.ctx.block.add_instr(salloc.into());
+			}
 		}
 		let call_instr = ir::CallInstr::new(dest.clone(), callee, ret_type, args);
 		self.ctx.block.add_instr(call_instr.into());
@@ -21,14 +35,39 @@ impl Builder<'_> {
 	}
 
 	#[inline(always)]
-	fn resolve_callee(&mut self, expr: &ast::CallExpr) -> String {
-		match expr.callee.as_ref() {
-			ast::Expr::Ident(ident) => ident.lexeme().to_string(),
-			ast::Expr::Associate(associate) => associate.method.lexeme().to_string(),
-			ast::Expr::Member(member) => member.method.lexeme().to_string(),
+	fn resolve_callee(&mut self, expr: &mut ast::CallExpr) -> CalleeResolvedType {
+		match &mut *expr.callee {
+			ast::Expr::Ident(ident) => (ident.lexeme().to_string(), None),
+			ast::Expr::Associate(associate_expr) => (self.resolve_associate_expr(associate_expr), None),
+			ast::Expr::Member(member) => self.resolve_member_expr(member),
 			_ => todo!("unrecognized callee: {:?}", expr.callee),
 		}
 	}
+
+	#[inline(always)]
+	fn resolve_associate_expr(&mut self, expr: &mut ast::AssociateExpr) -> String {
+		let self_name = expr.self_name.lexeme();
+		let method_name = expr.method.lexeme();
+		self.create_bind_method_with_selfname(self_name, method_name)
+	}
+
+	#[inline(always)]
+	fn resolve_member_expr(&mut self, member: &mut ast::MemberExpr) -> CalleeResolvedType {
+		self.ctx.push_member_scope();
+		let self_value = self.build_expr(&mut member.left);
+		let self_register = self_value.value.as_str();
+		self.ctx.pop_scope();
+		let self_name = match self.type_store.get_struct_name(self_value.get_type()) {
+			Some(name) => name,
+			None => {
+				throw_ir_build_error(format!("cannot resolve struct name for type {}", self_register))
+			}
+		};
+		let method_name = member.method.lexeme();
+		let method = self.create_bind_method_with_selfname(self_name, method_name);
+		(method, Some(self_value))
+	}
+
 	#[rustfmt::skip]
 	fn build_function_args(&mut self, args_expr: &mut [ast::Expr], args_type: &[TypeId]) -> Vec<IrBasicValue> {
 		let mut basic_values = Vec::with_capacity(args_type.len());

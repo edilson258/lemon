@@ -36,11 +36,17 @@ mod llvm_compile_instr;
 mod llvm_compile_jmp;
 mod llvm_compile_jmp_if;
 // mem
+mod llvm_compile_drop;
+mod llvm_compile_getptr;
+mod llvm_compile_halloc;
 mod llvm_compile_load;
 mod llvm_compile_ret;
 mod llvm_compile_salloc;
 mod llvm_compile_set;
 mod llvm_memory;
+
+// structs
+mod llvm_compile_struct;
 
 // other
 mod env;
@@ -68,6 +74,15 @@ impl<'ll> Llvm<'ll> {
 	}
 
 	pub fn compile_ir(&mut self, root: &ir::IR) {
+		// structs
+		//
+
+		root.structs.iter().for_each(|struct_def| {
+			self.llvm_compile_struct(struct_def);
+		});
+
+		// functions
+		//
 		root.functions.iter().for_each(|function| {
 			self.llvm_compile_function(function);
 		});

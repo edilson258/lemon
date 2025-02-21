@@ -2,7 +2,7 @@ pub mod context;
 use std::mem;
 
 use crate::checker::types::TypeStore;
-use crate::ir::IR;
+use crate::ir::{Instr, IR};
 use crate::source::Source;
 use crate::{ast, ir};
 use context::Context;
@@ -15,6 +15,7 @@ mod build_call_expr;
 mod build_deref_expr;
 mod build_expr;
 
+mod build_associate_expr;
 mod build_block_stmt;
 mod build_extern_fn_stmt;
 mod build_fn_stmt;
@@ -29,6 +30,7 @@ mod build_struct_def_stmt;
 mod build_struct_init_expr;
 mod build_type;
 mod build_type_def_stmt;
+mod build_utils;
 // mod build_const_del_stmt;
 // mod build_const_fn_stmt;
 // mod build_extern_fn;
@@ -61,6 +63,16 @@ impl<'br> Builder<'br> {
 		let blocks = self.ctx.block.take_blocks();
 		function.extend_blocks(blocks);
 		self.ir.add_function(function);
+	}
+
+	pub fn drop_local_function_values(&mut self, ret_value: Option<&str>) -> Vec<Instr> {
+		let mut instrs = Vec::new();
+		for value in self.ctx.get_free_values() {
+			if ret_value.map(|ret_value| value.value.as_str() != ret_value).unwrap_or(true) {
+				instrs.push(Instr::Drop(value));
+			}
+		}
+		instrs
 	}
 
 	fn build_stmt(&mut self, stmt: &mut ast::Stmt) {

@@ -33,11 +33,19 @@ impl Builder<'_> {
 	pub fn build_fn_body(&mut self, body: &mut ast::FnBody) {
 		if let ast::FnBody::Expr(expr) = body {
 			self.build_expr(expr);
+			let drop_instrs = self.drop_local_function_values(None);
+			for drop_instr in drop_instrs {
+				self.ctx.block.add_instr(drop_instr);
+			}
 		}
 
 		if let ast::FnBody::Block(block) = body {
 			for stmt in block.stmts.iter_mut() {
 				self.build_stmt(stmt);
+			}
+			let drop_instrs = self.drop_local_function_values(None);
+			for drop_instr in drop_instrs {
+				self.ctx.block.add_instr(drop_instr);
 			}
 		}
 	}

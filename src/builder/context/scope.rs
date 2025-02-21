@@ -1,10 +1,18 @@
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::{checker::types::TypeId, ir::IrBasicValue};
 
 pub enum ScopeKind {
-	Function { ret_type: TypeId },
-	Impl { self_name: String, self_type: TypeId, refs: FxHashSet<String> },
+	Function {
+		ret_type: TypeId,
+	},
+	Impl {
+		self_name: String,
+		self_type: TypeId,
+	},
+	Member {
+		// self_value: Option<IrBasicValue>
+	},
 	Block,
 }
 
@@ -12,6 +20,7 @@ pub struct Scope {
 	pub kind: ScopeKind,
 	pub locals: FxHashMap<String, IrBasicValue>,
 	pub dont_load: FxHashMap<String, bool>,
+	pub free_values: FxHashMap<String, IrBasicValue>,
 }
 
 impl Default for Scope {
@@ -24,26 +33,29 @@ impl Scope {
 	pub fn new() -> Self {
 		let dont_load = FxHashMap::default();
 		let locals = FxHashMap::default();
-		Scope { dont_load, locals, kind: ScopeKind::Block }
+		let free_values = FxHashMap::default();
+		Scope { dont_load, locals, free_values, kind: ScopeKind::Block }
 	}
 
 	pub fn new_function(ret_type: TypeId) -> Self {
 		let dont_load = FxHashMap::default();
 		let locals = FxHashMap::default();
-		Scope { dont_load, locals, kind: ScopeKind::Function { ret_type } }
+		let free_values = FxHashMap::default();
+		Scope { dont_load, locals, free_values, kind: ScopeKind::Function { ret_type } }
 	}
 
 	pub fn new_impl(self_name: String, self_type: TypeId) -> Self {
 		let dont_load = FxHashMap::default();
 		let locals = FxHashMap::default();
-		let refs = FxHashSet::default();
-		Scope { dont_load, locals, kind: ScopeKind::Impl { self_name, self_type, refs } }
+		let free_values = FxHashMap::default();
+		Scope { dont_load, locals, free_values, kind: ScopeKind::Impl { self_name, self_type } }
 	}
 
-	pub fn add_self_ref(&mut self, ref_name: String) {
-		if let ScopeKind::Impl { refs, .. } = &mut self.kind {
-			refs.insert(ref_name);
-		}
+	pub fn new_member() -> Self {
+		let dont_load = FxHashMap::default();
+		let locals = FxHashMap::default();
+		let free_values = FxHashMap::default();
+		Scope { dont_load, locals, free_values, kind: ScopeKind::Member {} }
 	}
 
 	pub fn get_ret_type(&self) -> Option<TypeId> {
@@ -53,8 +65,20 @@ impl Scope {
 		}
 	}
 
+	pub fn add_free_value(&mut self, value: IrBasicValue) {
+		self.free_values.insert(value.value.as_str().into(), value);
+	}
+
+	pub fn get_free_values(&self) -> Vec<IrBasicValue> {
+		self.free_values.values().cloned().collect()
+	}
+
 	pub fn is_impl_scope(&self) -> bool {
 		matches!(&self.kind, ScopeKind::Impl { .. })
+	}
+
+	pub fn is_member_scope(&self) -> bool {
+		matches!(&self.kind, ScopeKind::Member {})
 	}
 
 	pub fn get_self_info(&self) -> Option<(String, TypeId)> {
