@@ -10,25 +10,20 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::Mul(instr) => self.disassemble_bin_inst("mul", instr, output),
 			ir::Instr::Div(instr) => self.disassemble_bin_inst("div", instr, output),
 			ir::Instr::Mod(instr) => self.disassemble_bin_inst("mod", instr, output),
-
 			ir::Instr::CmpEq(instr) => self.disassemble_bin_inst("cmp_eq", instr, output),
 			ir::Instr::CmpNe(instr) => self.disassemble_bin_inst("cmp_ne", instr, output),
 			ir::Instr::CmpLt(instr) => self.disassemble_bin_inst("cmp_lt", instr, output),
 			ir::Instr::CmpGt(instr) => self.disassemble_bin_inst("cmp_gt", instr, output),
 			ir::Instr::CmpLe(instr) => self.disassemble_bin_inst("cmp_le", instr, output),
 			ir::Instr::CmpGe(instr) => self.disassemble_bin_inst("cmp_ge", instr, output),
-
 			ir::Instr::And(bin_instr) => self.disassemble_bin_inst("and", bin_instr, output),
 			ir::Instr::Or(bin_instr) => self.disassemble_bin_inst("or", bin_instr, output),
 			ir::Instr::Shl(bin_instr) => self.disassemble_bin_inst("shl", bin_instr, output),
 			ir::Instr::Shr(bin_instr) => self.disassemble_bin_inst("shr", bin_instr, output),
-
 			ir::Instr::Not(instr) => self.disassemble_bin_inst("not", instr, output),
 			ir::Instr::Neg(instr) => self.disassemble_bin_inst("neg", instr, output),
-
 			ir::Instr::Load(un_instr) => self.disassemble_un_instr("load", un_instr, output),
 			ir::Instr::Set(un_instr) => self.disassemble_un_instr("set", un_instr, output),
-
 			ir::Instr::Mov(un_instr) => self.disassemble_mov_instr(un_instr, output),
 			ir::Instr::Drop(instr) => self.disassemble_drop_instr(instr, output),
 			ir::Instr::Ret(instr) => self.disassemble_ret_instr(instr, output),
@@ -37,7 +32,16 @@ impl<'ir> Disassembler<'ir> {
 			ir::Instr::Call(instr) => self.disassemble_call_inst(instr, output),
 			ir::Instr::Salloc(instr) => self.disassemble_salloc_instr(instr, output),
 			ir::Instr::Halloc(un_instr) => self.disassemble_halloc_instr(un_instr, output),
+			ir::Instr::Getptr(get_ptr_instr) => self.disassemble_getptr_instr(get_ptr_instr, output),
 		}
+	}
+
+	pub fn disassemble_getptr_instr(&self, instr: &'ir ir::GetPtrInstr, output: &mut String) {
+		let self_name = instr.self_name.as_str();
+		let dest = self.disassemble_basic_value(&instr.dest);
+		let self_base = self.disassemble_value(&instr.self_base);
+		let instr_text = format!("{} = {} getptr {} {}", dest, self_name, self_base, instr.offset);
+		output.push_str(&instr_text);
 	}
 
 	pub fn disassemble_salloc_instr(&self, instr: &'ir ir::SallocInstr, output: &mut String) {
@@ -48,7 +52,7 @@ impl<'ir> Disassembler<'ir> {
 	pub fn disassemble_halloc_instr(&self, instr: &'ir ir::UnInstr, output: &mut String) {
 		let dest = self.disassemble_basic_value(&instr.dest);
 		let size = self.disassemble_basic_value(&instr.src);
-		output.push_str(&format!("{} = halloc {}", dest, size));
+		output.push_str(&format!("{} = heap {}", dest, size));
 	}
 	pub fn disassemble_mov_instr(&self, instr: &'ir ir::UnInstr, output: &mut String) {
 		let dest = self.disassemble_basic_value(&instr.dest);

@@ -13,12 +13,13 @@ impl Builder<'_> {
 			ast::Expr::Ident(ident_expr) => self.build_ident_expr(ident_expr),
 			ast::Expr::If(if_expr) => self.build_if_expr(if_expr),
 			ast::Expr::Literal(literal) => self.build_literal(literal),
-			// ast::Expr::Member(member_expr) => self.build_member_expr(member_expr),
+			ast::Expr::StructInit(struct_init_expr) => self.build_struct_init_expr(struct_init_expr),
+			ast::Expr::Member(member_expr) => self.build_member_expr(member_expr),
 			// ast::Expr::Ret(ret_expr) => self.build_ret_expr(ret_expr),
 			// ast::Expr::StructInit(struct_init_expr) => self.build_struct_init_expr(struct_init_expr),
 			// ast::Expr::TypeDef(type_def) => self.build_type_def_expr(type_def),
 			// ast::Expr::While(while_expr) => self.build_while_expr(while_expr),
-			_ => todo!(),
+			_ => todo!("{:?}", expr),
 		}
 	}
 }

@@ -20,10 +20,15 @@ mod build_extern_fn_stmt;
 mod build_fn_stmt;
 mod build_ident_expr;
 mod build_if_expr;
+mod build_impl_stmt;
 mod build_let_stmt;
 mod build_literal;
+mod build_member_expr;
 mod build_ret_stmt;
+mod build_struct_def_stmt;
+mod build_struct_init_expr;
 mod build_type;
+mod build_type_def_stmt;
 // mod build_const_del_stmt;
 // mod build_const_fn_stmt;
 // mod build_extern_fn;
@@ -31,7 +36,6 @@ mod build_type;
 // mod build_impl_stmt;
 // mod build_member_expr;
 // mod build_struct_init_expr;
-// mod build_type_def_stmt;
 // mod build_while_stmt;
 
 pub struct Builder<'br> {
@@ -66,13 +70,13 @@ impl<'br> Builder<'br> {
 			ast::Stmt::ExternFn(extern_fn_stmt) => self.build_extern_fn_stmt(extern_fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
+			ast::Stmt::TypeDef(type_def) => self.build_type_def_stmt(type_def),
 			// ast::Stmt::While(while_stmt) => self.build_while_stmt(while_stmt),
 			// ast::Stmt::For(for_stmt) => self.build_for_stmt(for_stmt),
 			// ast::Stmt::ConstDel(const_del) => self.build_const_del_stmt(const_del),
 			// ast::Stmt::ConstFn(const_fn) => self.build_const_fn_stmt(const_fn),
 			// ast::Stmt::ExternFn(extern_fn) => self.build_extern_fn(extern_fn),
-			// ast::Stmt::TypeDef(type_def) => self.build_type_def_stmt(type_def),
-			// ast::Stmt::Impl(impl_stmt) => self.build_impl_stmt(impl_stmt),
+			ast::Stmt::Impl(impl_stmt) => self.build_impl_stmt(impl_stmt),
 			ast::Stmt::Expr(expr) => {
 				let rest = self.build_expr(expr);
 				if rest.is_none() || rest.get_type().is_nothing() {

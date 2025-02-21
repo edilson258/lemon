@@ -7,7 +7,7 @@ impl Builder<'_> {
 		self.ctx.block.as_returned();
 		if let Some(expr) = &mut ret_stmt.expr {
 			let mut ret = self.build_expr(expr);
-			let ret_type = *self.ctx.get_ret_type().unwrap_or_else(|| {
+			let ret_type = self.ctx.get_ret_type().unwrap_or_else(|| {
 				throw_ir_build_error("ret type not found");
 			});
 			let ret = ret.with_new_type(ret_type);
