@@ -38,17 +38,17 @@ impl Builder<'_> {
 	fn resolve_callee(&mut self, expr: &mut ast::CallExpr) -> CalleeResolvedType {
 		match &mut *expr.callee {
 			ast::Expr::Ident(ident) => (ident.lexeme().to_string(), None),
-			ast::Expr::Associate(associate_expr) => (self.resolve_associate_expr(associate_expr), None),
+			ast::Expr::Associate(associate_expr) => self.resolve_associate_expr(associate_expr),
 			ast::Expr::Member(member) => self.resolve_member_expr(member),
 			_ => todo!("unrecognized callee: {:?}", expr.callee),
 		}
 	}
 
 	#[inline(always)]
-	fn resolve_associate_expr(&mut self, expr: &mut ast::AssociateExpr) -> String {
+	fn resolve_associate_expr(&mut self, expr: &mut ast::AssociateExpr) -> CalleeResolvedType {
 		let self_name = expr.self_name.lexeme();
 		let method_name = expr.method.lexeme();
-		self.create_bind_method_with_selfname(self_name, method_name)
+		(self.create_bind_method_with_selfname(self_name, method_name), None)
 	}
 
 	#[inline(always)]

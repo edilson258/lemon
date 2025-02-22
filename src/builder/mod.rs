@@ -65,14 +65,12 @@ impl<'br> Builder<'br> {
 		self.ir.add_function(function);
 	}
 
-	pub fn drop_local_function_values(&mut self, ret_value: Option<&str>) -> Vec<Instr> {
-		let mut instrs = Vec::new();
+	pub fn drop_local_function_values(&mut self, ret_value: Option<&str>) {
 		for value in self.ctx.get_free_values() {
 			if ret_value.map(|ret_value| value.value.as_str() != ret_value).unwrap_or(true) {
-				instrs.push(Instr::Drop(value));
+				self.ctx.block.add_instr(Instr::Drop(value));
 			}
 		}
-		instrs
 	}
 
 	fn build_stmt(&mut self, stmt: &mut ast::Stmt) {

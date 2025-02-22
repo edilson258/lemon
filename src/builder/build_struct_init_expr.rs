@@ -21,6 +21,9 @@ impl Builder<'_> {
 		//
 		let size_ir_value: IrBasicValue = self_size.into();
 		let ptr_dest = self.ctx.new_register(self_type);
+
+		self.ctx.add_free_value(ptr_dest.clone());
+
 		let instr = ir::UnInstr::new(ptr_dest.clone(), size_ir_value);
 
 		self.ctx.block.add_instr(ir::Instr::Halloc(instr));
