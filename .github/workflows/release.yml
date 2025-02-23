@@ -17,7 +17,7 @@ jobs:
           sudo apt update
           sudo apt install -y llvm-dev clang libpolly-dev \
                               gcc-mingw-w64-x86-64 gcc-aarch64-linux-gnu \
-                              lld curl xz-utils
+                              lld curl xz-utils libz-dev
 
       - name: Install Rust targets
         run: |
