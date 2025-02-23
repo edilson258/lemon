@@ -98,6 +98,12 @@ impl From<i64> for IrBasicValue {
 		Self::new(BasicValue::Int(value as u64), TypeId::I32)
 	}
 }
+
+impl From<usize> for IrBasicValue {
+	fn from(value: usize) -> Self {
+		Self::new(BasicValue::Int(value as u64), TypeId::I32)
+	}
+}
 impl From<f64> for IrBasicValue {
 	fn from(value: f64) -> Self {
 		Self::new(BasicValue::Float(value), TypeId::F64)

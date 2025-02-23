@@ -4,8 +4,8 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) {
-		let ret = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
-		self.ctx.push_scope(Some(ret));
+		let ret_type = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
+		self.ctx.push_function_scope(ret_type);
 		let name = fn_stmt.name.lexeme().to_owned();
 		let args: Vec<_> = fn_stmt.params.iter_mut().map(|arg| self.build_bind(arg)).collect();
 		let ret = self.build_type(fn_stmt.ret_id, fn_stmt.get_range());
@@ -33,11 +33,17 @@ impl Builder<'_> {
 	pub fn build_fn_body(&mut self, body: &mut ast::FnBody) {
 		if let ast::FnBody::Expr(expr) = body {
 			self.build_expr(expr);
+			if !self.ctx.block.is_returned() {
+				self.drop_local_function_values(None);
+			}
 		}
 
 		if let ast::FnBody::Block(block) = body {
 			for stmt in block.stmts.iter_mut() {
 				self.build_stmt(stmt);
+			}
+			if !self.ctx.block.is_returned() {
+				self.drop_local_function_values(None);
 			}
 		}
 	}

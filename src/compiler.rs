@@ -40,7 +40,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let term = Term::stdout();
 	let style = Style::new();
 	let compile_green_text = style.green().apply_to("compiling...").bold();
-	write_in_term(&term, compile_green_text.to_string(), true);
+	write_in_term(&term, compile_green_text.to_string(), false);
 	let mut loader = Loader::new();
 	let file_id = loader.load(path_name);
 	let source = loader.get_source(file_id);
@@ -124,7 +124,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	};
 
 	let text = format!(" finished in {}.", elapsed_text);
-	write_in_term(&term, text, true);
+	write_in_term(&term, text, false);
 }
 
 fn generate_output_filename(path: &Path) -> String {

@@ -13,7 +13,7 @@ impl Builder<'_> {
 			self.build_fn_stmt(method, Some(struct_name.to_owned()));
 		}
 	}
-	pub fn create_bind_method_name(&self, self_name: &str, method_name: &str) -> String {
+	pub fn create_bind_method_with_selfname(&self, self_name: &str, method_name: &str) -> String {
 		format!("{}__{}", self_name, method_name)
 	}
 }

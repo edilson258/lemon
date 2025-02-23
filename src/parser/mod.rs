@@ -444,14 +444,14 @@ impl<'lex> Parser<'lex> {
 
 	// ::<expr>
 	fn parse_associate_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
-		let range = self.expect(Token::ColonColon)?;
-		let method = self.parse_ident()?;
-		Ok(ast::Expr::Associate(ast::AssociateExpr {
-			left: Box::new(expr),
-			method,
-			range,
-			left_type: None,
-		}))
+		if let ast::Expr::Ident(self_name) = expr {
+			let range = self.expect(Token::ColonColon)?;
+			let method = self.parse_ident()?;
+			Ok(ast::Expr::Associate(ast::AssociateExpr { self_name, method, range, self_type: None }))
+		} else {
+			let diag = self.custom_diag("expected identifier", &expr.get_range());
+			Err(diag.with_file_id(self.file_id))
+		}
 	}
 
 	// exper.<expr>

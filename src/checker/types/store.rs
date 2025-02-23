@@ -121,11 +121,12 @@ impl TypeStore {
 		text
 	}
 
-	pub fn get_struct_name(&self, type_id: TypeId) -> &str {
-		let type_value = self.get_type(type_id).unwrap();
-		match type_value {
-			Type::Struct(struct_type) => &struct_type.name,
-			_ => panic!("not a struct type"),
+	pub fn get_struct_name(&self, type_id: TypeId) -> Option<&str> {
+		let type_value = self.get_type(type_id);
+		if let Some(Type::Struct(struct_type)) = type_value {
+			Some(struct_type.name.as_str())
+		} else {
+			None
 		}
 	}
 

@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 mod value;
+use std::ops::{Rem, Sub};
+
 use crate::checker::types::TypeId;
 pub use value::*;
 
@@ -52,6 +54,29 @@ pub enum Instr {
 	Set(UnInstr),        // set r0, r1 # only heap alloc
 	Salloc(SallocInstr), // r0 = salloc r1 # only stack
 	Halloc(UnInstr),     // r0 = halloc r1 # only heap
+
+	// heap pointer
+	Getptr(GetPtrInstr), // r0 = Person getptr r0, 0
+}
+
+#[derive(Debug, Clone)]
+pub struct GetPtrInstr {
+	pub dest: IrBasicValue,
+	pub self_base: IrBasicValue,
+	pub self_name: String,
+	pub offset: usize,
+}
+
+impl GetPtrInstr {
+	pub fn new(self_name: String, self_ptr: IrBasicValue, offset: usize, dest: IrBasicValue) -> Self {
+		Self { dest, self_base: self_ptr, self_name, offset }
+	}
+}
+
+impl From<GetPtrInstr> for Instr {
+	fn from(value: GetPtrInstr) -> Self {
+		Instr::Getptr(value)
+	}
 }
 
 #[derive(Debug, Clone)]
@@ -243,8 +268,66 @@ impl Function {
 	}
 }
 
+pub struct Struct {
+	pub fields: Vec<TypeId>,
+	pub name: Option<String>,
+	pub size: usize,
+}
+
+impl Struct {
+	pub fn new(fields: Vec<TypeId>) -> Self {
+		Self { fields, name: None, size: 0 }
+	}
+
+	pub fn new_with_name(fields: Vec<TypeId>, name: impl Into<String>) -> Self {
+		Self { fields, name: Some(name.into()), size: 0 }
+	}
+
+	pub fn with_capacity(capacity: usize) -> Self {
+		Self { fields: Vec::with_capacity(capacity), name: None, size: 0 }
+	}
+
+	pub fn set_name(&mut self, name: impl Into<String>) {
+		self.name = Some(name.into());
+	}
+
+	pub fn add_field(&mut self, field: TypeId) -> usize {
+		let field_size = field.get_size();
+		let field_align = field.get_align();
+		if self.size.rem(field_align).ne(&0) {
+			self.size += field_align.sub(self.size.rem(field_align));
+		}
+		let index = self.fields.len();
+		self.fields.push(field);
+		self.size += field_size;
+		index
+	}
+
+	pub fn lazy_size(&mut self) {
+		let max_align = self.fields.iter().map(|field| field.get_align()).max().unwrap_or(1);
+		if self.size.rem(max_align).ne(&0) {
+			self.size += max_align.sub(self.size.rem(max_align));
+		}
+	}
+
+	pub fn get_fields(&self) -> &[TypeId] {
+		&self.fields
+	}
+
+	pub fn get_field(&mut self, index: usize) -> Option<&mut TypeId> {
+		self.fields.get_mut(index)
+	}
+}
+
+impl Default for Struct {
+	fn default() -> Self {
+		Self::new(Vec::new())
+	}
+}
+
 pub struct IR {
 	pub functions: Vec<Function>,
+	pub structs: Vec<Struct>,
 }
 
 impl Default for IR {
@@ -255,11 +338,15 @@ impl Default for IR {
 
 impl IR {
 	pub fn new() -> Self {
-		Self { functions: Vec::new() }
+		Self { functions: Vec::new(), structs: Vec::new() }
 	}
 
 	pub fn add_function(&mut self, function: Function) {
 		self.functions.push(function);
+	}
+
+	pub fn add_struct(&mut self, struct_: Struct) {
+		self.structs.push(struct_);
 	}
 }
 

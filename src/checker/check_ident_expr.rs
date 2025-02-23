@@ -21,7 +21,6 @@ impl Checker<'_> {
 			return Ok(fn_value.type_id);
 		}
 		self.ctx.type_store.end_monomo_fn();
-		println!("not found value: {}", ident.lexeme());
 		Err(SyntaxErr::not_found_value(ident.lexeme(), ident.get_range()))
 	}
 

@@ -1,29 +1,25 @@
 // extern fn printf(fmt: str, ...): i32 = {};
+extern fn printf(fmt: str, ...) = {};
 
-// fn println(value: i32) = {
-// 	printf("%d\n", value);
-// }
+fn println(value: i64) = printf("%d\n", value);
 
 type Person = {
-  born: i32,
   age: i32,
+  born: i64,
 }
 
 impl Person = {
-  fn new(age: i32, born: i32): Person = {
-    return Person { age: age, born: born };
+  fn new(age: i32, born: i64): Person = {
+    return Person { age, born };
   }
 
-  fn get_age(&self): i32 = {
-    return self.age;
+  fn get_age(&self): i64 = {
+    return self.born;
   }
 }
 
-// fn Person_new(age: i32, born: i32): Person = {
-//   return Person { age: age, born: born };
-// }
-
 fn main() = {
-  let mut person: Person = Person::new(20, 1990);
+  let person = Person::new(21, 2004);
   let age = person.get_age();
+  println(age);
 }

@@ -39,6 +39,7 @@ impl Block {
 	}
 
 	pub fn take_blocks(&mut self) -> Vec<IrBlock> {
+		self.returned = false;
 		self.label = Label::default();
 		self.next = self.label;
 		let blocks = std::mem::take(&mut self.blocks);
