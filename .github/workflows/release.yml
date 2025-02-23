@@ -9,6 +9,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y llvm-dev clang libpolly-dev
+
       - name: Checkout code
         uses: actions/checkout@v3
 
