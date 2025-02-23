@@ -29,6 +29,9 @@ walkdir = "2.5.0"
 name = "lemon"
 path = "src/main.rs"
 
+[toolchain]
+channel = "nightly"
+
 [profile.release]
 lto = "fat"       # Link Time Optimization, "fat" aplica otimizações mais agressivas
 opt-level = 3
@@ -41,3 +44,5 @@ panic = "abort"   # Let it crash and force ourselves to write safe Rust.
 inherits = "release"
 lto = "thin"            # Faster compile time with thin lto
 debug-assertions = true # Make sure `debug_assert!`s pass
+opt-level = "z"         # minify
+strip = true
