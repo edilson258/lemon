@@ -1,8 +1,8 @@
 [package]
 name = "lemon"
-version = "0.1.0"
+version = "0.0.3"
 edition = "2021"
-description = "an experimental, modern, purely safe, general-purpose programming language."
+description = "an experimental, modern, purely safe, programming language."
 authors = ["Yazalde Filimone <yazaldefilimon@gmail.com>"]
 repository = "https://github.com/yazaldefilimone/lemon"
 license = "Apache-2.0"
