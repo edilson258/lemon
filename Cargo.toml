@@ -1,6 +1,6 @@
 [package]
 name = "lemonlang"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 description = "an experimental, modern, purely safe, programming language."
 authors = ["Yazalde Filimone <yazaldefilimon@gmail.com>"]
@@ -29,8 +29,6 @@ walkdir = "2.5.0"
 name = "lemon"
 path = "src/main.rs"
 
-[toolchain]
-channel = "nightly"
 
 [profile.release]
 lto = "fat"       # Link Time Optimization, "fat" aplica otimizações mais agressivas

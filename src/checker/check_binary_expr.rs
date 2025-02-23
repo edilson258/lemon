@@ -5,6 +5,8 @@ impl Checker<'_> {
 	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> TyResult<TypeId> {
 		let left = self.check_expr(&mut binary_expr.left)?;
 		let right = self.check_expr(&mut binary_expr.right)?;
+		let left = self.infer_no_type_anotation(left)?;
+		let right = self.infer_no_type_anotation(right)?;
 		let range = binary_expr.get_range();
 		let type_id = match binary_expr.operator.kind {
 			OperatorKind::ADD | OperatorKind::SUB | OperatorKind::MUL | OperatorKind::DIV => {
@@ -27,9 +29,10 @@ impl Checker<'_> {
 			OperatorKind::SHR => self.check_bitwise_operation(left, right, &binary_expr.operator)?,
 			_ => todo!(),
 		};
-		let t = self.infer_type(right, left)?;
-		let t = self.infer_type(t, right)?;
-		binary_expr.set_type_id(t);
+
+		let rt_lt = self.infer_type(left, right)?;
+		let rt_rt = self.infer_type(right, left)?;
+		binary_expr.set_type_id(rt_rt);
 		Ok(type_id)
 	}
 

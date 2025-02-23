@@ -88,17 +88,7 @@ impl<'br> Builder<'br> {
 			// ast::Stmt::ExternFn(extern_fn) => self.build_extern_fn(extern_fn),
 			ast::Stmt::Impl(impl_stmt) => self.build_impl_stmt(impl_stmt),
 			ast::Stmt::Expr(expr) => {
-				let rest = self.build_expr(expr);
-				if rest.is_none() || rest.get_type().is_nothing() {
-					return;
-				}
-				if !rest.is_register() {
-					println!("stmt expr: {:?}", rest);
-					return;
-				}
-				let name = rest.value.as_str();
-				let type_name = self.type_store.get_display_type(rest.get_type());
-				println!("stmt expr: {} {}", name, type_name);
+				let _ = self.build_expr(expr);
 			}
 			_ => todo!("code {:#?}", stmt),
 		}

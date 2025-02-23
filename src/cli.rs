@@ -1,7 +1,7 @@
 use clap::{Arg, ArgAction, Command};
 
 pub fn command_line() -> clap::ArgMatches {
-	let matches: clap::ArgMatches = Command::new("Lemon")
+	let matches: clap::ArgMatches = Command::new("lemon")
 		.about(env!("CARGO_PKG_DESCRIPTION"))
 		.version(env!("CARGO_PKG_VERSION"))
 		.author(env!("CARGO_PKG_AUTHORS"))

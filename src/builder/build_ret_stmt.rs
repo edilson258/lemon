@@ -12,7 +12,11 @@ impl Builder<'_> {
 			});
 			let ret_value = ret_value.with_new_type(ret_type);
 			let ret_value = self.resolve_value(ret_value);
-			self.drop_local_function_values(Some(ret_value.value.as_str()));
+
+			if ret_value.is_register() {
+				self.drop_local_function_values(Some(ret_value.value.as_str()));
+			}
+
 			let instr = ir::Instr::Ret(Some(ret_value));
 			self.ctx.block.add_instr(instr);
 			return;

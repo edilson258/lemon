@@ -17,8 +17,7 @@ impl<'ll> Llvm<'ll> {
       let ptr = self.ctx.ptr_type(AddressSpace::default());
       return Some(ptr.into())
    	}
-		let found = self.type_store.resolve_borrow_type(type_id);
-		match found {
+		match self.type_store.resolve_borrow_type(type_id) {
 			TypeId::I8   | TypeId::U8 | TypeId::CHAR => Some(self.ctx.i8_type().into()),
 			TypeId::I16  | TypeId::U16 => Some(self.ctx.i16_type().into()),
 			TypeId::I32  | TypeId::U32 => Some(self.ctx.i32_type().into()),
@@ -31,21 +30,8 @@ impl<'ll> Llvm<'ll> {
 			TypeId::F64    => Some(self.ctx.f64_type().into()),
 			TypeId::BOOL   => Some(self.ctx.bool_type().into()),
 			found => {
-				let struct_name = match self.type_store.get_struct_name(found) {
-					Some(name) => name,
-					None => {
-						let text = self.type_store.get_display_ir_type(found);
-						throw_llvm_error(format!("struct '{}' not found", text))
-					}
-				};
-
-				match self.ctx.get_struct_type(struct_name) {
-					Some(t) => Some(t.into()),
-					None => throw_llvm_error(format!(
-						"type '{}' not found",
-						self.type_store.get_display_ir_type(found)
-					)),
-				}
+				let struct_name = self.type_store.get_struct_name(found)?;
+				self.ctx.get_struct_type(struct_name).map(|t| t.into())
 			}
 		}
 	}

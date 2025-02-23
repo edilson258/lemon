@@ -66,7 +66,9 @@ impl Scope {
 	}
 
 	pub fn add_free_value(&mut self, value: IrBasicValue) {
-		self.free_values.insert(value.value.as_str().into(), value);
+		if value.is_register() {
+			self.free_values.insert(value.value.as_str().into(), value);
+		}
 	}
 
 	pub fn get_free_values(&self) -> Vec<IrBasicValue> {

@@ -27,7 +27,7 @@ impl BasicValue {
 	pub fn as_str(&self) -> &str {
 		match self {
 			BasicValue::Register(register) => register,
-			_ => throw_ir_build_error("try get register from non register value"),
+			_ => throw_ir_build_error("not a valid register"),
 		}
 	}
 }
