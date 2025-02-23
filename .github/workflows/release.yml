@@ -57,7 +57,7 @@ jobs:
 
       - name: Install LLVM
         run: |
-          brew install
+          brew install llvm
           echo "LLVM_SYS_180_PREFIX=$(brew --prefix llvm)" >> $GITHUB_ENV
 
       - name: Install Rust targets
