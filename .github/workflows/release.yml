@@ -15,10 +15,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y llvm-dev clang libpolly-dev \
-                              gcc-mingw-w64-x86-64 gcc-aarch64-linux-gnu \
-                              lld curl xz-utils libz-dev
+          apt-get install clang-format clang-tidy clang-tools clang clangd libc++-dev libc++1  libc++abi-dev libc++abi1 libclang-dev libclang1 liblldb-dev libllvm-ocaml-dev libomp-dev libomp5 lld lldb llvm-dev llvm-runtime llvm python3-clang
 
+      - name: Set LLVM_SYS environment variable
+        run: echo "LLVM_SYS_180_PREFIX=/usr/lib/llvm-18" >> $GITHUB_ENV
       - name: Install Rust targets
         run: |
           rustup target add x86_64-unknown-linux-gnu
