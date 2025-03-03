@@ -88,6 +88,11 @@ impl<'lex> Parser<'lex> {
 				extern_fn_stmt.set_is_pub(true);
 				Ok(ast::Stmt::ExternFn(extern_fn_stmt))
 			}
+			Some(Token::Const) => {
+				let mut const_stmt = self.parse_const_stmt()?;
+				const_stmt.has_pub();
+				Ok(ast::Stmt::Const(const_stmt))
+			}
 			Some(Token::Type) => {
 				let mut type_def_stmt = self.parse_type_def_stmt()?;
 				type_def_stmt.set_is_pub(true);
@@ -144,7 +149,7 @@ impl<'lex> Parser<'lex> {
 		let name = self.parse_binding(false)?;
 		self.expect(Token::Assign)?; // take '='
 		let expr = self.parse_expr(MIN_PDE)?;
-		Ok(ast::ConstDelStmt { name, expr, range, type_id: None })
+		Ok(ast::ConstDelStmt { name, expr, range, type_id: None, is_pub: false })
 	}
 
 	// type <name> = {} or type <name> = <type>

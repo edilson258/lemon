@@ -231,6 +231,7 @@ pub struct ConstDelStmt {
 	pub name: Binding,
 	pub expr: Expr,
 	pub range: Range, // let range
+	pub is_pub: bool,
 	pub type_id: Option<TypeId>,
 }
 
@@ -238,6 +239,11 @@ impl ConstDelStmt {
 	pub fn lexeme(&self) -> &str {
 		&self.name.ident.text
 	}
+
+	pub fn has_pub(&mut self) {
+		self.is_pub = true;
+	}
+
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.name.get_range().merged_with(&self.expr.get_range()))
 	}
