@@ -1,10 +1,10 @@
 use crate::ast;
-use crate::ir::{self, IrBasicValue};
+use crate::ir::{self};
 
 use super::Builder;
 
 impl Builder<'_> {
-	pub fn build_if_expr(&mut self, if_expr: &mut ast::IfExpr) -> IrBasicValue {
+	pub fn build_if_stmt(&mut self, if_expr: &mut ast::IfStmt) {
 		let cond = self.build_expr(&mut if_expr.cond);
 		let then_block = self.ctx.block.new_block();
 		let otherwise_block = if_expr.otherwise.as_ref().map(|_| self.ctx.block.new_block());
@@ -32,6 +32,5 @@ impl Builder<'_> {
 			}
 		}
 		self.ctx.block.switch_to_block(merge_block);
-		IrBasicValue::default()
 	}
 }
