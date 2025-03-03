@@ -20,7 +20,7 @@ mod build_block_stmt;
 mod build_extern_fn_stmt;
 mod build_fn_stmt;
 mod build_ident_expr;
-mod build_if_expr;
+mod build_if_stmt;
 mod build_impl_stmt;
 mod build_let_stmt;
 mod build_literal;
@@ -80,6 +80,7 @@ impl<'br> Builder<'br> {
 			ast::Stmt::ExternFn(extern_fn_stmt) => self.build_extern_fn_stmt(extern_fn_stmt),
 			ast::Stmt::Block(block_stmt) => self.build_block_stmt(block_stmt),
 			ast::Stmt::Ret(ret_stmt) => self.build_ret_stmt(ret_stmt),
+			ast::Stmt::If(if_stmt) => self.build_if_stmt(if_stmt),
 			ast::Stmt::TypeDef(type_def) => self.build_type_def_stmt(type_def),
 			// ast::Stmt::While(while_stmt) => self.build_while_stmt(while_stmt),
 			// ast::Stmt::For(for_stmt) => self.build_for_stmt(for_stmt),
