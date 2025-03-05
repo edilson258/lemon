@@ -42,8 +42,6 @@ pub fn report_engine_err(diag: &Diag) {
 
 pub fn report_syntax_err(diag: &Diag, source: &Source) {
 	report(diag, ReportKind::SyntaxErr, source);
-	let A = na();
-	let a = A + 1;
 	std::process::exit(1);
 }
 pub fn throw_error_with_range(text: impl Into<String>, range: Range, source: &Source) -> ! {

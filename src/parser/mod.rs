@@ -90,9 +90,10 @@ impl<'lex> Parser<'lex> {
 				Ok(ast::Stmt::ExternFn(extern_fn_stmt))
 			}
 			Some(Token::Const) => {
-				let mut const_stmt = self.parse_const_stmt()?;
-				const_stmt.has_pub();
-				Ok(ast::Stmt::Const(const_stmt))
+				todo!()
+				// let mut const_stmt = self.parse_const_stmt()?;
+				// const_stmt.has_pub();
+				// Ok(ast::Stmt::Const(const_stmt))
 			}
 			Some(Token::Type) => {
 				let mut type_def_stmt = self.parse_type_def_stmt()?;
