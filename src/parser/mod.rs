@@ -90,10 +90,13 @@ impl<'lex> Parser<'lex> {
 				Ok(ast::Stmt::ExternFn(extern_fn_stmt))
 			}
 			Some(Token::Const) => {
-				todo!()
-				// let mut const_stmt = self.parse_const_stmt()?;
-				// const_stmt.has_pub();
-				// Ok(ast::Stmt::Const(const_stmt))
+				let mut const_stmt = self.parse_const_stmt()?;
+				match const_stmt {
+					ast::Stmt::ConstFn(ref mut const_fn_stmt) => const_fn_stmt.has_pub(),
+					ast::Stmt::ConstDel(ref mut const_del_stmt) => const_del_stmt.has_pub(),
+					_ => unreachable!(),
+				}
+				Ok(const_stmt)
 			}
 			Some(Token::Type) => {
 				let mut type_def_stmt = self.parse_type_def_stmt()?;
@@ -158,7 +161,16 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = self.parse_fn_body()?;
-		Ok(ast::ConstFnStmt { name, params, ret_type, body, range, fn_range, ret_id: None })
+		Ok(ast::ConstFnStmt {
+			name,
+			params,
+			ret_type,
+			body,
+			range,
+			fn_range,
+			ret_id: None,
+			is_pub: false,
+		})
 	}
 
 	fn parse_const_del_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstDelStmt> {

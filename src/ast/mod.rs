@@ -119,6 +119,7 @@ pub struct ConstFnStmt {
 	pub range: Range,    // const range
 	pub fn_range: Range, // fn range
 	pub ret_id: Option<TypeId>,
+	pub is_pub: bool,
 }
 
 impl ConstFnStmt {
@@ -134,6 +135,13 @@ impl ConstFnStmt {
 	}
 	pub fn get_ret_id(&self) -> Option<TypeId> {
 		self.ret_id
+	}
+
+	pub fn has_pub(&mut self) {
+		self.is_pub = true;
+	}
+	pub fn is_pub(&self) -> bool {
+		self.is_pub
 	}
 }
 
