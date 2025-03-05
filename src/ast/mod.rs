@@ -24,6 +24,7 @@ pub enum Stmt {
 	ConstDel(ConstDelStmt),
 	ConstFn(ConstFnStmt),
 	Block(BlockStmt),
+	If(IfStmt),
 
 	// loop
 	While(WhileStmt),
@@ -44,6 +45,7 @@ impl Stmt {
 			Stmt::ConstDel(const_del) => const_del.get_range(),
 			Stmt::ConstFn(const_stmt) => const_stmt.get_range(),
 			Stmt::Ret(ret_stmt) => ret_stmt.get_range(),
+			Stmt::If(if_stmt) => if_stmt.get_range(),
 			Stmt::ExternFn(extern_fn_stmt) => extern_fn_stmt.get_range(),
 			Stmt::While(while_stmt) => while_stmt.get_range(),
 			Stmt::For(for_stmt) => for_stmt.get_range(),
@@ -87,6 +89,23 @@ impl RetStmt {
 	}
 	pub fn get_type_id(&self) -> Option<TypeId> {
 		self.type_id
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IfStmt {
+	pub cond: Box<Expr>,
+	pub then: Box<Stmt>,
+	pub otherwise: Option<Box<Stmt>>,
+	pub range: Range, // if range
+}
+
+impl IfStmt {
+	pub fn get_range(&self) -> Range {
+		match &self.otherwise {
+			Some(otherwise) => self.range.merged_with(&otherwise.get_range()),
+			None => self.range.merged_with(&self.then.get_range()),
+		}
 	}
 }
 
@@ -511,7 +530,6 @@ pub enum Expr {
 	Pipe(PipeExpr),
 	Unary(UnaryExpr),
 	Call(CallExpr),
-	If(IfExpr),
 	Import(ImportExpr),
 	Ident(Ident),
 	Literal(Literal),
@@ -529,7 +547,6 @@ impl Expr {
 			Expr::Pipe(pipe) => pipe.get_range(),
 			Expr::Unary(unary) => unary.get_range(),
 			Expr::Call(call) => call.get_range(),
-			Expr::If(if_expr) => if_expr.get_range(),
 			// Expr::Ret(ret_expr) => ret_expr.get_range(),
 			Expr::Ident(ident) => ident.get_range(),
 			Expr::Assign(assign) => assign.get_range(),
@@ -776,23 +793,6 @@ impl CallExpr {
 	}
 	pub fn get_args_type(&self) -> &Vec<TypeId> {
 		&self.args_type
-	}
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct IfExpr {
-	pub cond: Box<Expr>,
-	pub then: Box<Stmt>,
-	pub otherwise: Option<Box<Stmt>>,
-	pub range: Range, // if range
-}
-
-impl IfExpr {
-	pub fn get_range(&self) -> Range {
-		match &self.otherwise {
-			Some(otherwise) => self.range.merged_with(&otherwise.get_range()),
-			None => self.range.merged_with(&self.then.get_range()),
-		}
 	}
 }
 

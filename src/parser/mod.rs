@@ -44,6 +44,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Fn) => self.parse_fn_stmt().map(ast::Stmt::Fn),
 			Some(Token::LBrace) => self.parse_block_stmt().map(ast::Stmt::Block),
 			Some(Token::Ret) => self.parse_ret_stmt().map(ast::Stmt::Ret),
+			Some(Token::If) => self.parse_if_stmt().map(ast::Stmt::If),
 			Some(Token::Extern) => self.parse_extern_fn_stmt().map(ast::Stmt::ExternFn),
 			Some(Token::While) => self.parse_while_stmt().map(ast::Stmt::While),
 			Some(Token::For) => self.parse_for_stmt().map(ast::Stmt::For),
@@ -119,6 +120,20 @@ impl<'lex> Parser<'lex> {
 			return self.parse_const_fn_stmt(range).map(ast::Stmt::ConstFn);
 		}
 		self.parse_const_del_stmt(range).map(ast::Stmt::ConstDel)
+	}
+
+	fn parse_if_stmt(&mut self) -> PResult<'lex, ast::IfStmt> {
+		let range = self.expect(Token::If)?;
+		self.expect(Token::LParen)?; // take '('
+		let cond = Box::new(self.parse_expr(MIN_PDE)?);
+		self.expect(Token::RParen)?; // take ')'
+		let then = Box::new(self.parse_stmt()?);
+		let mut otherwise = None;
+		if self.match_token(Token::Else) {
+			self.expect(Token::Else)?;
+			otherwise = Some(Box::new(self.parse_stmt()?));
+		}
+		Ok(ast::IfStmt { cond, then, otherwise, range })
 	}
 
 	fn parse_const_fn_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstFnStmt> {
@@ -389,7 +404,6 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Char) => self.parse_char().map(ast::Expr::Literal)?,
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
-			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
 			Some(Token::Import) => self.parse_import_expr().map(ast::Expr::Import)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
@@ -587,20 +601,6 @@ impl<'lex> Parser<'lex> {
 		let body = Box::new(self.parse_stmt()?);
 
 		Ok(ast::FnExpr { params, body, range, ret_type, type_id: None })
-	}
-
-	fn parse_if_expr(&mut self) -> PResult<'lex, ast::IfExpr> {
-		let range = self.expect(Token::If)?;
-		self.expect(Token::LParen)?; // take '('
-		let cond = Box::new(self.parse_expr(MIN_PDE)?);
-		self.expect(Token::RParen)?; // take ')'
-		let then = Box::new(self.parse_stmt()?);
-		let mut otherwise = None;
-		if self.match_token(Token::Else) {
-			self.expect(Token::Else)?;
-			otherwise = Some(Box::new(self.parse_stmt()?));
-		}
-		Ok(ast::IfExpr { cond, then, otherwise, range })
 	}
 
 	fn parse_call_expr(&mut self, callee: ast::Expr) -> PResult<'lex, ast::Expr> {
