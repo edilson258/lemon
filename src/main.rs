@@ -22,35 +22,38 @@ use checker::{context::Context, Checker};
 use compiler::compile;
 use diag::DiagGroup;
 use lexer::Token;
-use loader::Loader;
+use loader::{Loader, LoaderConfig};
 use logos::Logos;
 use parser::Parser;
+use report::throw_error;
 fn check(path_name: &str) {
-	let mut loader = Loader::new();
+	let config = LoaderConfig::new(path_name);
+	let mut loader = Loader::new(config);
 
-	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id);
+	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
+	let source = loader.get_source_unwrap(module_id).clone();
 	let mut lexer = Token::lexer(source.raw());
-	let mut parser = Parser::new(&mut lexer, file_id);
+	let mut parser = Parser::new(&mut lexer, module_id, &mut loader);
 
 	let mut ast = match parser.parse_program() {
 		Ok(ast) => ast,
-		Err(diag) => diag.report_syntax_err_wrap(source),
+		Err(diag) => diag.report_syntax_err_wrap(&source),
 	};
 	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
-	let mut checker = Checker::new(&mut diag_group, &mut ctx);
-	let _ = match checker.check_program(&mut ast) {
+	let mut checker = Checker::new(&mut diag_group, &mut ctx, &mut loader);
+	let _ = match checker.check_program() {
 		Ok(tyy) => tyy,
-		Err(diag) => diag.report_type_err_wrap(source),
+		Err(diag) => diag.report_type_err_wrap(&source),
 	};
 	println!("ok.");
 }
 
 fn lex(path_name: &str) {
-	let mut loader = Loader::new();
-	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id);
+	let config = LoaderConfig::new(path_name);
+	let mut loader = Loader::new(config);
+	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
+	let source = loader.get_source_unwrap(module_id);
 	let mut lexer = Token::lexer(source.raw());
 	while let Some(token) = lexer.next() {
 		println!("{:?}: {:?}", token, lexer.slice());
@@ -58,23 +61,25 @@ fn lex(path_name: &str) {
 }
 
 fn token(path_name: &str) {
-	let mut loader = Loader::new();
-	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id);
+	let config = LoaderConfig::new(path_name);
+	let mut loader = Loader::new(config);
+	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
+	let source = loader.get_source_unwrap(module_id);
 	let mut lexer = Token::lexer(source.raw());
 	while let Some(token) = lexer.next() {
 		println!("{:?}: {:?}", token, lexer.slice());
 	}
 }
 fn ast(path_name: &str) {
-	let mut loader = Loader::new();
-	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id);
+	let config = LoaderConfig::new(path_name);
+	let mut loader = Loader::new(config);
+	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
+	let source = loader.get_source_unwrap(module_id).clone();
 	let mut lexer = Token::lexer(source.raw());
-	let mut parser = Parser::new(&mut lexer, file_id);
+	let mut parser = Parser::new(&mut lexer, module_id, &mut loader);
 	let ast = match parser.parse_program() {
 		Ok(ast) => ast,
-		Err(diag) => diag.report_syntax_err_wrap(source),
+		Err(diag) => diag.report_syntax_err_wrap(&source),
 	};
 	println!("{:#?}", ast);
 }

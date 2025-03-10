@@ -8,8 +8,8 @@ use crate::{
 	disassembler::Disassembler,
 	linker::Linker,
 	llvm,
-	loader::Loader,
-	report::throw_cross_compile_error,
+	loader::{Loader, LoaderConfig},
+	report::{throw_cross_compile_error, throw_error},
 };
 
 use clap::ArgMatches;
@@ -38,19 +38,17 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let style = Style::new();
 	let compile_green_text = style.green().apply_to("compiling...").bold();
 	write_in_term(&term, compile_green_text.to_string(), false);
-
-	let mut loader = Loader::new();
-	let file_id = loader.load(path_name);
-	let source = loader.get_source(file_id).clone();
-	let ast = loader.get_program(file_id);
-
+	let config = LoaderConfig::new(path_name);
+	let mut loader = Loader::new(config);
+	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
+	let source = loader.get_source_unwrap(module_id).clone();
 	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
 
 	// check
 	write_in_term(&term, " check...", false);
-	let mut checker = Checker::new(&mut diag_group, &mut ctx);
-	let _ = match checker.check_program(ast) {
+	let mut checker = Checker::new(&mut diag_group, &mut ctx, &mut loader);
+	let _ = match checker.check_program() {
 		Ok(tyy) => tyy,
 		Err(diag) => diag.report_type_err_wrap(&source),
 	};
@@ -58,8 +56,8 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	// emit lnr
 	//
 	write_in_term(&term, " emit lnr...", true);
-	let mut ir_builder = Builder::new(&ctx.type_store, &source);
-	let ir = ir_builder.build(ast);
+	let mut ir_builder = Builder::new(&ctx.type_store, &mut loader);
+	let ir = ir_builder.build();
 
 	// optimize::optimize(&mut ir);
 

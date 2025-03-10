@@ -2,7 +2,7 @@
 use core::fmt;
 use std::fmt::Display;
 
-use crate::{checker::types::TypeId, range::Range};
+use crate::{checker::types::TypeId, loader::ModuleId, range::Range};
 use serde::{Deserialize, Serialize};
 mod ast_type;
 pub use ast_type::*;
@@ -847,6 +847,7 @@ impl DerefExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImportExpr {
 	pub path: StringLiteral,
+	pub module_id: Option<ModuleId>,
 	pub range: Range,
 }
 
