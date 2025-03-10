@@ -31,16 +31,20 @@ path = "src/main.rs"
 
 
 [profile.release]
-lto = "fat"       # Link Time Optimization, "fat" aplica otimizações mais agressivas
+# Configurations explicitly listed here for clarity.
+# Using the best options for performance.
 opt-level = 3
+lto = "fat"
 codegen-units = 1
-strip = "symbols" # set to `false` for debug information
-debug = false     # set to `true` for debug information
-panic = "abort"   # Let it crash and force ourselves to write safe Rust.
+strip = "symbols" # Set to `false` for debug information
+debug = false     # Set to `true` for debug information
+panic = "abort"   # Let it crash and force ourselves to write safe Rust
+
 # Profile for `cargo coverage`
 [profile.coverage]
 inherits = "release"
-lto = "thin"            # Faster compile time with thin lto
+opt-level = 2           # Compile faster
+codegen-units = 256     # Compile faster
+lto = "thin"            # Faster compile time with thin LTO
 debug-assertions = true # Make sure `debug_assert!`s pass
-opt-level = "z"         # minify
-strip = true
+overflow-checks = true  # Catch arithmetic overflow errors

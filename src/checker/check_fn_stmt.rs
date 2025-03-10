@@ -31,6 +31,12 @@ impl Checker<'_> {
 		// self.equal_type_expected(ret_id, ret_found, fn_stmt.body.get_range())?;
 
 		self.ctx.exit_scope();
+
+		if fn_stmt.is_pub {
+			let lexeme = fn_stmt.name.lexeme();
+			self.ctx.add_pub_function(lexeme.into(), fn_type_id);
+		}
+
 		Ok(TypeId::UNIT)
 	}
 

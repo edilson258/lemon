@@ -48,7 +48,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	// check
 	write_in_term(&term, " check...", false);
 	let mut checker = Checker::new(&mut diag_group, &mut ctx, &mut loader);
-	let _ = match checker.check_program() {
+	let _ = match checker.check_program(module_id) {
 		Ok(tyy) => tyy,
 		Err(diag) => diag.report_type_err_wrap(&source),
 	};

@@ -4,7 +4,6 @@ use std::mem;
 use crate::checker::types::TypeStore;
 use crate::ir::{Instr, IR};
 use crate::loader::Loader;
-use crate::source::Source;
 use crate::{ast, ir};
 use context::Context;
 

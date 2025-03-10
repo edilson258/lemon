@@ -9,7 +9,16 @@ impl Checker<'_> {
 			return Err(SyntaxErr::const_outside_global_scope(const_del.range.clone()));
 		}
 		let found_id = self.check_expr(&mut const_del.expr)?;
+
 		let lexeme = const_del.name.ident.text.clone();
+
+		if self.ctx.type_store.is_module(found_id) {
+			if const_del.name.ty.is_some() {
+				return Err(SyntaxErr::type_annotation_not_allowed_for_module(const_del.get_range()));
+			}
+			self.ctx.type_store.add_module_name(found_id, lexeme.as_str());
+		}
+
 		let expect_id = match const_del.name.ty.as_ref() {
 			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
 			None => {

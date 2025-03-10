@@ -1,8 +1,11 @@
+use crate::loader::ModuleId;
+
 // use bind::create_binds;
 use super::types::{monomorphic::MonomorphicStore, TypeId, TypeStore};
 use borrow::BorrowId;
 use flow::Flow;
-use module::{Module, ModuleId};
+use module::Module;
+use rustc_hash::FxHashMap;
 use scope::{Scope, ScopeType};
 use store::Store;
 use value::{Value, ValueId};
@@ -23,7 +26,8 @@ pub struct Context {
 	pub store: Store,
 	pub value_id: ValueId,
 	pub store_id: usize,
-	pub modules: Vec<Module>,
+	pub modules: FxHashMap<ModuleId, Module>,
+	pub module_id: ModuleId,
 }
 
 impl Context {
@@ -34,8 +38,9 @@ impl Context {
 		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		let modules = Vec::from_iter(vec![Module::new(ModuleId::new(0))]);
-		Self { scopes, flow, type_store, store, value_id, store_id, modules }
+		let modules = FxHashMap::default();
+		let module_id = ModuleId::new(0);
+		Self { scopes, flow, type_store, store, value_id, store_id, modules, module_id }
 	}
 
 	pub fn get_monomorphic_store(&mut self) -> &mut MonomorphicStore {
@@ -50,16 +55,46 @@ impl Context {
 		self.scopes.last().unwrap()
 	}
 
-	pub fn get_module(&self, module_id: ModuleId) -> &Module {
-		self.modules.get(module_id.as_usize()).unwrap()
+	pub fn get_module(&self, module_id: ModuleId) -> Option<&Module> {
+		self.modules.get(&module_id)
+	}
+
+	pub fn get_module_mut(&mut self, module_id: ModuleId) -> Option<&mut Module> {
+		self.modules.get_mut(&module_id)
+	}
+
+	pub fn swap_module(&mut self, module_id: ModuleId) {
+		self.module_id = module_id;
+	}
+
+	pub fn add_module(&mut self, module_id: ModuleId) {
+		self.swap_module(module_id);
+		self.modules.insert(module_id, Module::new(module_id));
+	}
+
+	pub fn add_entry_module(&mut self, module_id: ModuleId) {
+		self.modules.insert(module_id, Module::with_entry(module_id));
+	}
+
+	pub fn is_entry_module(&self, module_id: ModuleId) -> bool {
+		self.modules.get(&module_id).map(|module| module.is_entry).unwrap_or(false)
+	}
+
+	pub fn get_current_module(&self) -> Option<&Module> {
+		let module = self.modules.get(&self.module_id)?;
+		Some(module)
 	}
 
 	pub fn add_pub_value(&mut self, name: String, type_id: TypeId) {
-		todo!()
+		if let Some(module) = self.modules.get_mut(&self.module_id) {
+			module.add_value(name, type_id)
+		}
 	}
 
-	pub fn add_pub_fn(&mut self, name: String, type_id: TypeId) {
-		todo!()
+	pub fn add_pub_function(&mut self, name: String, type_id: TypeId) {
+		if let Some(module) = self.modules.get_mut(&self.module_id) {
+			module.add_function(name, type_id)
+		}
 	}
 
 	pub fn get_scope_mut(&mut self) -> &mut Scope {

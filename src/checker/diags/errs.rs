@@ -20,6 +20,13 @@ pub enum SyntaxErr<'tce> {
 	RedefineFnInSameScope { name: String, range: Range },
 	ReturnLocalBorrow { range: Range },
 
+	// module errors
+	MainInNonMainModule { range: Range, pathname: String },
+	MissingMainInEntryModule { range: Range, pathname: String },
+	CannotReassignModule { range: Range },
+	TypeAnnotationNotAllowedForModule { range: Range },
+	NotFoundPubItem { name: String, range: Range },
+
 	// context errors
 	ReturnOutsideFn { range: Range },
 	ReturnNotInFnScope { range: Range },
@@ -208,6 +215,27 @@ impl<'tce> SyntaxErr<'tce> {
 	pub fn left_hand_cannot_be_assigned(range: Range) -> Diag {
 		Self::LeftHandCannotBeAssigned { range }.into()
 	}
+
+	// module errors
+	pub fn cannot_reassign_module(range: Range) -> Diag {
+		Self::CannotReassignModule { range }.into()
+	}
+
+	pub fn main_in_non_main_module(range: Range, pathname: String) -> Diag {
+		Self::MainInNonMainModule { range, pathname }.into()
+	}
+
+	pub fn missing_main_in_entry_module(range: Range, pathname: String) -> Diag {
+		Self::MissingMainInEntryModule { range, pathname }.into()
+	}
+
+	pub fn type_annotation_not_allowed_for_module(range: Range) -> Diag {
+		Self::TypeAnnotationNotAllowedForModule { range }.into()
+	}
+
+	pub fn not_found_pub_item(name: String, range: Range) -> Diag {
+		Self::NotFoundPubItem { name, range }.into()
+	}
 }
 impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 	fn from(err: SyntaxErr<'tce>) -> Self {
@@ -365,6 +393,32 @@ impl<'tce> From<SyntaxErr<'tce>> for diag::Diag {
 			SyntaxErr::LeftHandCannotBeAssigned { range } => {
 				let text = "left-hand side can't be assigned".to_string();
 				diag::Diag::new(Severity::Err, text, range)
+			}
+
+			// module errors
+			SyntaxErr::MainInNonMainModule { range, pathname } => {
+				let text = format!("non-entry module '{}' contains 'fn main'", pathname);
+				let diag = diag::Diag::new(Severity::Err, text, range);
+				diag.with_note("'fn main' can only be defined in the entry module")
+			}
+			SyntaxErr::MissingMainInEntryModule { range, pathname } => {
+				let text = format!("entry module '{}' must contain 'fn main'", pathname);
+				diag::Diag::new(Severity::Err, text, range)
+			}
+			SyntaxErr::CannotReassignModule { range } => {
+				let text = "cannot reassign module".to_string();
+				let diag = diag::Diag::new(Severity::Err, text, range);
+				diag.with_note("consider using a new import or extract a specific item")
+			}
+			SyntaxErr::TypeAnnotationNotAllowedForModule { range } => {
+				let text = "type annotation not allowed for module".to_string();
+				let diag = diag::Diag::new(Severity::Err, text, range);
+				diag.with_note("consider removing specified type annotation")
+			}
+			SyntaxErr::NotFoundPubItem { name, range } => {
+				let text = format!("pub item '{}' not found", name);
+				let diag = diag::Diag::new(Severity::Err, text, range);
+				diag.with_note("consider adding 'pub' to the item")
 			}
 		}
 	}

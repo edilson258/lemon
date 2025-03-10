@@ -7,6 +7,7 @@ impl Builder<'_> {
 		if let Some(type_id) = type_id {
 			return type_id;
 		}
-		throw_error_with_range("not found `type_id`", range, self.source);
+		let source = self.loader.get_current_source();
+		throw_error_with_range("not found `type_id`", range, source);
 	}
 }

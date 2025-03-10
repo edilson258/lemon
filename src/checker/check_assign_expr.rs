@@ -9,6 +9,9 @@ use super::{
 impl Checker<'_> {
 	pub fn check_assign_expr(&mut self, assign_expr: &mut ast::AssignExpr) -> TyResult<TypeId> {
 		let found = self.check_expr(&mut assign_expr.right)?;
+		if self.ctx.type_store.is_module(found) {
+			return Err(SyntaxErr::cannot_reassign_module(assign_expr.get_range()));
+		}
 		let expected = self.assign_left_expr(&mut assign_expr.left, found)?;
 		assign_expr.set_type_id(expected);
 		Ok(TypeId::UNIT)

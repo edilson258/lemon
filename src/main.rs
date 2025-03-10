@@ -29,22 +29,16 @@ use report::throw_error;
 fn check(path_name: &str) {
 	let config = LoaderConfig::new(path_name);
 	let mut loader = Loader::new(config);
-
-	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
-	let source = loader.get_source_unwrap(module_id).clone();
-	let mut lexer = Token::lexer(source.raw());
-	let mut parser = Parser::new(&mut lexer, module_id, &mut loader);
-
-	let mut ast = match parser.parse_program() {
-		Ok(ast) => ast,
-		Err(diag) => diag.report_syntax_err_wrap(&source),
-	};
 	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
+	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
 	let mut checker = Checker::new(&mut diag_group, &mut ctx, &mut loader);
-	let _ = match checker.check_program() {
+	let _ = match checker.check_program(module_id) {
 		Ok(tyy) => tyy,
-		Err(diag) => diag.report_type_err_wrap(&source),
+		Err(diag) => {
+			let source = loader.get_current_source();
+			diag.report_syntax_err_wrap(source);
+		}
 	};
 	println!("ok.");
 }

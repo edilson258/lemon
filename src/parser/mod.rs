@@ -109,7 +109,7 @@ impl<'lex> Parser<'lex> {
 				Ok(ast::Stmt::TypeDef(type_def_stmt))
 			}
 			_ => {
-				let diag = Diag::error("expected fn, extern or type", self.range.clone());
+				let diag = Diag::error("expected 'const', 'fn' or 'type'", self.range.clone());
 				Err(diag.with_module_id(self.module_id))
 			}
 		}
@@ -521,7 +521,7 @@ impl<'lex> Parser<'lex> {
 			Ok(module_id) => module_id,
 			Err(message) => return Err(self.custom_diag(message, &max_range)),
 		};
-		Ok(ast::ImportExpr { path, range, module_id: Some(module_id) })
+		Ok(ast::ImportExpr { path, range: max_range, module_id: Some(module_id) })
 	}
 	// &mut <expr>
 	fn parse_borrow_expr(&mut self) -> PResult<'lex, ast::BorrowExpr> {

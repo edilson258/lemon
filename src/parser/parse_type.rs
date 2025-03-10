@@ -60,14 +60,13 @@ impl<'l> Parser<'l> {
 	}
 	fn parse_numb_type(&mut self) -> PResult<'l, ast::NumberType> {
 		match self.token {
-			// todo: check if isize/usize is 32 or 64 bits or use platform?
 			Some(Token::IsizeType) => {
 				let range = self.expect(Token::IsizeType)?.clone();
-				Ok(ast::NumberType { range, bits: 32, signed: true })
+				Ok(ast::NumberType { range, bits: 0, signed: true })
 			}
 			Some(Token::UsizeType) => {
 				let range = self.expect(Token::UsizeType)?.clone();
-				Ok(ast::NumberType { range, bits: 32, signed: false })
+				Ok(ast::NumberType { range, bits: 0, signed: false })
 			}
 			Some(Token::I8Type) => {
 				let range = self.expect(Token::I8Type)?.clone();

@@ -48,9 +48,8 @@ pub enum Token {
 	#[token("return")]
 	Ret,
 
-	#[token("null")]
-	Null,
-
+	// #[token("null")]
+	// Null,
 	#[token("match")]
 	Match,
 
@@ -63,8 +62,8 @@ pub enum Token {
 	#[token("impl")]
 	Impl,
 
-	#[token("mod")]
-	Mod,
+	// #[token("mod")]
+	// Mod,
 
 	// Operators
 	#[token("+")]
@@ -253,7 +252,7 @@ impl fmt::Display for Token {
 			Token::Skip => write!(f, "skip"),
 			Token::Else => write!(f, "else"),
 			Token::Ret => write!(f, "return"),
-			Token::Null => write!(f, "null"),
+			// Token::Null => write!(f, "null"),
 			Token::Match => write!(f, "match"),
 			Token::Import => write!(f, "import"),
 			Token::Plus => write!(f, "+"),
@@ -324,7 +323,7 @@ impl fmt::Display for Token {
 			Token::StringType => write!(f, "string"),
 			Token::StrType => write!(f, "str"),
 			Token::Pub => write!(f, "pub"),
-			Token::Mod => write!(f, "mod"),
+			// Token::Mod => write!(f, "mod"),
 			Token::DotDotEq => write!(f, "..="),
 			Token::DotDotDot => write!(f, "..."),
 			Token::Tilde => write!(f, "~"),

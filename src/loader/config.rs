@@ -23,6 +23,7 @@ fn get_entry_file_and_cwd(entry_file: &str) -> (PathBuf, PathBuf) {
 impl LoaderConfig {
 	pub fn new(entry_file: &str) -> Self {
 		let (entry_file, cwd) = get_entry_file_and_cwd(entry_file);
+		let cwd = cwd.canonicalize().unwrap_or(cwd);
 		let max_threads = DEFAULT_MAX_THREADS;
 		let extensions = vec!["rs".to_string()];
 		let search_paths = vec![cwd.clone()];

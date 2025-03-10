@@ -9,6 +9,8 @@ use rustc_hash::FxHashMap;
 pub use store::*;
 pub use type_id::*;
 
+use crate::loader::ModuleId;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
 	Void,
@@ -30,7 +32,7 @@ pub enum Type {
 
 	// module
 	//
-	Mod(ModType),
+	Mod(ModuleType),
 
 	// internal
 	Unit,
@@ -44,6 +46,10 @@ impl Type {
 	}
 	pub fn is_struct(&self) -> bool {
 		matches!(self, Type::Struct(_))
+	}
+
+	pub fn is_module(&self) -> bool {
+		matches!(self, Type::Mod(_))
 	}
 
 	pub fn can_implemented(&self) -> bool {
@@ -109,9 +115,44 @@ impl Type {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ModType {
-	pub name: String,
-	pub items: Vec<TypeId>,
+pub struct ModuleType {
+	pub name: Option<String>,
+	pub module_id: ModuleId,
+}
+
+impl ModuleType {
+	pub fn new(module_id: ModuleId) -> Self {
+		Self { name: None, module_id }
+	}
+
+	pub fn new_with_name(module_id: ModuleId, name: String) -> Self {
+		Self { name: Some(name), module_id }
+	}
+
+	pub fn get_name(&self) -> Option<&str> {
+		self.name.as_deref()
+	}
+
+	pub fn set_name(&mut self, name: String) {
+		self.name = Some(name);
+	}
+}
+
+impl From<ModuleId> for ModuleType {
+	fn from(module_id: ModuleId) -> Self {
+		Self::new(module_id)
+	}
+}
+
+impl From<ModuleType> for ModuleId {
+	fn from(module_type: ModuleType) -> Self {
+		module_type.module_id
+	}
+}
+impl From<ModuleType> for Type {
+	fn from(module_type: ModuleType) -> Self {
+		Type::Mod(module_type)
+	}
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

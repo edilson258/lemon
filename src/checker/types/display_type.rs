@@ -1,6 +1,6 @@
 use super::{
-	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, ModType, NumRange,
-	Number, StructType, Type, TypeId, TypeStore,
+	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, ModuleType,
+	NumRange, Number, StructType, Type, TypeId, TypeStore,
 };
 
 impl Type {
@@ -218,10 +218,13 @@ impl TypeId {
 	}
 }
 
-impl ModType {
+impl ModuleType {
 	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
 		*text += "mod ";
-		*text += &self.name;
+		*text += match &self.name {
+			Some(name) => name,
+			None => "<unknown>",
+		};
 		// *text += " { ";
 		// for (i, item) in self.items.iter().enumerate() {
 		// 	if i > 0 {

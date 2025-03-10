@@ -18,8 +18,9 @@ pub struct Loader {
 	root_cache: FxHashMap<PathBuf, ModuleId>,
 	root: FxHashMap<ModuleId, Program>,
 	config: LoaderConfig,
-	loading: FxHashMap<ModuleId, PathBuf>,
+	loading: FxHashMap<PathBuf, ModuleId>,
 	pub entry_module: ModuleId,
+	pub current_module: ModuleId,
 }
 
 type LoaderResult<T> = Result<T, String>;
@@ -31,6 +32,7 @@ impl Loader {
 		let root = FxHashMap::default();
 		let loading = FxHashMap::default();
 		let entry_module = ModuleId::new(u64::MAX);
+		let current_module = ModuleId::new(u64::MAX);
 
 		// todo: threads
 		// if loader.config.max_threads > 0 {
@@ -39,7 +41,7 @@ impl Loader {
 		// 		.build_global()
 		// 		.unwrap();
 		// }
-		Self { sources, root_cache, root, config, loading, entry_module }
+		Self { sources, root_cache, root, config, loading, entry_module, current_module }
 	}
 
 	pub fn load_file(&mut self, path: PathBuf) -> LoaderResult<ModuleId> {
@@ -74,35 +76,44 @@ impl Loader {
 	}
 
 	fn _load_file(&mut self, path: PathBuf) -> LoaderResult<ModuleId> {
+		let name = path.display().to_string();
 		let path = self._canonicalize(path)?;
+		self.check_circular(&path)?;
 		if let Some(module_id) = self.root_cache.get(&path) {
 			return Ok(*module_id);
 		}
 		let raw = self._read_file(path.clone())?;
-		let name = self._strip_prefix(path.as_path())?.display().to_string();
+		// let name = self._strip_prefix(path.as_path())?.display().to_string();
 		let module_id = self.add_module(path.clone(), name, raw)?;
-		self.loading.insert(module_id, path);
+		self.loading.insert(path.clone(), module_id);
 		self.finish(module_id);
-		self.loading.remove(&module_id);
+		self.loading.remove(&path);
+		self.swap_module(module_id);
 		Ok(module_id)
+	}
+
+	pub fn swap_module(&mut self, module_id: ModuleId) {
+		self.current_module = module_id;
 	}
 
 	fn add_module(&mut self, path: PathBuf, name: String, raw: String) -> LoaderResult<ModuleId> {
 		let module_id = self.sources.len() as u64;
-		self.check_circular(module_id.into())?;
 		let source = Source::new(path.clone(), name, raw);
 		self.sources.insert(module_id.into(), Arc::new(source));
 		self.root_cache.insert(path, module_id.into());
 		Ok(module_id.into())
 	}
 
-	fn check_circular(&mut self, module_id: ModuleId) -> LoaderResult<()> {
-		if self.loading.contains_key(&module_id) {
+	fn check_circular(&mut self, path: &PathBuf) -> LoaderResult<()> {
+		if self.loading.contains_key(path) {
 			return Err("circular dependency detected".to_string());
 		}
 		Ok(())
 	}
 
+	pub fn get_current_source(&mut self) -> &Source {
+		self.get_source_unwrap(self.current_module)
+	}
 	pub fn get_source(&self, module_id: ModuleId) -> LoaderResult<&Source> {
 		match self.sources.get(&module_id) {
 			Some(source) => Ok(source),
@@ -111,6 +122,7 @@ impl Loader {
 	}
 
 	pub fn get_ast(&mut self, module_id: ModuleId) -> &mut Program {
+		self.swap_module(module_id);
 		match self.root.get_mut(&module_id) {
 			Some(ast) => ast,
 			None => throw_error(format!("module '{}' not found", module_id)),

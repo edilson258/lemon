@@ -848,7 +848,7 @@ impl DerefExpr {
 pub struct ImportExpr {
 	pub path: StringLiteral,
 	pub module_id: Option<ModuleId>,
-	pub range: Range,
+	pub range: Range, // import range
 }
 
 impl ImportExpr {
