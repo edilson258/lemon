@@ -101,24 +101,23 @@ println(result); // Output: 12
 
 ## Primitive types
 
-| Type    | Size (bytes)         | Alignment (bytes) | Description                                                  |
-| ------- | -------------------- | ----------------- | ------------------------------------------------------------ |
-| `void`  | 0                    | 1                 | Zero sized unit type, default function return type           |
-| `i8`    | 1                    | 1                 | Signed 8 bit integer                                         |
-| `i16`   | 2                    | 2                 | Signed 16 bit integer                                        |
-| `i32`   | 4                    | 4                 | Signed 32 bit integer                                        |
-| `i64`   | 8                    | 8                 | Signed 64 bit integer                                        |
-| `u8`    | 1                    | 1                 | Unsigned 8 bit integer                                       |
-| `u16`   | 2                    | 2                 | Unsigned 16 bit integer                                      |
-| `u32`   | 4                    | 4                 | Unsigned 32 bit integer                                      |
-| `u64`   | 8                    | 8                 | Unsigned 64 bit integer                                      |
-| `isize` | Same as a pointer    | Same as a pointer | Signed pointer sized integer                                 |
-| `usize` | Same as a pointer    | Same as a pointer | Unsigned pointer sized integer                               |
-| `f32`   | 4                    | 4                 | 32 bit floating point number                                 |
-| `f64`   | 8                    | 8                 | 64 bit floating point number                                 |
-| `bool`  | 1                    | 1                 | Boolean value type, `true` or `false`                        |
-| `str`   | Same as two pointers | Same as a pointer | String slice, has `pointer` and `length`                     |
-| `fstr`  | Same as two pointers | Same as a pointer | Format string slice, describes a string formatting operation |
+| Type    | Size (bytes)         | Alignment (bytes) | Description                                        |
+| ------- | -------------------- | ----------------- | -------------------------------------------------- |
+| `void`  | 0                    | 1                 | Zero sized unit type, default function return type |
+| `i8`    | 1                    | 1                 | Signed 8 bit integer                               |
+| `i16`   | 2                    | 2                 | Signed 16 bit integer                              |
+| `i32`   | 4                    | 4                 | Signed 32 bit integer                              |
+| `i64`   | 8                    | 8                 | Signed 64 bit integer                              |
+| `u8`    | 1                    | 1                 | Unsigned 8 bit integer                             |
+| `u16`   | 2                    | 2                 | Unsigned 16 bit integer                            |
+| `u32`   | 4                    | 4                 | Unsigned 32 bit integer                            |
+| `u64`   | 8                    | 8                 | Unsigned 64 bit integer                            |
+| `isize` | Same as a pointer    | Same as a pointer | Signed pointer sized integer                       |
+| `usize` | Same as a pointer    | Same as a pointer | Unsigned pointer sized integer                     |
+| `f32`   | 4                    | 4                 | 32 bit floating point number                       |
+| `f64`   | 8                    | 8                 | 64 bit floating point number                       |
+| `bool`  | 1                    | 1                 | Boolean value type, `true` or `false`              |
+| `str`   | Same as two pointers | Same as a pointer | String slice, has `pointer` and `length`           |
 
 ## Pointer types
 
