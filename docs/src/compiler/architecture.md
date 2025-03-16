@@ -59,8 +59,9 @@ This makes **IR inherently safe**, requiring no additional verification.
 ---
 
 The **Lemon** compiler applies **ownership principles from AST analysis to code generation**, ensuring execution **without memory leaks or invalid accesses**. This approach provides:
-✔ **Memory safety with no GC overhead**
-✔ **Efficient and predictable execution**
-✔ **Low-level safe code, easy to optimize**
+
+- **Memory safety with no GC overhead**
+- **Efficient and predictable execution**
+- **Low-level safe code, easy to optimize**
 
 - Read abou [Pointer Cache Management](./pointer_cache.md).

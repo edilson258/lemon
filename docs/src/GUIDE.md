@@ -8,23 +8,49 @@ If you want a **deep technical dive**, check out the [The Lemon Compiler](./comp
 
 ---
 
-## **Installation**
+## Installation
 
-### **Linux and macOS**
+### Install dependencies
+
+#### On Linux
 
 ```sh
+# Install Rust if you haven't it already.
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# make sure you have libc installed, we use gcc
+sudo apt install gcc
+```
+
+#### On Mac
+
+```sh
+# Install Rust if you haven't it already.
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# make sure you have libc installed, probably we don't need to install gcc
+brew install gcc
+
+```
+
+Also, you can install Lemon by running:
+
+```
 curl -fsSL https://lemonlang.org/install | sh
+
 ```
 
----
+### On Windows
 
-### **Windows**
+- [Install Rust](https://forge.rust-lang.org/infra/other-installation-methods.html#other-ways-to-install-rustup)
+
+### Install Lemon
 
 ```sh
-powershell -c "irm lemonlang.org/install.ps1 | iex"
-```
+cargo install lemonlang
 
----
+lemon --version
+```
 
 ## **Hello, World!**
 
@@ -254,3 +280,7 @@ Lemon is **actively being developed**, and there’s **a lot to improve**!
 ---
 
 Now you know the basics! Start writing **fast, safe, and simple** Lemon code today! 🍋
+
+```
+
+```

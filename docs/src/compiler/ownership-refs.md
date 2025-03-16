@@ -34,9 +34,10 @@ This simplifies the language **without sacrificing safety**.
 ### 3. How Does the Type Checker Validate Ownership and References?
 
 Before generating **IR**, the compiler ensures:
-✔ **`&mut` is used correctly** → Only one mutable reference can exist at a time.
-✔ **`&` allows multiple reads** → Shared reading is safe as long as no `&mut` exists.
-✔ **Return values preserve ownership correctly** → A function **can only return ownership (`Person`) if it received ownership or created a new object.**
+
+- **`&mut` is used correctly** → Only one mutable reference can exist at a time.
+- **`&` allows multiple reads** → Shared reading is safe as long as no `&mut` exists.
+- **Return values preserve ownership correctly** → A function **can only return ownership (`Person`) if it received ownership or created a new object.**
 
 **Invalid Example (Ownership Error)**:
 
