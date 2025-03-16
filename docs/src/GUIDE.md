@@ -1,4 +1,4 @@
-# **Lemon in X minutes – The Ultimate Guide!** 🍋
+# **Lemon in X minutes – The Ultimate Guide!**
 
 Lemon is a **low-level, safe programming language**. It aims to be **as fast as C** and **as safe as Rust**, but with a **simpler syntax**. No garbage collector, no `use-after-free`, no `double-free` – **everything is prevented by design**.
 
@@ -8,7 +8,7 @@ If you want a **deep technical dive**, check out the [The Lemon Compiler](./comp
 
 ---
 
-## ** Installation**
+## **Installation**
 
 ### **Linux and macOS**
 
@@ -26,7 +26,7 @@ powershell -c "irm lemonlang.org/install.ps1 | iex"
 
 ---
 
-## ** Hello, World!**
+## **Hello, World!**
 
 Lemon is **low-level**, but its syntax is **easy to read**. Here’s a `"Hello, world!"` program:
 
@@ -54,7 +54,7 @@ Simple, right? Now, let’s learn the basics!
 
 ---
 
-## ** Types and Functions**
+## **Types and Functions**
 
 Lemon **has static types**, but you **don’t always need to write them** because the compiler **can infer them**.
 
@@ -111,7 +111,7 @@ println(result); // Output: 12
 
 ---
 
-## ** Structs**
+## **Structs**
 
 Structs allow you to **group data together**:
 
@@ -146,7 +146,7 @@ impl Person = {
 
 ---
 
-## ** Ownership and Borrowing**
+## **Ownership and Borrowing**
 
 Lemon **has no garbage collector**, but also **prevents `use-after-free` automatically**.
 This works because **the compiler tracks who owns what**.
@@ -211,11 +211,11 @@ This prevents **data races and undefined behavior**.
 
 ---
 
-## ** Control Flow**
+## **Control Flow**
 
 Lemon has `if`, `while`, and `match` statements.
 
-### ** If / Else**
+### **If / Else**
 
 ```rs
 fn check_age(age: i32) = {
@@ -241,13 +241,13 @@ fn check_age(age: i32) = {
 
 Coming soon!
 
-### ** Match (Pattern Matching)**
+### **Match (Pattern Matching)**
 
 Coming soon!
 
 ---
 
-## ** What's Next?**
+## **What's Next?**
 
 Lemon is **actively being developed**, and there’s **a lot to improve**!
 
