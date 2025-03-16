@@ -306,6 +306,4 @@ Lemon is **actively being developed**, and there’s **a lot to improve**!
 
 ---
 
-Now you know the basics! Start writing **fast, safe, and simple** Lemon code today! 🍋
-
 - See [The Lemon Compiler](./compiler/architecture.md) for more information about the compiler.
