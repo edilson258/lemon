@@ -1,4 +1,4 @@
-use crate::ast::{self};
+use crate::ast::{self, MemberExpr};
 
 use super::{
 	diags::SyntaxErr,
@@ -52,11 +52,7 @@ impl Checker<'_> {
 		Ok(expected)
 	}
 
-	fn assign_member_expr(
-		&mut self,
-		member: &mut ast::MemberExpr,
-		found: TypeId,
-	) -> TyResult<TypeId> {
+	fn assign_member_expr(&mut self, member: &mut MemberExpr, found: TypeId) -> TyResult<TypeId> {
 		let self_type = self.check_expr(&mut member.left)?;
 		let self_type = self.get_stored_type(self_type);
 		if let Type::Struct(struct_type) = self_type {

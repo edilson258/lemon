@@ -8,7 +8,6 @@ impl Checker<'_> {
 	pub fn check_let_stmt(&mut self, let_stmt: &mut ast::LetStmt) -> TyResult<TypeId> {
 		let lexeme = let_stmt.bind.lexeme();
 		let found_id = self.check_expr(&mut let_stmt.expr)?;
-
 		let expect_id = match let_stmt.bind.ty.as_ref() {
 			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
 			None => {

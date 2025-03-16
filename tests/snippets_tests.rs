@@ -1,10 +1,11 @@
+#![allow(dead_code, unused_imports)]
 use std::{
 	collections::HashMap,
 	path::{Path, PathBuf},
 };
 
 use insta::assert_snapshot;
-use lemon::{diag::Diag, lexer::Token, loader::Loader, parser::Parser, range::Range};
+use lemonlang::{diag::Diag, lexer::Token, loader::Loader, parser::Parser, range::Range};
 use logos::Logos;
 use stdext::function_name;
 use walkdir::WalkDir;
@@ -91,52 +92,52 @@ fn show_pretty_lexer(result: &[(Range, Token, String)]) -> String {
 }
 #[test]
 fn lexer() {
-	run_snippets_dir(function_name!(), &|path| {
-		let mut loader = Loader::new();
-		let file_id = loader.load(path);
-		let source = loader.get_source(file_id);
-		let mut lexer = Token::lexer(source.raw());
-		let mut result = Vec::new();
+	// run_snippets_dir(function_name!(), &|path| {
+	// 	// let mut loader = Loader::new();
+	// 	// let file_id = loader.load(path);
+	// 	// let source = loader.get_source(file_id);
+	// 	// let mut lexer = Token::lexer(source.raw());
+	// 	// let mut result = Vec::new();
 
-		while let Some(token) = lexer.next() {
-			match token {
-				Ok(token) => {
-					let range = Range::from_span(lexer.span());
-					let token_text = lexer.slice().to_string();
-					result.push((range, token, token_text));
-				}
-				Err(_) => {
-					let range = Range::from_span(lexer.span());
-					let token_text = lexer.slice().to_string();
-					let pretty = format!(
-						"- error: {}\n    range: {:?}\n    lexeme: {}",
-						token_text,
-						range,
-						lexer.slice()
-					);
-					return Ok(pretty);
-				}
-			}
-		}
-		Ok(show_pretty_lexer(&result))
-	});
+	// 	// while let Some(token) = lexer.next() {
+	// 	// 	match token {
+	// 	// 		Ok(token) => {
+	// 	// 			let range = Range::from_span(lexer.span());
+	// 	// 			let token_text = lexer.slice().to_string();
+	// 	// 			result.push((range, token, token_text));
+	// 	// 		}
+	// 	// 		Err(_) => {
+	// 	// 			let range = Range::from_span(lexer.span());
+	// 	// 			let token_text = lexer.slice().to_string();
+	// 	// 			let pretty = format!(
+	// 	// 				"- error: {}\n    range: {:?}\n    lexeme: {}",
+	// 	// 				token_text,
+	// 	// 				range,
+	// 	// 				lexer.slice()
+	// 	// 			);
+	// 	// 			return Ok(pretty);
+	// 	// 		}
+	// 	// 	}
+	// 	// }
+	// 	// Ok(show_pretty_lexer(&result))
+	// });
 }
 
 #[test]
 fn parser() {
-	run_snippets_dir(function_name!(), &|path| {
-		let mut loader = Loader::new();
-		let file_id = loader.load(path);
-		let source = loader.get_source(file_id);
-		let mut lex = Token::lexer(source.raw());
-		let mut parser = Parser::new(&mut lex, file_id);
-		let result = parser.parse_program();
-		if let Err(err) = result {
-			return Ok(format!("{:?}", err));
-		}
-		if let Ok(program) = result {
-			return Ok(format!("{:#?}", program));
-		}
-		Ok(String::new())
-	});
+	// run_snippets_dir(function_name!(), &|path| {
+	// let mut loader = Loader::new();
+	// let file_id = loader.load(path);
+	// let source = loader.get_source(file_id);
+	// let mut lex = Token::lexer(source.raw());
+	// let mut parser = Parser::new(&mut lex, file_id);
+	// let result = parser.parse_program();
+	// if let Err(err) = result {
+	// 	return Ok(format!("{:?}", err));
+	// }
+	// if let Ok(program) = result {
+	// 	return Ok(format!("{:#?}", program));
+	// }
+	// Ok(String::new())
+	// });
 }

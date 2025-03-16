@@ -164,7 +164,7 @@ impl Loader {
 		match path_str {
 			// "core" => self.resolve_special_module("lemon/core/mod.ln", "core module not found"),
 			// "std" => self.resolve_special_module("lemon/std/mod.ln", "std module not installed"),
-			path if path.starts_with("@/") => self.resolve_absolute_path(path_str),
+			path if path.starts_with("~/") => self.resolve_absolute_path(path_str),
 			path if path.starts_with("./") => self.resolve_relative_path(path_str, cwd),
 			_ => {
 				Err(format!("invalid import '{}': must be 'core', 'std', '@/path', or './name'", path_str))

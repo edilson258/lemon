@@ -18,6 +18,7 @@ which = "7.0.1"
 target-lexicon = "0.13.1"
 console = "0.15.10"
 rustc-hash = "2.1.0"
+toml = "0.8.20"
 
 
 [dev-dependencies]
