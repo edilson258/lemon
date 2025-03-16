@@ -273,6 +273,33 @@ Coming soon!
 
 ---
 
+#### Some examples
+
+```rs
+fn max(a: i32, b: i32): i32 = {
+  if (a > b) return a;
+  return b;
+}
+
+```
+
+```rs
+
+fn factorial(n: i32): i32 = {
+  if (n == 0) return 1;
+  return n * factorial(n - 1);
+}
+
+```
+
+```rs
+
+ fn fibonacci(n: i32): i32 = {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+```
+
 ## **What's Next?**
 
 Lemon is **actively being developed**, and there’s **a lot to improve**!
@@ -281,6 +308,4 @@ Lemon is **actively being developed**, and there’s **a lot to improve**!
 
 Now you know the basics! Start writing **fast, safe, and simple** Lemon code today! 🍋
 
-```
-
-```
+- See [The Lemon Compiler](./compiler/architecture.md) for more information about the compiler.
