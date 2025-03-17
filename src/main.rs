@@ -7,6 +7,7 @@ mod compiler;
 mod cross;
 mod diag;
 mod disassembler;
+mod file_system;
 mod ir;
 mod lexer;
 mod linker;
@@ -16,6 +17,7 @@ mod loader;
 mod parser;
 mod range;
 mod report;
+mod shio;
 mod source;
 
 use checker::{context::Context, Checker};
@@ -48,7 +50,7 @@ fn lex(path_name: &str) {
 	let mut loader = Loader::new(config);
 	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
 	let source = loader.get_source_unwrap(module_id);
-	let mut lexer = Token::lexer(source.raw());
+	let mut lexer = Token::lexer(&source.raw);
 	while let Some(token) = lexer.next() {
 		println!("{:?}: {:?}", token, lexer.slice());
 	}
@@ -59,7 +61,7 @@ fn token(path_name: &str) {
 	let mut loader = Loader::new(config);
 	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
 	let source = loader.get_source_unwrap(module_id);
-	let mut lexer = Token::lexer(source.raw());
+	let mut lexer = Token::lexer(&source.raw);
 	while let Some(token) = lexer.next() {
 		println!("{:?}: {:?}", token, lexer.slice());
 	}
@@ -69,7 +71,7 @@ fn ast(path_name: &str) {
 	let mut loader = Loader::new(config);
 	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
 	let source = loader.get_source_unwrap(module_id).clone();
-	let mut lexer = Token::lexer(source.raw());
+	let mut lexer = Token::lexer(&source.raw);
 	let mut parser = Parser::new(&mut lexer, module_id, &mut loader);
 	let ast = match parser.parse_program() {
 		Ok(ast) => ast,

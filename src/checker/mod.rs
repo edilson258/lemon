@@ -2,7 +2,8 @@
 use crate::{
 	ast,
 	diag::{Diag, DiagGroup},
-	loader::{Loader, ModuleId},
+	loader::{Loader, ModId},
+	report::throw_error,
 };
 
 pub mod context;
@@ -57,9 +58,13 @@ impl<'ckr> Checker<'ckr> {
 		Self { ctx, diag_group, loader }
 	}
 
-	pub fn check_program(&mut self, module_id: ModuleId) -> TyResult<TypeId> {
-		self.ctx.add_module(module_id);
-		let mut ast = self.loader.get_ast(module_id).clone();
+	pub fn check_program(&mut self, mod_id: ModId) -> TyResult<TypeId> {
+		self.ctx.add_entry_mod(mod_id);
+		#[rustfmt::skip]
+		let mut ast = self.loader.get_mod_result(mod_id).cloned().unwrap_or_else(|err| {
+		  // todo: using throw_error_with_range here...
+		  throw_error(err)
+		});
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}

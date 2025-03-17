@@ -1,4 +1,4 @@
-use crate::loader::ModuleId;
+use crate::loader::ModId;
 
 // use bind::create_binds;
 use super::types::{monomorphic::MonomorphicStore, TypeId, TypeStore};
@@ -26,8 +26,8 @@ pub struct Context {
 	pub store: Store,
 	pub value_id: ValueId,
 	pub store_id: usize,
-	pub modules: FxHashMap<ModuleId, Module>,
-	pub module_id: ModuleId,
+	pub mods: FxHashMap<ModId, Module>,
+	pub mod_id: ModId,
 }
 
 impl Context {
@@ -38,9 +38,9 @@ impl Context {
 		let flow = Flow::new();
 		let value_id = ValueId::init();
 		let store_id = 0;
-		let modules = FxHashMap::default();
-		let module_id = ModuleId::new(0);
-		Self { scopes, flow, type_store, store, value_id, store_id, modules, module_id }
+		let mods = FxHashMap::default();
+		let mod_id = ModId::new(0);
+		Self { scopes, flow, type_store, store, value_id, store_id, mods, mod_id }
 	}
 
 	pub fn get_monomorphic_store(&mut self) -> &mut MonomorphicStore {
@@ -55,44 +55,44 @@ impl Context {
 		self.scopes.last().unwrap()
 	}
 
-	pub fn get_module(&self, module_id: ModuleId) -> Option<&Module> {
-		self.modules.get(&module_id)
+	pub fn get_module(&self, mod_id: ModId) -> Option<&Module> {
+		self.mods.get(&mod_id)
 	}
 
-	pub fn get_module_mut(&mut self, module_id: ModuleId) -> Option<&mut Module> {
-		self.modules.get_mut(&module_id)
+	pub fn get_module_mut(&mut self, mod_id: ModId) -> Option<&mut Module> {
+		self.mods.get_mut(&mod_id)
 	}
 
-	pub fn swap_module(&mut self, module_id: ModuleId) {
-		self.module_id = module_id;
+	pub fn swap_mod(&mut self, mod_id: ModId) {
+		self.mod_id = mod_id;
 	}
 
-	pub fn add_module(&mut self, module_id: ModuleId) {
-		self.swap_module(module_id);
-		self.modules.insert(module_id, Module::new(module_id));
+	pub fn add_mod(&mut self, mod_id: ModId) {
+		self.swap_mod(mod_id);
+		self.mods.insert(mod_id, Module::new(mod_id));
 	}
 
-	pub fn add_entry_module(&mut self, module_id: ModuleId) {
-		self.modules.insert(module_id, Module::with_entry(module_id));
+	pub fn add_entry_mod(&mut self, mod_id: ModId) {
+		self.mods.insert(mod_id, Module::with_entry(mod_id));
 	}
 
-	pub fn is_entry_module(&self, module_id: ModuleId) -> bool {
-		self.modules.get(&module_id).map(|module| module.is_entry).unwrap_or(false)
+	pub fn is_entry_module(&self, mod_id: ModId) -> bool {
+		self.mods.get(&mod_id).map(|module| module.is_entry).unwrap_or(false)
 	}
 
-	pub fn get_current_module(&self) -> Option<&Module> {
-		let module = self.modules.get(&self.module_id)?;
+	pub fn get_current_mod(&self) -> Option<&Module> {
+		let module = self.mods.get(&self.mod_id)?;
 		Some(module)
 	}
 
 	pub fn add_pub_value(&mut self, name: String, type_id: TypeId) {
-		if let Some(module) = self.modules.get_mut(&self.module_id) {
+		if let Some(module) = self.mods.get_mut(&self.mod_id) {
 			module.add_value(name, type_id)
 		}
 	}
 
 	pub fn add_pub_function(&mut self, name: String, type_id: TypeId) {
-		if let Some(module) = self.modules.get_mut(&self.module_id) {
+		if let Some(module) = self.mods.get_mut(&self.mod_id) {
 			module.add_function(name, type_id)
 		}
 	}

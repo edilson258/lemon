@@ -4,6 +4,7 @@ use scope::Scope;
 use crate::{
 	checker::types::TypeId,
 	ir::{BasicValue, IrBasicValue},
+	loader::ModId,
 	report::throw_ir_build_error,
 };
 mod block;
@@ -21,6 +22,7 @@ pub struct Context {
 	pub struct_table: StructTable,
 	// todo: improve it
 	pub struct_table_size: FxHashMap<String, usize>,
+	pub mod_id: ModId,
 }
 impl Default for Context {
 	fn default() -> Self {

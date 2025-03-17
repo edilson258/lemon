@@ -47,10 +47,10 @@ pub fn report_syntax_err(diag: &Diag, source: &Source) {
 pub fn throw_error_with_range(text: impl Into<String>, range: Range, source: &Source) -> ! {
 	let start = range.start;
 	let end = range.end;
-	let err = codelighter::highlight_error(start, end, source.raw());
+	let err = codelighter::highlight_error(start, end, &source.raw);
 	let slug = text_red("error");
 	println!("{}: {}", slug, text.into()); // -- message
-	println!("---> {}", text_white(source.pathname())); // -- filename
+	println!("---> {}", text_white(&source.pathname)); // -- filename
 	println!("{}", err);
 	std::process::exit(1);
 }
@@ -61,13 +61,13 @@ fn report(diag: &Diag, kind: ReportKind, source: &Source) {
 		Severity::Note => text_green("info"),
 	};
 	println!("{}: {}", slug, diag.message); // -- message
-	println!("---> {}", text_white(source.pathname())); // -- filename
+	println!("---> {}", text_white(&source.pathname)); // -- filename
 	let start = diag.range.start;
 	let end = diag.range.end;
 	let code = match diag.severity {
-		Severity::Err => codelighter::highlight_error(start, end, source.raw()),
-		Severity::Warn => codelighter::highlight_warn(start, end, source.raw()),
-		Severity::Note => codelighter::highlight_note(start, end, source.raw()),
+		Severity::Err => codelighter::highlight_error(start, end, &source.raw),
+		Severity::Warn => codelighter::highlight_warn(start, end, &source.raw),
+		Severity::Note => codelighter::highlight_note(start, end, &source.raw),
 	};
 	println!("{}", code);
 	if let Some(note) = &diag.note {

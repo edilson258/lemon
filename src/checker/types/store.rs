@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 
 use rustc_hash::{FxHashMap, FxHasher};
 
-use crate::loader::ModuleId;
+use crate::loader::ModId;
 
 use super::{
 	monomorphic::MonomorphicStore, type_id::TypeId, ExternFnType, FnType, InferType, Number, Type,
@@ -15,7 +15,7 @@ pub struct TypeStore {
 	generics: FxHashMap<String, TypeId>,
 	// is good?
 	cache: FxHashMap<u64, TypeId>,
-	pub module_cache: FxHashMap<ModuleId, TypeId>,
+	pub mods: FxHashMap<ModId, TypeId>,
 	pub monomorphic_store: MonomorphicStore,
 }
 
@@ -25,8 +25,8 @@ impl TypeStore {
 		let types_by_name = FxHashMap::default();
 		let cache = FxHashMap::default();
 		let generics = FxHashMap::default();
-		let module_cache = FxHashMap::default();
-		Self { types, types_by_name, cache, generics, monomorphic_store, module_cache }
+		let mods = FxHashMap::default();
+		Self { types, types_by_name, cache, generics, monomorphic_store, mods }
 	}
 
 	pub fn add_monomo_fn(&mut self, fn_type: FnType) {
@@ -45,15 +45,15 @@ impl TypeStore {
 		self.monomorphic_store.end_fn();
 	}
 
-	pub fn add_module_cache(&mut self, module_id: ModuleId, type_id: TypeId) {
-		self.module_cache.insert(module_id, type_id);
+	pub fn add_mod(&mut self, mod_id: ModId, type_id: TypeId) {
+		self.mods.insert(mod_id, type_id);
 	}
 
-	pub fn get_module_cache(&self, module_id: ModuleId) -> Option<&TypeId> {
-		self.module_cache.get(&module_id)
+	pub fn get_mod(&self, mod_id: ModId) -> Option<&TypeId> {
+		self.mods.get(&mod_id)
 	}
 
-	pub fn add_module_name(&mut self, type_id: TypeId, name: impl Into<String>) {
+	pub fn add_mod_name(&mut self, type_id: TypeId, name: impl Into<String>) {
 		if type_id.is_known() {
 			return;
 		}

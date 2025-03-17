@@ -2,7 +2,7 @@
 use core::fmt;
 
 use crate::{
-	loader::{Loader, ModuleId},
+	loader::{Loader, ModId},
 	range::Range,
 	report::{self},
 	source::Source,
@@ -17,7 +17,7 @@ pub enum Severity {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Diag {
-	pub module_id: ModuleId,
+	pub mod_id: ModId,
 	pub severity: Severity,
 	pub message: String,
 	pub note: Option<String>,
@@ -26,8 +26,8 @@ pub struct Diag {
 
 impl Diag {
 	pub fn new(severity: Severity, message: String, range: Range) -> Self {
-		let module_id = ModuleId::new(u64::MAX);
-		Self { module_id, severity, message, note: None, range }
+		let mod_id = ModId::new(u64::MAX);
+		Self { mod_id, severity, message, note: None, range }
 	}
 
 	pub fn error(message: impl Into<String>, range: Range) -> Self {
@@ -50,8 +50,8 @@ impl Diag {
 		Self::new(Severity::Note, message.into(), range)
 	}
 
-	pub fn with_module_id(mut self, module_id: ModuleId) -> Self {
-		self.module_id = module_id;
+	pub fn with_mod_id(mut self, mod_id: ModId) -> Self {
+		self.mod_id = mod_id;
 		self
 	}
 
@@ -110,7 +110,7 @@ impl DiagGroup {
 
 	pub fn report(&self, loader: &Loader) {
 		for diag in &self.diags {
-			let source = loader.get_source_unwrap(diag.module_id);
+			let source = loader.get_source_unchecked(diag.mod_id);
 			diag.report_err(source);
 		}
 	}

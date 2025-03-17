@@ -9,7 +9,7 @@ use rustc_hash::FxHashMap;
 pub use store::*;
 pub use type_id::*;
 
-use crate::loader::ModuleId;
+use crate::loader::ModId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -117,16 +117,16 @@ impl Type {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleType {
 	pub name: Option<String>,
-	pub module_id: ModuleId,
+	pub mod_id: ModId,
 }
 
 impl ModuleType {
-	pub fn new(module_id: ModuleId) -> Self {
-		Self { name: None, module_id }
+	pub fn new(mod_id: ModId) -> Self {
+		Self { name: None, mod_id }
 	}
 
-	pub fn new_with_name(module_id: ModuleId, name: String) -> Self {
-		Self { name: Some(name), module_id }
+	pub fn new_with_name(mod_id: ModId, name: String) -> Self {
+		Self { name: Some(name), mod_id }
 	}
 
 	pub fn get_name(&self) -> Option<&str> {
@@ -138,15 +138,15 @@ impl ModuleType {
 	}
 }
 
-impl From<ModuleId> for ModuleType {
-	fn from(module_id: ModuleId) -> Self {
-		Self::new(module_id)
+impl From<ModId> for ModuleType {
+	fn from(mod_id: ModId) -> Self {
+		Self::new(mod_id)
 	}
 }
 
-impl From<ModuleType> for ModuleId {
+impl From<ModuleType> for ModId {
 	fn from(module_type: ModuleType) -> Self {
-		module_type.module_id
+		module_type.mod_id
 	}
 }
 impl From<ModuleType> for Type {

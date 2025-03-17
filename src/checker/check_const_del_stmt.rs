@@ -16,7 +16,7 @@ impl Checker<'_> {
 			if const_del.name.ty.is_some() {
 				return Err(SyntaxErr::type_annotation_not_allowed_for_module(const_del.get_range()));
 			}
-			self.ctx.type_store.add_module_name(found_id, lexeme.as_str());
+			self.ctx.type_store.add_mod_name(found_id, lexeme.as_str());
 		}
 
 		let expect_id = match const_del.name.ty.as_ref() {

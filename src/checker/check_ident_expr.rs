@@ -43,13 +43,12 @@ impl Checker<'_> {
 	}
 
 	fn mod_acessor(&self, ident: &mut Ident, mod_type: &ModuleType) -> TyResult<TypeId> {
-		let mod_id = mod_type.module_id;
-
+		let mod_id = mod_type.mod_id;
 		let module = match self.ctx.get_module(mod_id) {
 			Some(module) => module,
 			None => {
 				// todo: improve this...
-				let source = self.loader.get_source_unwrap(mod_id);
+				let source = self.loader.get_source_unchecked(mod_id);
 				let message = format!("error: module not found: {}", mod_id);
 				throw_error_with_range(message, ident.get_range(), source);
 			}

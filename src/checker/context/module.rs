@@ -1,10 +1,10 @@
 use rustc_hash::FxHashMap;
 
-use crate::{checker::types::TypeId, loader::ModuleId};
+use crate::{checker::types::TypeId, loader::ModId};
 
 #[derive(Debug)]
 pub struct Module {
-	pub module_id: ModuleId,
+	pub mod_id: ModId,
 	pub is_entry: bool,
 	// types or values
 	pub values: FxHashMap<String, TypeId>,
@@ -13,18 +13,18 @@ pub struct Module {
 }
 
 impl Module {
-	pub fn new(id: ModuleId) -> Self {
-		let module_id = id;
+	pub fn new(mod_id: ModId) -> Self {
+		let mod_id = mod_id;
 		let values = FxHashMap::default();
 		let functions = FxHashMap::default();
-		Self { module_id, values, functions, is_entry: false }
+		Self { mod_id, values, functions, is_entry: false }
 	}
 
-	pub fn with_entry(id: ModuleId) -> Self {
-		let module_id = id;
+	pub fn with_entry(mod_id: ModId) -> Self {
+		let mod_id = mod_id;
 		let values = FxHashMap::default();
 		let functions = FxHashMap::default();
-		Self { module_id, values, functions, is_entry: true }
+		Self { mod_id, values, functions, is_entry: true }
 	}
 
 	pub fn add_value(&mut self, name: String, type_id: TypeId) {

@@ -89,7 +89,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let triple = HOST.to_string();
 	let cross = Cross::new(&triple);
 
-	let output = generate_output_filename(&source.pathbuf);
+	let output = generate_output_filename(&source.abs_path);
 	let output_path = Path::new(&output);
 	match cross.emit(&llvm.module, FileType::Object, output_path) {
 		Ok(_) => {}
