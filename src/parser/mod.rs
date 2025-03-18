@@ -1,4 +1,4 @@
-use logos::Lexer;
+use logos::{Lexer, Logos};
 
 use crate::ast::{self, AstType, OperatorKind, BASE_BIN, BASE_DECIMAL, BASE_HEX, MIN_PDE};
 use crate::diag::Diag;
@@ -8,6 +8,13 @@ use crate::range::Range;
 use crate::report::throw_error;
 mod parse_type;
 
+pub fn parse_mod(mod_id: ModId, loader: &mut Loader) {
+	let source = loader.get_source_unchecked(mod_id).clone();
+	let mut lexer = Token::lexer(source.raw.as_str());
+	let mut parser = Parser::new(&mut lexer, mod_id, loader);
+	let ast = parser.parse_program().unwrap_or_else(|diag| diag.report_syntax_err_wrap(&source));
+	loader.add_mod(mod_id, ast);
+}
 // --- pde utils -----
 
 // state
@@ -36,16 +43,6 @@ impl<'p> Parser<'p> {
 			stmts.push(self.parse_stmt()?);
 		}
 		Ok(ast::Program { stmts })
-	}
-
-	pub fn parse_mod(&mut self, mod_id: ModId) -> PResult<'p, ()> {
-		let mut stmts = vec![];
-		while !self.is_end() {
-			stmts.push(self.parse_stmt()?);
-		}
-		let program = ast::Program { stmts };
-		self.loader.add_mod(mod_id, program);
-		Ok(())
 	}
 
 	fn parse_stmt(&mut self) -> PResult<'p, ast::Stmt> {
@@ -524,11 +521,11 @@ impl<'p> Parser<'p> {
 		let end = self.expect(Token::RParen)?;
 		let max_range = range.merged_with(&end);
 
-		let mod_id = match self.loader.load_source(&path.text) {
+		let mod_id = match self.loader.load_source(&path.text, self.mod_id) {
 			Ok(mod_id) => mod_id,
 			Err(message) => return Err(self.custom_diag(message, &max_range)),
 		};
-		self.parse_mod(mod_id)?;
+		parse_mod(mod_id, self.loader);
 		Ok(ast::ImportExpr { path, range: max_range, mod_id: Some(mod_id) })
 	}
 

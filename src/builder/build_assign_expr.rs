@@ -21,12 +21,12 @@ impl Builder<'_> {
 		if src.is_register() && !basic_type.is_borrow() {
 			let register = self.resolve_value(src);
 			let instr = UnInstr::new(dest, register);
-			self.ctx.block.add_instr(ir::Instr::Set(instr));
+			self.ctx.current_block.append_instr(ir::Instr::Set(instr));
 			return IrBasicValue::default();
 		}
 
 		let instr = UnInstr::new(dest, src);
-		self.ctx.block.add_instr(ir::Instr::Set(instr));
+		self.ctx.current_block.append_instr(ir::Instr::Set(instr));
 		IrBasicValue::default()
 	}
 }

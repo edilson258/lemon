@@ -5,11 +5,11 @@ use crate::ast::{self};
 
 impl Checker<'_> {
 	pub fn check_ret_stmt(&mut self, ret_stmt: &mut ast::RetStmt) -> TyResult<TypeId> {
-		if !self.ctx.has_fn_scope() {
+		if !self.ctx.has_function_scope() {
 			return Err(SyntaxErr::return_outside_fn(ret_stmt.get_range()));
 		}
 
-		let ret_id = self.ctx.ret_scope_type().unwrap(); // we know it's a fn
+		let ret_id = self.ctx.get_return_type().unwrap(); // we know it's a fn
 
 		if let Some(value_expr) = &mut ret_stmt.expr {
 			let found_id = self.check_expr(value_expr)?;

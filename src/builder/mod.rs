@@ -3,7 +3,8 @@ use std::mem;
 
 use crate::checker::types::TypeStore;
 use crate::ir::{Instr, IR};
-use crate::loader::Loader;
+use crate::loader::{Loader, ModId};
+use crate::report::throw_error;
 use crate::{ast, ir};
 use context::Context;
 
@@ -52,8 +53,11 @@ impl<'br> Builder<'br> {
 		Self { ctx: Context::new(), ir: IR::new(), type_store, loader }
 	}
 
-	pub fn build(&mut self) -> IR {
-		let mut program = self.loader.get_ast(self.loader.entry_module).clone();
+	pub fn build(&mut self, mod_id: ModId) -> IR {
+		#[rustfmt::skip]
+		let mut program = self.loader.get_mod_result(mod_id).cloned()
+			.unwrap_or_else(|err| throw_error(err));
+
 		for stmt in program.stmts.iter_mut() {
 			self.build_stmt(stmt);
 		}
@@ -61,15 +65,15 @@ impl<'br> Builder<'br> {
 	}
 
 	pub fn push_function_with_blocks(&mut self, mut function: ir::Function) {
-		let blocks = self.ctx.block.take_blocks();
+		let blocks = self.ctx.current_block.extract_blocks();
 		function.extend_blocks(blocks);
 		self.ir.add_function(function);
 	}
 
 	pub fn drop_local_function_values(&mut self, ret_value: Option<&str>) {
-		for value in self.ctx.get_free_values() {
+		for value in self.ctx.collect_unbound_values() {
 			if ret_value.map(|ret_value| value.value.as_str() != ret_value).unwrap_or(true) {
-				self.ctx.block.add_instr(Instr::Drop(value));
+				self.ctx.current_block.append_instr(Instr::Drop(value));
 			}
 		}
 	}

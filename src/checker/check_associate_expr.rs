@@ -1,4 +1,4 @@
-use super::context::scope::ScopeType;
+use super::context::scope::ScopeKind;
 use super::diags::SyntaxErr;
 use super::types::TypeId;
 use super::{Checker, TyResult};
@@ -11,7 +11,7 @@ impl Checker<'_> {
 			Some(type_id) => *type_id,
 			None => return Err(SyntaxErr::not_found_type(self_name, associate.self_name.get_range())),
 		};
-		self.ctx.enter_scope(ScopeType::new_accessor_associate(self_type_id));
+		self.ctx.enter_scope(ScopeKind::accessor(self_type_id, true));
 		let ret_type = self.check_ident_expr(&mut associate.method)?;
 		self.ctx.exit_scope();
 		associate.set_self_type(self_type_id);

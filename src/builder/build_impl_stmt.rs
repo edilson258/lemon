@@ -11,7 +11,7 @@ impl Builder<'_> {
 		let self_type = self.type_store.get_type_by_name(self_name).copied();
 
 		let self_type = self.build_type(self_type, impl_stmt.get_range());
-		self.ctx.push_impl_scope(self_name, self_type);
+		self.ctx.push_implementation_scope(self_name, self_type);
 
 		for item in impl_stmt.items.iter_mut() {
 			self.build_method(impl_stmt.self_name.lexeme(), item);

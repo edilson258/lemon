@@ -19,21 +19,21 @@ impl Builder<'_> {
 	pub fn build_bind(&mut self, bind: &mut ast::Binding) -> ir::IrBasicValue {
 		let lexeme = bind.lexeme().to_owned();
 		let kind = self.build_type(bind.type_id, bind.get_range());
-		let value = self.ctx.new_register(kind);
+		let value = self.ctx.create_register(kind);
 		// fix: remove this
 		//
 		if !kind.is_str() {
-			self.ctx.add_dont_load(value.get_value().as_str());
+			self.ctx.mark_skip_loading(value.get_value().as_str());
 		}
 
-		self.ctx.add_local(lexeme, value.clone());
+		self.ctx.define_local_variable(lexeme, value.clone());
 		value
 	}
 
 	pub fn build_fn_body(&mut self, body: &mut ast::FnBody) {
 		if let ast::FnBody::Expr(expr) = body {
 			self.build_expr(expr);
-			if !self.ctx.block.is_returned() {
+			if !self.ctx.current_block.has_returned {
 				self.drop_local_function_values(None);
 			}
 		}
@@ -42,7 +42,7 @@ impl Builder<'_> {
 			for stmt in block.stmts.iter_mut() {
 				self.build_stmt(stmt);
 			}
-			if !self.ctx.block.is_returned() {
+			if !self.ctx.current_block.has_returned {
 				self.drop_local_function_values(None);
 			}
 		}

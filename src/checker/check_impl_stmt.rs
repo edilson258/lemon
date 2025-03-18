@@ -1,6 +1,6 @@
 use crate::ast::{self};
 
-use super::{context::scope::ScopeType, diags::SyntaxErr, types::TypeId, Checker, TyResult};
+use super::{context::scope::ScopeKind, diags::SyntaxErr, types::TypeId, Checker, TyResult};
 
 impl Checker<'_> {
 	pub fn check_impl_stmt(&mut self, impl_stmt: &mut ast::ImplStmt) -> TyResult<TypeId> {
@@ -23,9 +23,7 @@ impl Checker<'_> {
 		}
 
 		self_type.set_impl(true);
-
-		self.ctx.enter_scope(ScopeType::new_impl(self_type_id));
-
+		self.ctx.enter_scope(ScopeKind::implementation(self_type_id));
 		for item in impl_stmt.items.iter_mut() {
 			self.check_fn_stmt(item)?;
 		}

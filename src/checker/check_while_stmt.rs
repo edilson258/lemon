@@ -1,4 +1,4 @@
-use super::context::scope::ScopeType;
+use super::context::scope::ScopeKind;
 use super::types::TypeId;
 use super::{Checker, TyResult};
 use crate::ast;
@@ -9,7 +9,7 @@ impl Checker<'_> {
 
 		self.equal_type_expected(TypeId::BOOL, test_type, while_stmt.test.get_range())?;
 
-		self.ctx.enter_scope(ScopeType::new_loop());
+		self.ctx.enter_scope(ScopeKind::loop_scope());
 
 		let body_type = self.check_stmt(&mut while_stmt.body)?;
 

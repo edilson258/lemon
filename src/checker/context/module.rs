@@ -14,14 +14,12 @@ pub struct Module {
 
 impl Module {
 	pub fn new(mod_id: ModId) -> Self {
-		let mod_id = mod_id;
 		let values = FxHashMap::default();
 		let functions = FxHashMap::default();
 		Self { mod_id, values, functions, is_entry: false }
 	}
 
 	pub fn with_entry(mod_id: ModId) -> Self {
-		let mod_id = mod_id;
 		let values = FxHashMap::default();
 		let functions = FxHashMap::default();
 		Self { mod_id, values, functions, is_entry: true }

@@ -29,7 +29,7 @@ impl Checker<'_> {
 	fn assign_ident_expr(&mut self, ident: &mut ast::Ident, found: TypeId) -> TyResult<TypeId> {
 		let lexeme = ident.lexeme();
 		if let Some(value) = self.ctx.get_value(lexeme) {
-			if !value.is_mutable() {
+			if !value.is_mut {
 				return Err(SyntaxErr::cannot_assign_immutable(lexeme, ident.get_range()));
 			}
 			let found = self.infer_type(value.type_id, found)?;
@@ -89,7 +89,7 @@ impl Checker<'_> {
 	fn try_mutate_ident_expr(&self, ident: &ast::Ident) -> TyResult<(String, bool)> {
 		let lexeme = ident.lexeme();
 		if let Some(value) = self.ctx.get_value(lexeme) {
-			return Ok((lexeme.to_owned(), value.is_mutable()));
+			return Ok((lexeme.to_owned(), value.is_mut));
 		}
 		Err(SyntaxErr::not_found_value(lexeme, ident.get_range()))
 	}

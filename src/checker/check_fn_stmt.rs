@@ -1,4 +1,4 @@
-use super::context::scope::ScopeType;
+use super::context::scope::ScopeKind;
 use super::diags::SyntaxErr;
 use super::types::TypeId;
 use super::{synthesis, Checker, TyResult};
@@ -19,7 +19,7 @@ impl Checker<'_> {
 		self.register_fn_type(lexeme, fn_type_id, fn_stmt.get_range())?;
 
 		fn_stmt.set_ret_id(ret_id);
-		self.ctx.enter_scope(ScopeType::new_fn(ret_id));
+		self.ctx.enter_scope(ScopeKind::function(ret_id));
 
 		for (bind, bind_type_id) in fn_stmt.params.iter().zip(fn_arg_types.iter()) {
 			let type_value = self.get_stored_type(*bind_type_id);
@@ -31,7 +31,6 @@ impl Checker<'_> {
 		// self.equal_type_expected(ret_id, ret_found, fn_stmt.body.get_range())?;
 
 		self.ctx.exit_scope();
-
 		if fn_stmt.is_pub {
 			let lexeme = fn_stmt.name.lexeme();
 			self.ctx.add_pub_function(lexeme.into(), fn_type_id);
@@ -42,8 +41,8 @@ impl Checker<'_> {
 
 	#[inline(always)]
 	fn register_fn_type(&mut self, fn_name: &str, type_id: TypeId, range: Range) -> TyResult<()> {
-		if self.ctx.has_impl_scope() {
-			let self_type_id = self.ctx.get_scope().self_scope().unwrap();
+		if self.ctx.has_implementation_scope() {
+			let self_type_id = self.ctx.get_scope().get_self_scope_type().unwrap();
 			let self_type = self.get_stored_mut_type(self_type_id);
 			let struct_type = self_type.get_struct_type().unwrap(); // fix... suport enums etc
 			if struct_type.has_fn(fn_name) {
@@ -77,12 +76,12 @@ impl Checker<'_> {
 
 	#[inline(always)]
 	pub fn check_ret_expr(&mut self, expr: &mut ast::Expr) -> TyResult<TypeId> {
-		if !self.ctx.has_fn_scope() {
+		if !self.ctx.has_function_scope() {
 			// todo: change this error
 			return Err(SyntaxErr::return_outside_fn(expr.get_range()));
 		}
 
-		let expected_ret_id = self.ctx.ret_scope_type().unwrap();
+		let expected_ret_id = self.ctx.get_return_type().unwrap();
 		let ret_id = self.check_expr(expr)?;
 		if !self.equal_type_id(expected_ret_id, ret_id) {
 			let expected = self.display_type(expected_ret_id);

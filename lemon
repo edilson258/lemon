@@ -1,20 +1,32 @@
 #!/bin/bash
 
 if [ ! -f "./Cargo.toml" ]; then
-  echo "you can't run lemon outside of lemon directory"
+  echo "error: run this script in the lemon project directory."
   exit 1
 fi
-# if [ "$1" = "build" ] || [ "$1" = "-b" ]; then
-#   cargo build --release
-#   exit 0
-# fi
+
+
+if [ "$1" = "-d" ] || [ "$1" = "dev" ]; then
+  shift
+  cargo run -- "$@"
+  exit $?
+fi
+
+if [ "$1" = "-r" ] || [ "$1" = "build" ]; then
+  shift
+  cargo build --release "$@"
+  exit $?
+fi
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  echo "usage: lemon [-d] [-r] [...]"
+  echo "  -d: run in debug mode"
+  echo "  -r: run in release mode"
+  exit 0
+fi
 
 if [ ! -f "./target/release/lemon" ]; then
-  echo "lemon bin not found, try run 'cargo build --release'"
-  # cargo build --release
+  echo "error: release binary not found. please run 'cargo build --release'."
+  exit 1
 fi
-# if [[ $(git status --porcelain) ]]; then
-#   echo "build with changes..."
-#    cargo build --release
-# fi
 ./target/release/lemon "$@"

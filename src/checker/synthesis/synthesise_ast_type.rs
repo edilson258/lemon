@@ -27,11 +27,10 @@ pub fn synthesise_ast_type(
 }
 
 fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> TyResult<TypeId> {
-	if ctx.has_impl_scope() && ident.lexeme() == "self" {
-		let self_type = ctx.self_scope_type().expect("error: self scope not found to infer type");
+	if ctx.has_implementation_scope() && ident.lexeme() == "self" {
+		let self_type = ctx.get_self_scope_type().expect("error: self scope not found to infer type");
 		return Ok(self_type);
 	}
-
 	if let Some(infer_id) = ctx.type_store.get_infer_id(ident.lexeme()) {
 		return Ok(*infer_id);
 	}

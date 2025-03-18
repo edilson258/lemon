@@ -14,7 +14,7 @@ impl Builder<'_> {
 				throw_ir_build_error(format!("cannot find struct name for type {}", type_text))
 			}
 		};
-		match self.ctx.struct_table_size.get(value_name).copied() {
+		match self.ctx.struct_sizes.get(value_name).copied() {
 			Some(size) => Some(size),
 			None => throw_ir_build_error(format!("cannot find size of {}", value_name)),
 		}

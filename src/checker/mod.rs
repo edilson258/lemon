@@ -58,6 +58,13 @@ impl<'ckr> Checker<'ckr> {
 		Self { ctx, diag_group, loader }
 	}
 
+	pub fn check(&mut self, mod_id: ModId) {
+		if let Err(diag) = self.check_program(mod_id) {
+			let mod_id = self.ctx.mod_id;
+			let source = self.loader.get_source_unchecked(mod_id);
+			diag.report_type_err_wrap(source);
+		}
+	}
 	pub fn check_program(&mut self, mod_id: ModId) -> TyResult<TypeId> {
 		self.ctx.add_entry_mod(mod_id);
 		#[rustfmt::skip]

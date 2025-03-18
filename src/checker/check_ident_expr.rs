@@ -7,7 +7,7 @@ use super::{Checker, TyResult};
 
 impl Checker<'_> {
 	pub fn check_ident_expr(&mut self, ident: &mut ast::Ident) -> TyResult<TypeId> {
-		if self.ctx.has_accessor_scope() {
+		if self.ctx.is_accessor_scope() {
 			return self.self_acessor(ident);
 		}
 
@@ -27,7 +27,7 @@ impl Checker<'_> {
 
 	pub fn self_acessor(&mut self, ident: &mut Ident) -> TyResult<TypeId> {
 		let lexeme = ident.lexeme();
-		let self_type = self.ctx.accessor_scope_type().expect("error: accessor scope not found");
+		let self_type = self.ctx.get_accessor_scope_type().expect("error: accessor scope not found");
 
 		let self_type = self.get_stored_type_without_borrow(self_type);
 
@@ -65,7 +65,7 @@ impl Checker<'_> {
 
 	fn struct_acessor(&self, ident: &mut Ident, _type: &StructType) -> TyResult<TypeId> {
 		let lexeme = ident.lexeme();
-		if self.ctx.is_acessor_associate_scope() {
+		if self.ctx.is_accessor_scope() {
 			if let Some(field_id) = _type.get_associate(lexeme) {
 				ident.set_type_id(*field_id);
 				return Ok(*field_id);

@@ -11,7 +11,7 @@ type CalleeResolvedType = (String, Option<IrBasicValue>);
 impl Builder<'_> {
 	pub fn build_call_expr(&mut self, expr: &mut ast::CallExpr) -> IrBasicValue {
 		let ret_type = self.build_type(expr.get_ret_type_id(), expr.get_range());
-		let dest = self.ctx.new_register(ret_type);
+		let dest = self.ctx.create_register(ret_type);
 		let (callee, self_value) = self.resolve_callee(expr);
 		let mut args = self.build_function_args(&mut expr.args, &expr.args_type);
 
@@ -21,16 +21,16 @@ impl Builder<'_> {
 
 		if !ret_type.is_nothing() {
 			if let Some(size) = self.is_need_heap_allocation(ret_type) {
-				self.ctx.add_free_value(dest.clone());
+				self.ctx.register_unbound_value(dest.clone());
 				let unary_instr = ir::UnInstr::new(dest.clone(), size.into());
-				self.ctx.block.add_instr(ir::Instr::Halloc(unary_instr));
+				self.ctx.current_block.append_instr(ir::Instr::Halloc(unary_instr));
 			} else {
 				let salloc = ir::SallocInstr::new(dest.clone(), ret_type);
-				self.ctx.block.add_instr(salloc.into());
+				self.ctx.current_block.append_instr(salloc.into());
 			}
 		}
 		let call_instr = ir::CallInstr::new(dest.clone(), callee, ret_type, args);
-		self.ctx.block.add_instr(call_instr.into());
+		self.ctx.current_block.append_instr(call_instr.into());
 		dest
 	}
 
@@ -53,15 +53,13 @@ impl Builder<'_> {
 
 	#[inline(always)]
 	fn resolve_member_expr(&mut self, member: &mut ast::MemberExpr) -> CalleeResolvedType {
-		self.ctx.push_member_scope();
+		self.ctx.push_struct_member_scope();
 		let self_value = self.build_expr(&mut member.left);
-		let self_register = self_value.value.as_str();
+		// let self_register = self_value.value.as_str();
 		self.ctx.pop_scope();
 		let self_name = match self.type_store.get_struct_name(self_value.get_type()) {
 			Some(name) => name,
-			None => {
-				throw_ir_build_error(format!("cannot resolve struct name for type {}", self_register))
-			}
+			None => throw_ir_build_error(format!("callee not found: '{}'", member.method.lexeme())),
 		};
 		let method_name = member.method.lexeme();
 		let method = self.create_bind_method_with_selfname(self_name, method_name);

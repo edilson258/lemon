@@ -31,7 +31,7 @@ impl Checker<'_> {
 			}
 
 			if let Some(value) = self.ctx.get_value(ident.lexeme()) {
-				if !value.is_mutable() & muttable {
+				if !value.is_mut & muttable {
 					return Err(SyntaxErr::cannot_borrow_as_mutable(ident.lexeme(), range));
 				}
 				let brrow_id = self.ctx.add_borrow(value.id, muttable);

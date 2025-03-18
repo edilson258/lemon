@@ -4,12 +4,8 @@ mod utils;
 use rustc_hash::FxHashMap;
 use std::{fs, path::PathBuf};
 use toml::Value;
-use utils::{
-	get_toml_array_value, get_toml_bool_value, get_toml_integer_value, get_toml_text_value,
-};
-
-const DEFAULT_MAX_THREADS: usize = 4;
-
+use utils::{get_toml_array_value, get_toml_bool_value};
+use utils::{get_toml_integer_value, get_toml_text_value};
 pub struct ShioLoader {
 	pub main: PathBuf,
 	pub cwd: PathBuf,
@@ -23,30 +19,21 @@ impl ShioLoader {
 	}
 
 	pub fn from_toml(toml: &Value) -> Result<Self, String> {
-		let loader = toml.get("loader").expect("shio.toml must have a loader section");
-		let main = get_toml_text_value(loader, "main")?;
-		let cwd = get_toml_text_value(loader, "cwd")?;
+		let loader = toml.get("loader").ok_or("shio.toml must have a loader section")?;
+		let main = get_toml_text_value(loader, "main")?.into();
+		let cwd = get_toml_text_value(loader, "cwd")?.into();
 		let strict = get_toml_bool_value(loader, "strict").unwrap_or(true);
-		#[rustfmt::skip]
-		let max_threads = get_toml_integer_value(loader, "max_threads").unwrap_or(DEFAULT_MAX_THREADS);
-		let main = PathBuf::from(main);
-		let cwd = PathBuf::from(cwd);
+		let max_threads = get_toml_integer_value(loader, "max_threads").unwrap_or(4);
 		Ok(Self::new(main, cwd, strict, max_threads))
 	}
 
 	pub fn with_main(main: PathBuf) -> Self {
-		let cwd = match main.parent() {
-			Some(parent) => parent.to_path_buf(),
-			None => PathBuf::from("."),
-		};
-		Self::new(main, cwd, true, DEFAULT_MAX_THREADS)
+		let cwd = main.parent().map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
+		Self::new(main, cwd, true, 4)
 	}
+
 	pub fn with_cwd(main: PathBuf, cwd: PathBuf) -> Self {
-		// todo: check if main is the same as cwd
-		// e.g. main  = path/to/main.rs
-		//      cwd   = path/to
-		//
-		Self::new(main, cwd, true, DEFAULT_MAX_THREADS)
+		Self::new(main, cwd, true, 4)
 	}
 }
 
@@ -70,12 +57,14 @@ impl ShioPackage {
 	}
 
 	pub fn from_toml(toml: &Value) -> Result<Self, String> {
-		let package = toml.get("package").expect("shio.toml must have a package section");
+		let package = toml.get("package").ok_or("shio.toml must have a package section")?;
+
 		let name = get_toml_text_value(package, "name")?;
 		let version = get_toml_text_value(package, "version")?;
 		let description = get_toml_text_value(package, "description")?;
 		let authors = get_toml_array_value(package, "authors")?;
 		let license = get_toml_text_value(package, "license")?;
+
 		Ok(Self { name, version, description, authors, license })
 	}
 }
@@ -101,15 +90,16 @@ impl ShioDependencies {
 	}
 
 	pub fn from_toml(toml: &Value) -> Result<Self, String> {
-		let dependencies = match toml.get("dependencies") {
-			Some(dependencies) => dependencies,
-			None => return Ok(Self::new()),
-		};
 		let mut local = FxHashMap::default();
-		for (name, path) in dependencies.as_table().unwrap() {
-			let path = PathBuf::from(path.as_str().unwrap());
-			local.insert(name.to_string(), path);
+
+		if let Some(dependencies) = toml.get("dependencies").and_then(Value::as_table) {
+			for (name, path) in dependencies {
+				if let Some(path_str) = path.as_str() {
+					local.insert(name.clone(), PathBuf::from(path_str));
+				}
+			}
 		}
+
 		Ok(Self { local })
 	}
 
@@ -126,6 +116,12 @@ impl ShioDependencies {
 	}
 }
 
+impl Default for ShioDependencies {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 pub struct ShioConfig {
 	pub package: ShioPackage,
 	pub loader: ShioLoader,
@@ -136,12 +132,26 @@ impl ShioConfig {
 	pub fn new(package: ShioPackage, loader: ShioLoader, dependencies: ShioDependencies) -> Self {
 		Self { package, loader, dependencies }
 	}
+
 	pub fn load_from_toml(path: &PathBuf) -> Result<Self, String> {
-		let shio_text = fs::read_to_string(path).expect("failed to read shio.toml");
-		let shio_toml: Value = toml::from_str(&shio_text).expect("failed to parse shio.toml");
+		#[rustfmt::skip]
+		let shio_text = fs::read_to_string(path)
+		  .map_err(|_| "failed to read shio.toml".to_string())?;
+
+		#[rustfmt::skip]
+		let shio_toml: Value  = toml::from_str(&shio_text)
+			.map_err(|_| "failed to parse shio.toml".to_string())?;
+
 		let package = ShioPackage::from_toml(&shio_toml)?;
 		let loader = ShioLoader::from_toml(&shio_toml)?;
 		let dependencies = ShioDependencies::from_toml(&shio_toml)?;
 		Ok(Self::new(package, loader, dependencies))
+	}
+
+	pub fn with_defaults(main: PathBuf) -> Self {
+		let package = ShioPackage::default();
+		let loader = ShioLoader::with_main(main);
+		let dependencies = ShioDependencies::new();
+		Self::new(package, loader, dependencies)
 	}
 }

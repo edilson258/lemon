@@ -7,7 +7,7 @@ impl Builder<'_> {
 		if let Some(type_id) = type_id {
 			return type_id;
 		}
-		let source = self.loader.get_current_source();
+		let source = self.loader.get_source_unchecked(self.ctx.mod_id);
 		throw_error_with_range("not found `type_id`", range, source);
 	}
 }

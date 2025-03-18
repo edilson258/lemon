@@ -1,6 +1,5 @@
-use std::mem;
-
 use crate::{checker::types::TypeId, report::throw_ir_build_error};
+use std::mem;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BasicValue {
@@ -15,20 +14,26 @@ pub enum BasicValue {
 
 impl BasicValue {
 	pub fn is_register(&self) -> bool {
-		matches!(self, BasicValue::Register(_))
+		matches!(self, Self::Register(_))
 	}
 
 	pub fn try_get_register(&self) -> Option<&str> {
-		match self {
-			BasicValue::Register(register) => Some(register),
-			_ => None,
+		if let Self::Register(register) = self {
+			Some(register)
+		} else {
+			None
 		}
 	}
+
 	pub fn as_str(&self) -> &str {
 		match self {
-			BasicValue::Register(register) => register,
+			Self::Register(register) => register,
 			_ => throw_ir_build_error("not a valid register"),
 		}
+	}
+
+	pub fn is_raw_value(&self) -> bool {
+		matches!(self, Self::Int(_) | Self::Float(_) | Self::String(_) | Self::Char(_) | Self::Bool(_))
 	}
 }
 
@@ -59,72 +64,42 @@ impl IrBasicValue {
 		matches!(self.value, BasicValue::None)
 	}
 
-	pub fn is_int(&self) -> bool {
-		matches!(self.value, BasicValue::Int(_))
-	}
-
-	pub fn is_float(&self) -> bool {
-		matches!(self.value, BasicValue::Float(_))
-	}
-
-	pub fn is_string(&self) -> bool {
-		matches!(self.value, BasicValue::String(_))
-	}
-
-	pub fn is_bool(&self) -> bool {
-		matches!(self.value, BasicValue::Bool(_))
-	}
-
-	pub fn is_char(&self) -> bool {
-		matches!(self.value, BasicValue::Char(_))
-	}
 	pub fn is_register(&self) -> bool {
-		matches!(self.value, BasicValue::Register(_))
+		self.value.is_register()
 	}
 
 	pub fn is_raw_value(&self) -> bool {
-		self.is_int() || self.is_float() || self.is_string() || self.is_char() || self.is_bool()
+		self.value.is_raw_value()
 	}
 }
 
-impl From<u64> for IrBasicValue {
-	fn from(value: u64) -> Self {
-		Self::new(BasicValue::Int(value), TypeId::I64)
+macro_rules! impl_from {
+	($type:ty, $variant:ident, $type_id:ident) => {
+		impl From<$type> for IrBasicValue {
+			fn from(value: $type) -> Self {
+				Self::new(BasicValue::$variant(value.into()), TypeId::$type_id)
+			}
+		}
+	};
+}
+
+impl From<usize> for IrBasicValue {
+	fn from(value: usize) -> Self {
+		Self::new(BasicValue::Int(value as u64), TypeId::USIZE)
 	}
 }
 
 impl From<i64> for IrBasicValue {
 	fn from(value: i64) -> Self {
-		Self::new(BasicValue::Int(value as u64), TypeId::I32)
+		Self::new(BasicValue::Int(value as u64), TypeId::I64)
 	}
 }
 
-impl From<usize> for IrBasicValue {
-	fn from(value: usize) -> Self {
-		Self::new(BasicValue::Int(value as u64), TypeId::I32)
-	}
-}
-impl From<f64> for IrBasicValue {
-	fn from(value: f64) -> Self {
-		Self::new(BasicValue::Float(value), TypeId::F64)
-	}
-}
-impl From<String> for IrBasicValue {
-	fn from(value: String) -> Self {
-		Self::new(BasicValue::String(value), TypeId::STR)
-	}
-}
-impl From<char> for IrBasicValue {
-	fn from(value: char) -> Self {
-		Self::new(BasicValue::Char(value), TypeId::CHAR)
-	}
-}
-
-impl From<bool> for IrBasicValue {
-	fn from(value: bool) -> Self {
-		Self::new(BasicValue::Bool(value), TypeId::BOOL)
-	}
-}
+impl_from!(u64, Int, I64);
+impl_from!(f64, Float, F64);
+impl_from!(String, String, STR);
+impl_from!(char, Char, CHAR);
+impl_from!(bool, Bool, BOOL);
 
 impl Default for BasicValue {
 	fn default() -> Self {

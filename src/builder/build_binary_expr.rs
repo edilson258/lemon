@@ -12,10 +12,10 @@ impl Builder<'_> {
 
 		let type_id = self.build_type(binary_expr.get_type_id(), binary_expr.get_range());
 
-		let dest = self.ctx.new_register(type_id);
+		let dest = self.ctx.create_register(type_id);
 
 		let alloc_instr = ir::SallocInstr::new(dest.clone(), type_id);
-		self.ctx.block.add_instr(alloc_instr.into());
+		self.ctx.current_block.append_instr(alloc_instr.into());
 
 		let lhs = self.resolve_value(lhs);
 		let rhs = self.resolve_value(rhs);
@@ -41,16 +41,16 @@ impl Builder<'_> {
 			OperatorKind::SHR => ir::Instr::Shr(instr),
 			_ => todo!("code {:?}", binary_expr.operator.kind),
 		};
-		self.ctx.block.add_instr(instr);
+		self.ctx.current_block.append_instr(instr);
 		self.resolve_value(dest)
 	}
 	pub fn resolve_value(&mut self, value: IrBasicValue) -> IrBasicValue {
-		if value.is_register() && !self.ctx.is_dont_load(value.value.as_str()) {
-			let register = self.ctx.new_register(value.get_type());
+		if value.is_register() && !self.ctx.should_skip_loading(value.value.as_str()) {
+			let register = self.ctx.create_register(value.get_type());
 			let instr = ir::UnInstr::new(register.clone(), value.clone());
-			self.ctx.block.add_instr(ir::Instr::Load(instr));
+			self.ctx.current_block.append_instr(ir::Instr::Load(instr));
 			// don't load the value again
-			self.ctx.add_dont_load(register.value.as_str());
+			self.ctx.mark_skip_loading(register.value.as_str());
 			return register;
 		}
 		value

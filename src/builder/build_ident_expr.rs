@@ -4,8 +4,8 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_ident_expr(&mut self, ident: &mut ast::Ident) -> IrBasicValue {
-		if let Some(local) = self.ctx.get_local(&ident.text) {
-			if self.ctx.is_member_scope() {
+		if let Some(local) = self.ctx.lookup_local_variable(&ident.text) {
+			if self.ctx.in_struct_member_scope() {
 				return local.clone();
 			}
 			return self.resolve_value(local.clone());

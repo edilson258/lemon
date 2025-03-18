@@ -6,10 +6,13 @@ use crate::{
 	cross::Cross,
 	diag::DiagGroup,
 	disassembler::Disassembler,
+	file_system::FileSystem,
 	linker::Linker,
 	llvm,
-	loader::{Loader, LoaderConfig},
+	loader::Loader,
+	parse_mod,
 	report::{throw_cross_compile_error, throw_error},
+	shio::ShioConfig,
 };
 
 use clap::ArgMatches;
@@ -38,26 +41,28 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	let style = Style::new();
 	let compile_green_text = style.green().apply_to("compiling...").bold();
 	write_in_term(&term, compile_green_text.to_string(), false);
-	let config = LoaderConfig::new(path_name);
-	let mut loader = Loader::new(config);
-	let module_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
-	let source = loader.get_source_unwrap(module_id).clone();
+
+	let path = Path::new(path_name);
+	let shio = ShioConfig::with_defaults(path.to_path_buf());
+	let cwd = shio.loader.cwd.clone();
+	let file_system = FileSystem::from_current_dir(cwd);
+	let mut loader = Loader::new(shio, file_system);
+	let mod_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
 	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
+	let source = loader.get_source_unchecked(mod_id).clone();
 
+	parse_mod(mod_id, &mut loader);
 	// check
 	write_in_term(&term, " check...", false);
 	let mut checker = Checker::new(&mut diag_group, &mut ctx, &mut loader);
-	let _ = match checker.check_program(module_id) {
-		Ok(tyy) => tyy,
-		Err(diag) => diag.report_type_err_wrap(&source),
-	};
+	checker.check(mod_id);
 
 	// emit lnr
 	//
 	write_in_term(&term, " emit lnr...", true);
 	let mut ir_builder = Builder::new(&ctx.type_store, &mut loader);
-	let ir = ir_builder.build();
+	let ir = ir_builder.build(mod_id);
 
 	// optimize::optimize(&mut ir);
 

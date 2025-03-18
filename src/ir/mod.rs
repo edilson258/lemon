@@ -201,7 +201,7 @@ impl IrBlock {
 		Self { label, instrs: Vec::new() }
 	}
 
-	pub fn add_instr(&mut self, instr: Instr) {
+	pub fn append_instr(&mut self, instr: Instr) {
 		self.instrs.push(instr);
 	}
 

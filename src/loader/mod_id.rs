@@ -11,9 +11,15 @@ impl ModId {
 	}
 }
 
+impl Default for ModId {
+	fn default() -> Self {
+		Self(u64::MAX)
+	}
+}
+
 impl Display for ModId {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		write!(f, "mod{}", self.0)
+		write!(f, "ModId({})", self.0)
 	}
 }
 
