@@ -32,7 +32,7 @@ impl Checker<'_> {
 			if !value.is_mut {
 				return Err(SyntaxErr::cannot_assign_immutable(lexeme, ident.get_range()));
 			}
-			let found = self.infer_type(value.type_id, found)?;
+			let found = self.infer_type_from_expected(value.type_id, found);
 			self.equal_type_expected(value.type_id, found, ident.get_range())?;
 			return Ok(value.type_id);
 		}
@@ -47,7 +47,7 @@ impl Checker<'_> {
 			return Err(SyntaxErr::cannot_assign_immutable(&name, deref.get_range()));
 		}
 
-		let found = self.infer_type(expected, found)?;
+		let found = self.infer_type_from_expected(expected, found);
 		self.equal_type_expected(expected, found, deref.get_range())?;
 		Ok(expected)
 	}
@@ -63,7 +63,7 @@ impl Checker<'_> {
 				if !mutable {
 					return Err(SyntaxErr::cannot_assign_immutable(&name, member.get_range()));
 				}
-				let found = self.infer_type(field.type_id, found)?;
+				let found = self.infer_type_from_expected(field.type_id, found);
 				member.method.set_type_id(found);
 				self.equal_type_expected(field.type_id, found, member.get_range())?;
 				return Ok(field.type_id);

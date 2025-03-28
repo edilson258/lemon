@@ -15,7 +15,7 @@ impl Checker<'_> {
 		// 	}
 		// }
 		borrow_expr.set_type_id(found_id);
-		let found_id = self.infer_no_type_anotation(found_id)?;
+		let found_id = self.infer_default_type(found_id);
 		let borrow_value = BorrowType::new_internal(found_id, borrow_expr.mutable.is_some());
 		let borrow_id = self.ctx.type_store.add_type(borrow_value.into());
 		Ok(borrow_id)

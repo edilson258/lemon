@@ -92,6 +92,13 @@ impl Context {
 		self.get_scope().is_accessor_scope()
 	}
 
+	pub fn is_associated_scope(&self) -> bool {
+		match self.get_scope().kind {
+			ScopeKind::Accessor { self_type, is_associated } => is_associated,
+			_ => false,
+		}
+	}
+
 	pub fn get_self_scope_type(&self) -> Option<TypeId> {
 		self.scopes.iter().rev().find_map(Scope::get_self_scope_type)
 	}

@@ -20,8 +20,8 @@ impl ShioLoader {
 
 	pub fn from_toml(toml: &Value) -> Result<Self, String> {
 		let loader = toml.get("loader").ok_or("shio.toml must have a loader section")?;
-		let main = get_toml_text_value(loader, "main")?.into();
-		let cwd = get_toml_text_value(loader, "cwd")?.into();
+		let main: PathBuf = get_toml_text_value(loader, "main")?.into();
+		let cwd = main.parent().map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
 		let strict = get_toml_bool_value(loader, "strict").unwrap_or(true);
 		let max_threads = get_toml_integer_value(loader, "max_threads").unwrap_or(4);
 		Ok(Self::new(main, cwd, strict, max_threads))
@@ -58,13 +58,18 @@ impl ShioPackage {
 
 	pub fn from_toml(toml: &Value) -> Result<Self, String> {
 		let package = toml.get("package").ok_or("shio.toml must have a package section")?;
+		#[rustfmt::skip]
+		let name = get_toml_text_value(package, "name")
+	    .unwrap_or("undefined".to_string());
+		#[rustfmt::skip]
+		let version = get_toml_text_value(package, "version")
+		  .unwrap_or("0.1.0".to_string());
+		#[rustfmt::skip]
+		let description = get_toml_text_value(package, "description")
+		  .unwrap_or_default();
 
-		let name = get_toml_text_value(package, "name")?;
-		let version = get_toml_text_value(package, "version")?;
-		let description = get_toml_text_value(package, "description")?;
-		let authors = get_toml_array_value(package, "authors")?;
-		let license = get_toml_text_value(package, "license")?;
-
+		let authors = get_toml_array_value(package, "authors").unwrap_or_default();
+		let license = get_toml_text_value(package, "license").unwrap_or_default();
 		Ok(Self { name, version, description, authors, license })
 	}
 }
@@ -133,7 +138,13 @@ impl ShioConfig {
 		Self { package, loader, dependencies }
 	}
 
-	pub fn load_from_toml(path: &PathBuf) -> Result<Self, String> {
+	fn get_shio_toml_path() -> PathBuf {
+		// find in current directory ./shio.toml
+		PathBuf::from("./shio.toml")
+	}
+
+	pub fn load_from_toml(path: Option<PathBuf>) -> Result<Self, String> {
+		let path = path.unwrap_or(Self::get_shio_toml_path());
 		#[rustfmt::skip]
 		let shio_text = fs::read_to_string(path)
 		  .map_err(|_| "failed to read shio.toml".to_string())?;

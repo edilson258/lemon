@@ -167,7 +167,7 @@ impl NumRange {
 		Self { bits, is_float }
 	}
 
-	pub fn as_float(&self) -> Number {
+	pub fn to_float(&self) -> Number {
 		match self.bits {
 			32 => Number::F32,
 			64 => Number::F64,
@@ -175,9 +175,9 @@ impl NumRange {
 		}
 	}
 
-	pub fn as_number(&self) -> Number {
+	pub fn to_number(&self) -> Number {
 		if self.is_float {
-			return self.as_float();
+			return self.to_float();
 		}
 		match self.bits {
 			0..=32 => Number::I32,
@@ -185,7 +185,7 @@ impl NumRange {
 			_ => unreachable!(),
 		}
 	}
-	pub fn infer_with_type_id(&self, expected: TypeId) -> Option<TypeId> {
+	pub fn try_resolve_with_type(&self, expected: TypeId) -> Option<TypeId> {
 		if self.is_float != expected.is_float() {
 			return None;
 		};
@@ -200,7 +200,7 @@ impl NumRange {
 		};
 		Some(number)
 	}
-	pub fn as_infer_number(&self, expected: &Number) -> Option<Number> {
+	pub fn try_resolve_with_number(&self, expected: &Number) -> Option<Number> {
 		if self.is_float != expected.is_float() {
 			return None;
 		};
@@ -215,7 +215,16 @@ impl NumRange {
 		};
 		Some(number)
 	}
+
+	pub fn unify_range(&self, other: &NumRange) -> Option<NumRange> {
+		if self.is_float != other.is_float {
+			return None;
+		}
+		let bits = self.bits.max(other.bits);
+		Some(NumRange::new(bits, self.is_float))
+	}
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Number {
 	// isize
@@ -507,6 +516,13 @@ impl From<NumRange> for Type {
 		Type::NumRange(value)
 	}
 }
+
+impl From<&NumRange> for TypeId {
+	fn from(value: &NumRange) -> Self {
+		TypeId::from(&value.to_number())
+	}
+}
+
 impl From<Number> for Type {
 	fn from(value: Number) -> Self {
 		Type::Number(value)

@@ -65,7 +65,7 @@ impl Checker<'_> {
 
 	fn struct_acessor(&self, ident: &mut Ident, _type: &StructType) -> TyResult<TypeId> {
 		let lexeme = ident.lexeme();
-		if self.ctx.is_accessor_scope() {
+		if self.ctx.is_associated_scope() {
 			if let Some(field_id) = _type.get_associate(lexeme) {
 				ident.set_type_id(*field_id);
 				return Ok(*field_id);

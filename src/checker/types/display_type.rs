@@ -170,13 +170,11 @@ impl ExternFnType {
 
 impl NumRange {
 	pub fn display_type(&self, text: &mut String) {
-		// if self.is_float {
-		// 	*text += "f";
-		// } else {
-		// 	*text += "i";
-		// }
-		// *text += "?";
-		self.as_number().display_type(text);
+		let kind = if self.is_float { "float" } else { "integer" };
+		let symbol = if self.is_float { "=" } else { "≤" };
+		let bits = self.bits.to_string();
+		let fmt = format!("{}({}{})", kind, symbol, bits);
+		*text += &fmt;
 	}
 }
 

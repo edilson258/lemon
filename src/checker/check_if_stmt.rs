@@ -11,6 +11,9 @@ impl Checker<'_> {
 
 		if let Some(otherwise) = &mut if_expr.otherwise {
 			let otherwise_type = self.check_stmt(otherwise)?;
+
+			let then_type = self.unify_types(then_type, otherwise_type)?;
+
 			// return Ok(otherwise_type);
 		}
 

@@ -40,9 +40,14 @@ pub fn parse_mod(mod_id: ModId, loader: &mut Loader) {
 	let ast = parser.parse_program().unwrap_or_else(|diag| diag.report_syntax_err_wrap(&source));
 	loader.add_mod(mod_id, ast);
 }
-fn check(path_name: &str) {
-	let path = Path::new(path_name);
-	let shio = ShioConfig::with_defaults(path.to_path_buf());
+fn check(matches: &clap::ArgMatches) {
+	let shio = match matches.get_one::<String>("file") {
+		Some(path_name) => {
+			let path = Path::new(path_name);
+			ShioConfig::with_defaults(path.to_path_buf())
+		}
+		None => ShioConfig::load_from_toml(None).unwrap_or_else(|err| throw_error(err)),
+	};
 	let cwd = shio.loader.cwd.clone();
 	let file_system = FileSystem::from_current_dir(cwd);
 	let mut loader = Loader::new(shio, file_system);
@@ -103,8 +108,8 @@ fn main() {
 	let matches = cli::command_line();
 	match matches.subcommand() {
 		Some(("check", matches)) => {
-			let path_name = matches.get_one::<String>("file").expect("file is required");
-			check(path_name);
+			// let path_name = matches.get_one::<String>("file").expect("file is required");
+			check(matches);
 		}
 
 		Some(("compile", matches)) => {

@@ -47,7 +47,7 @@ impl Checker<'_> {
 			// }
 			//
 			let expect = field_type.type_id;
-			let found = self.infer_type(expect, value)?;
+			let found = self.infer_type_from_expected(expect, value);
 			self.equal_type_expected(expect, found, field_expr.name.get_range())?;
 			field_expr.name.set_type_id(field_type.type_id);
 		}

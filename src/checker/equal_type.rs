@@ -7,18 +7,12 @@ use super::types::TypeId;
 
 impl Checker<'_> {
 	pub fn equal_type_id(&self, expected: TypeId, found: TypeId) -> bool {
-		if expected.is_any() || found.is_any() {
-			return true;
-		}
-
 		if expected == found {
 			return true;
 		}
-
-		if expected.is_unit() && found.is_void() || found.is_unit() && expected.is_void() {
+		if expected.is_nothing() && found.is_nothing() {
 			return true;
 		}
-
 		let expected_type = self.get_stored_type(expected);
 		let found_type = self.get_stored_type(found);
 		expected_type == found_type

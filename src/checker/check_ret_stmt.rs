@@ -13,7 +13,7 @@ impl Checker<'_> {
 
 		if let Some(value_expr) = &mut ret_stmt.expr {
 			let found_id = self.check_expr(value_expr)?;
-			let found_id = self.infer_type(ret_id, found_id)?;
+			let found_id = self.infer_type_from_expected(ret_id, found_id);
 			let found_type = self.get_stored_type(found_id);
 			if found_type.is_local_borrow() {
 				return Err(SyntaxErr::return_local_borrow(ret_stmt.get_range()));

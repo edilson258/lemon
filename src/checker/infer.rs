@@ -2,23 +2,42 @@ use super::types::{Type, TypeId};
 use super::{Checker, TyResult};
 
 impl Checker<'_> {
-	pub fn infer_type(&self, expected: TypeId, found: TypeId) -> TyResult<TypeId> {
-		if found.is_known() || !expected.is_number() {
-			return Ok(found);
+	pub fn infer_type_from_expected(&self, expected: TypeId, found: TypeId) -> TypeId {
+		if found.is_known() {
+			return found;
 		}
-		Ok(match self.get_stored_type(found) {
-			Type::NumRange(num_range) => num_range.infer_with_type_id(expected).unwrap_or(found),
-			_ => found,
-		})
+		if let Type::NumRange(found_range) = self.get_stored_type(found) {
+			return found_range.try_resolve_with_type(expected).unwrap_or(found);
+		}
+		found
 	}
 
-	pub fn infer_no_type_anotation(&self, type_id: TypeId) -> TyResult<TypeId> {
-		if type_id.is_known() {
-			return Ok(type_id);
+	pub fn infer_default_type(&self, found: TypeId) -> TypeId {
+		if found.is_known() {
+			return found;
 		}
-		Ok(match self.get_stored_type(type_id) {
-			Type::NumRange(range) => TypeId::from(&range.as_number()),
-			_ => type_id,
-		})
+		if let Type::NumRange(found_range) = self.get_stored_type(found) {
+			return found_range.into();
+		}
+		found
+	}
+
+	pub fn unify_types(&self, left: TypeId, right: TypeId) -> TyResult<Option<TypeId>> {
+		if left.is_known() && right.is_known() {
+			return Ok(None);
+		}
+		let left_type = self.get_stored_type(left);
+		let right_type = self.get_stored_type(right);
+
+		let result = match (left_type, right_type) {
+			(Type::NumRange(lt_range), Type::NumRange(rt_range)) => {
+				lt_range.unify_range(rt_range).map(|max| TypeId::from(&max.to_number()))
+			}
+			(Type::NumRange(_), _) => Some(self.infer_type_from_expected(right, left)),
+			(_, Type::NumRange(_)) => Some(self.infer_type_from_expected(left, right)),
+			_ => None,
+		};
+
+		Ok(result)
 	}
 }

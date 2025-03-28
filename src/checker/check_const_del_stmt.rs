@@ -22,7 +22,7 @@ impl Checker<'_> {
 		let expect_id = match const_del.name.ty.as_ref() {
 			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
 			None => {
-				let found_id = self.infer_no_type_anotation(found_id)?;
+				let found_id = self.infer_default_type(found_id);
 				self.ctx.add_value(lexeme.as_str(), found_id, false);
 				const_del.set_type_id(found_id);
 				return Ok(TypeId::UNIT);

@@ -106,6 +106,13 @@ impl TypeId {
 		}
 	}
 
+	pub fn equals(&self, other: &Self) -> bool {
+		if self.is_nothing() && other.is_nothing() {
+			return true;
+		}
+		self.0 == other.0
+	}
+
 	// pub fn is_infer(&self) -> bool {
 	// 	self.0 >= TypeId::INFER.0
 	// }

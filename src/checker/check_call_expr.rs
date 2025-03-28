@@ -59,7 +59,7 @@ impl Checker<'_> {
 
 	fn call_args_match(&mut self, expects: &[TypeId], founds: &[(TypeId, Range)]) -> TyResult<()> {
 		for (expected, (found, range)) in expects.iter().zip(founds) {
-			let found = self.infer_type(*expected, *found)?;
+			let found = self.infer_type_from_expected(*expected, *found);
 			self.equal_type_expected(*expected, found, range.clone())?;
 		}
 		Ok(())

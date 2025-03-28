@@ -50,7 +50,7 @@ pub struct Builder<'br> {
 
 impl<'br> Builder<'br> {
 	pub fn new(type_store: &'br TypeStore, loader: &'br mut Loader) -> Self {
-		Self { ctx: Context::new(), ir: IR::new(), type_store, loader }
+		Self { ctx: Context::new(), ir: IR::default(), type_store, loader }
 	}
 
 	pub fn build(&mut self, mod_id: ModId) -> IR {
