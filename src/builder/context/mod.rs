@@ -2,7 +2,7 @@ use crate::{
 	checker::types::TypeId,
 	ir::{BasicValue, IrBasicValue},
 	loader::ModId,
-	report::throw_ir_build_error,
+	throw_error,
 };
 use rustc_hash::FxHashMap;
 use scope::Scope;
@@ -20,6 +20,7 @@ pub struct Context {
 	struct_definitions: StructDefinitions,
 	pub struct_sizes: FxHashMap<String, usize>,
 	pub current_block: block::Block,
+	#[allow(dead_code)]
 	pub mod_id: ModId,
 }
 
@@ -107,11 +108,11 @@ impl Context {
 	}
 
 	fn current_scope(&self) -> &Scope {
-		self.scope_stack.last().unwrap_or_else(|| throw_ir_build_error("scope not found"))
+		self.scope_stack.last().unwrap_or_else(|| throw_error!("scope not found"))
 	}
 
 	fn current_scope_mut(&mut self) -> &mut Scope {
-		self.scope_stack.last_mut().unwrap_or_else(|| throw_ir_build_error("scope not found"))
+		self.scope_stack.last_mut().unwrap_or_else(|| throw_error!("scope not found"))
 	}
 
 	pub fn define_local_variable(&mut self, name: String, value: IrBasicValue) {

@@ -1,0 +1,12 @@
+extern fn printf(fmt: str, ...): i32 = {};
+
+fn println(value: i32) = {
+  printf("%d\n", value);
+}
+
+fn main() = {
+    let mut x = 10;
+    let r1 = &x;
+    println(*r1);
+    let r2 = &mut x; // ok
+}

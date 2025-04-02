@@ -1,12 +1,16 @@
 use super::synthesis;
 use super::types::TypeId;
-use super::{diags::SyntaxErr, Checker, TyResult};
+use super::{diags::SyntaxErr, Checker};
 use crate::ast;
+use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_const_del_stmt(&mut self, const_del: &mut ast::ConstDelStmt) -> TyResult<TypeId> {
+	pub fn check_const_del_stmt(
+		&mut self,
+		const_del: &mut ast::ConstDelStmt,
+	) -> MessageResult<TypeId> {
 		if !self.ctx.is_global_scope() {
-			return Err(SyntaxErr::const_outside_global_scope(const_del.range.clone()));
+			return Err(SyntaxErr::const_outside_global_scope(const_del.range));
 		}
 		let found_id = self.check_expr(&mut const_del.expr)?;
 
@@ -23,17 +27,17 @@ impl Checker<'_> {
 			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
 			None => {
 				let found_id = self.infer_default_type(found_id);
-				self.ctx.add_value(lexeme.as_str(), found_id, false);
-				const_del.set_type_id(found_id);
+				self.ctx.add_owned_value(lexeme.as_str(), found_id, false);
+				self.register_type(found_id, const_del.get_range());
 				return Ok(TypeId::UNIT);
 			}
 		};
-		const_del.set_type_id(expect_id);
-		self.ctx.add_value(lexeme.as_str(), expect_id, false);
+		self.register_type(expect_id, const_del.get_range());
+		self.ctx.add_owned_value(lexeme.as_str(), expect_id, false);
 		Ok(TypeId::UNIT)
 	}
 
-	pub fn check_const_bind(&mut self, const_bind: &mut ast::Binding) -> TyResult<TypeId> {
+	pub fn check_const_bind(&mut self, const_bind: &mut ast::Binding) -> MessageResult<TypeId> {
 		todo!()
 	}
 }

@@ -3,7 +3,7 @@ use core::fmt;
 use logos::Span;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Eq, Hash)]
 pub struct Range {
 	// set as u32?
 	pub start: usize,

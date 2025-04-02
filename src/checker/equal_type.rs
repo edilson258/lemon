@@ -1,7 +1,8 @@
+use crate::message::MessageResult;
 use crate::range::Range;
 
 use super::diags::SyntaxErr;
-use super::{Checker, TyResult};
+use super::Checker;
 
 use super::types::TypeId;
 
@@ -18,7 +19,12 @@ impl Checker<'_> {
 		expected_type == found_type
 	}
 
-	pub fn equal_type_expected(&self, expected: TypeId, found: TypeId, range: Range) -> TyResult<()> {
+	pub fn equal_type_expected(
+		&self,
+		expected: TypeId,
+		found: TypeId,
+		range: Range,
+	) -> MessageResult<()> {
 		if !self.equal_type_id(expected, found) {
 			let expected = self.display_type(expected);
 			let found = self.display_type(found);

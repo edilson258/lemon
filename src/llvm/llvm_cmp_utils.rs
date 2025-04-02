@@ -3,7 +3,7 @@ use inkwell::{
 	FloatPredicate, IntPredicate,
 };
 
-use crate::report::throw_llvm_error;
+use crate::error_codegen;
 
 use super::Llvm;
 
@@ -17,7 +17,7 @@ impl<'ll> Llvm<'ll> {
 		let dest = &self.env.get_temp();
 		match self.builder.build_int_compare(operator, lhs, rhs, dest) {
 			Ok(value) => value,
-			Err(err) => throw_llvm_error(format!("compare values, reason: {}", err)),
+			Err(err) => error_codegen!("compare values, reason: {}", err).report(self.loader),
 		}
 	}
 
@@ -30,7 +30,7 @@ impl<'ll> Llvm<'ll> {
 		let dest = &self.env.get_temp();
 		match self.builder.build_float_compare(operator, lhs, rhs, dest) {
 			Ok(value) => value,
-			Err(err) => throw_llvm_error(format!("compare values, reason: {}", err)),
+			Err(err) => error_codegen!("compare values, reason: {}", err).report(self.loader),
 		}
 	}
 }

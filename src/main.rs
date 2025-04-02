@@ -5,7 +5,6 @@ mod cli;
 mod compiler;
 // mod comptime;
 mod cross;
-mod diag;
 mod disassembler;
 mod file_system;
 mod ir;
@@ -13,6 +12,8 @@ mod lexer;
 mod linker;
 mod llvm;
 mod loader;
+mod message;
+mod time;
 // mod optimize;
 mod parser;
 mod range;
@@ -20,11 +21,10 @@ mod report;
 mod shio;
 mod source;
 
-use std::path::Path;
+use std::{path::Path, time::Instant};
 
 use checker::{context::Context, Checker};
 use compiler::compile;
-use diag::DiagGroup;
 use file_system::FileSystem;
 use lexer::Token;
 use loader::{Loader, ModId};
@@ -32,15 +32,17 @@ use logos::Logos;
 use parser::Parser;
 use report::throw_error;
 use shio::ShioConfig;
+use time::format_time;
 
 pub fn parse_mod(mod_id: ModId, loader: &mut Loader) {
-	let source = loader.get_source_unchecked(mod_id).clone();
+	let source = loader.lookup_source_unchecked(mod_id).clone();
 	let mut lexer = Token::lexer(source.raw.as_str());
 	let mut parser = Parser::new(&mut lexer, mod_id, loader);
-	let ast = parser.parse_program().unwrap_or_else(|diag| diag.report_syntax_err_wrap(&source));
+	let ast = parser.parse_program().unwrap_or_else(|message| message.report(loader));
 	loader.add_mod(mod_id, ast);
 }
 fn check(matches: &clap::ArgMatches) {
+	let timer = Instant::now();
 	let shio = match matches.get_one::<String>("file") {
 		Some(path_name) => {
 			let path = Path::new(path_name);
@@ -51,13 +53,12 @@ fn check(matches: &clap::ArgMatches) {
 	let cwd = shio.loader.cwd.clone();
 	let file_system = FileSystem::from_current_dir(cwd);
 	let mut loader = Loader::new(shio, file_system);
-	let mut diag_group = DiagGroup::new();
 	let mut ctx = Context::new();
-	let mod_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
+	let mod_id = loader.load_entry().unwrap_or_else(|message| message.report(&loader));
 	parse_mod(mod_id, &mut loader);
-	let mut checker = Checker::new(&mut diag_group, &mut ctx, &mut loader);
+	let mut checker = Checker::new(&mut ctx, &mut loader);
 	checker.check(mod_id);
-	println!("ok.");
+	println!("ok in {}.", format_time(timer.elapsed()));
 }
 
 fn lex(path_name: &str) {
@@ -66,8 +67,8 @@ fn lex(path_name: &str) {
 	let cwd = shio.loader.cwd.clone();
 	let file_system = FileSystem::from_current_dir(cwd);
 	let mut loader = Loader::new(shio, file_system);
-	let mod_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
-	let source = loader.get_source_unchecked(mod_id).clone();
+	let mod_id = loader.load_entry().unwrap_or_else(|message| message.report(&loader));
+	let source = loader.lookup_source_unchecked(mod_id).clone();
 	let mut lexer = Token::lexer(&source.raw);
 	while let Some(token) = lexer.next() {
 		println!("{:?}: {:?}", token, lexer.slice());
@@ -80,8 +81,8 @@ fn token(path_name: &str) {
 	let cwd = shio.loader.cwd.clone();
 	let file_system = FileSystem::from_current_dir(cwd);
 	let mut loader = Loader::new(shio, file_system);
-	let mod_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
-	let source = loader.get_source_unchecked(mod_id).clone();
+	let mod_id = loader.load_entry().unwrap_or_else(|message| message.report(&loader));
+	let source = loader.lookup_source_unchecked(mod_id).clone();
 	let mut lexer = Token::lexer(&source.raw);
 	while let Some(token) = lexer.next() {
 		println!("{:?}: {:?}", token, lexer.slice());
@@ -93,13 +94,13 @@ fn ast(path_name: &str) {
 	let cwd = shio.loader.cwd.clone();
 	let file_system = FileSystem::from_current_dir(cwd);
 	let mut loader = Loader::new(shio, file_system);
-	let mod_id = loader.load_entry().unwrap_or_else(|err| throw_error(err));
-	let source = loader.get_source_unchecked(mod_id).clone();
+	let mod_id = loader.load_entry().unwrap_or_else(|message| message.report(&loader));
+	let source = loader.lookup_source_unchecked(mod_id).clone();
 	let mut lexer = Token::lexer(&source.raw);
 	let mut parser = Parser::new(&mut lexer, mod_id, &mut loader);
 	let ast = match parser.parse_program() {
 		Ok(ast) => ast,
-		Err(diag) => diag.report_syntax_err_wrap(&source),
+		Err(message) => message.report(&loader),
 	};
 	println!("{:#?}", ast);
 }

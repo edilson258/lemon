@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 
 use super::Llvm;
 
@@ -14,7 +14,7 @@ impl Llvm<'_> {
 			let right_int = right.into_int_value();
 			let value = match self.builder.build_int_signed_rem(left_int, right_int, temp) {
 				Ok(result) => result,
-				Err(_) => throw_llvm_error("build int mod"),
+				Err(_) => error_codegen!("build int mod").report(self.loader),
 			};
 			let ptr = self.env.get_ptr_value_unwrap(dest);
 			return self.store(ptr, value);
@@ -25,12 +25,12 @@ impl Llvm<'_> {
 			let right_float = right.into_float_value();
 			let value = match self.builder.build_float_rem(left_float, right_float, temp) {
 				Ok(result) => result,
-				Err(_) => throw_llvm_error("build float mod"),
+				Err(_) => error_codegen!("build float mod").report(self.loader),
 			};
 			let ptr = self.env.get_ptr_value_unwrap(dest);
 			return self.store(ptr, value);
 		}
-		let error = format!("unsupported 'mod' {} to {}", left.get_type(), right.get_type());
-		throw_llvm_error(error);
+		let message = error_codegen!("unsupported 'mod' {} to {}", left.get_type(), right.get_type());
+		message.report(self.loader);
 	}
 }

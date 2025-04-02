@@ -1,5 +1,7 @@
+use crate::message::MessageResult;
+
 use super::types::{Type, TypeId};
-use super::{Checker, TyResult};
+use super::Checker;
 
 impl Checker<'_> {
 	pub fn infer_type_from_expected(&self, expected: TypeId, found: TypeId) -> TypeId {
@@ -22,7 +24,7 @@ impl Checker<'_> {
 		found
 	}
 
-	pub fn unify_types(&self, left: TypeId, right: TypeId) -> TyResult<Option<TypeId>> {
+	pub fn unify_types(&self, left: TypeId, right: TypeId) -> MessageResult<Option<TypeId>> {
 		if left.is_known() && right.is_known() {
 			return Ok(None);
 		}

@@ -1,4 +1,4 @@
-use crate::{checker::types::TypeId, report::throw_ir_build_error};
+use crate::{checker::types::TypeId, error_build};
 
 use super::Builder;
 
@@ -7,16 +7,16 @@ impl Builder<'_> {
 		if value_type.is_known() || self.type_store.is_borrow(value_type) {
 			return None;
 		}
-		let value_name = match self.type_store.get_struct_name(value_type) {
+		let value_name = match self.type_store.lookup_struct_name(value_type) {
 			Some(name) => name,
 			None => {
 				let type_text = self.type_store.get_display_ir_type(value_type);
-				throw_ir_build_error(format!("cannot find struct name for type {}", type_text))
+				error_build!("cannot find struct name for type {}", type_text).report(self.loader);
 			}
 		};
 		match self.ctx.struct_sizes.get(value_name).copied() {
 			Some(size) => Some(size),
-			None => throw_ir_build_error(format!("cannot find size of {}", value_name)),
+			None => error_build!("cannot find size of {}", value_name).report(self.loader),
 		}
 	}
 }

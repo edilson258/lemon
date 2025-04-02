@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 use inkwell::{FloatPredicate, IntPredicate};
 
 use super::Llvm;
@@ -25,7 +25,7 @@ impl Llvm<'_> {
 			let ptr = self.env.get_ptr_value_unwrap(dest);
 			return self.store(ptr, value);
 		}
-
-		throw_llvm_error(format!("unsupported types for comparison: {}", left.get_type()));
+		let message = error_codegen!("unsupported 'le' {} to {}", left.get_type(), right.get_type());
+		message.report(self.loader);
 	}
 }

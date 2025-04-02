@@ -1,8 +1,11 @@
-use super::{diags::SyntaxErr, types::TypeId, Checker, TyResult};
-use crate::ast::{self, Operator, OperatorKind};
+use super::{diags::SyntaxErr, types::TypeId, Checker};
+use crate::{
+	ast::{self, Operator, OperatorKind},
+	message::MessageResult,
+};
 
 impl Checker<'_> {
-	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> TyResult<TypeId> {
+	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> MessageResult<TypeId> {
 		let left = self.check_expr(&mut binary_expr.left)?;
 		let right = self.check_expr(&mut binary_expr.right)?;
 		let range = binary_expr.get_range();
@@ -27,11 +30,17 @@ impl Checker<'_> {
 			OperatorKind::SHR => self._check_bitwise(left, right, operator)?,
 			_ => todo!(),
 		};
-		binary_expr.set_type_id(type_id);
+
+		self.register_type(type_id, range);
 		Ok(type_id)
 	}
 
-	fn _check_bitwise(&self, _left: TypeId, _right: TypeId, operator: &Operator) -> TyResult<TypeId> {
+	fn _check_bitwise(
+		&self,
+		_left: TypeId,
+		_right: TypeId,
+		operator: &Operator,
+	) -> MessageResult<TypeId> {
 		let left = self.infer_type_from_expected(_right, _left);
 		let right = self.infer_type_from_expected(_left, _right);
 		if !left.is_int() || !right.is_int() {
@@ -45,11 +54,21 @@ impl Checker<'_> {
 		Ok(left)
 	}
 
-	fn _check_range_operator(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+	fn _check_range_operator(
+		&self,
+		lt: TypeId,
+		rt: TypeId,
+		operator: &Operator,
+	) -> MessageResult<TypeId> {
 		todo!("check range operator")
 	}
 
-	fn check_cmp_operator(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+	fn check_cmp_operator(
+		&self,
+		lt: TypeId,
+		rt: TypeId,
+		operator: &Operator,
+	) -> MessageResult<TypeId> {
 		let left = self.infer_type_from_expected(rt, lt);
 		let right = self.infer_type_from_expected(lt, rt);
 		if !self.equal_type_id(left, right) {
@@ -59,7 +78,12 @@ impl Checker<'_> {
 		Ok(TypeId::BOOL)
 	}
 
-	fn _check_math_operator(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+	fn _check_math_operator(
+		&self,
+		lt: TypeId,
+		rt: TypeId,
+		operator: &Operator,
+	) -> MessageResult<TypeId> {
 		let left = self.infer_type_from_expected(rt, lt);
 		let right = self.infer_type_from_expected(left, rt);
 		if !self.equal_type_id(left, right) {
@@ -69,7 +93,12 @@ impl Checker<'_> {
 		Ok(left)
 	}
 
-	fn _check_mod_operator(&self, lt: TypeId, rt: TypeId, operator: &Operator) -> TyResult<TypeId> {
+	fn _check_mod_operator(
+		&self,
+		lt: TypeId,
+		rt: TypeId,
+		operator: &Operator,
+	) -> MessageResult<TypeId> {
 		let left = self.infer_type_from_expected(rt, lt);
 		let right = self.infer_type_from_expected(lt, rt);
 

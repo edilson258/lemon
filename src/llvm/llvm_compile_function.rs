@@ -1,6 +1,6 @@
 use crate::checker::types::TypeId;
+use crate::error_codegen;
 use crate::ir::{self};
-use crate::report::throw_llvm_error;
 use inkwell::types::{BasicMetadataTypeEnum, BasicType, FunctionType};
 use inkwell::values::FunctionValue;
 
@@ -64,7 +64,7 @@ impl<'ll> Llvm<'ll> {
 			let value_str = param.value.as_str();
 			let param_value = match func.get_nth_param(i as u32) {
 				Some(param_value) => param_value,
-				None => throw_llvm_error(format!("param {} not found", value_str)),
+				None => error_codegen!("param {} not found", value_str).report(self.loader),
 			};
 			self.env.set_value(value_str, param_value);
 		});
@@ -74,14 +74,14 @@ impl<'ll> Llvm<'ll> {
 		if function.is_main() {
 			let sucess = self.ctx.i32_type().const_int(0, false);
 			if let Err(err) = self.builder.build_return(Some(&sucess)) {
-				throw_llvm_error(format!("cannot build success void return, error: {}", err));
+				error_codegen!("cannot build success void return, error: {}", err).report(self.loader);
 			}
 			return;
 		}
 
 		if function.ret.is_nothing() {
 			if let Err(err) = self.builder.build_return(None) {
-				throw_llvm_error(format!("cannot build void return, error: {}", err));
+				error_codegen!("cannot build void return, error: {}", err).report(self.loader);
 			}
 		}
 	}

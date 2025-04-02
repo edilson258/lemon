@@ -1,23 +1,26 @@
-use crate::ast::{self, MemberExpr};
+use crate::{
+	ast::{self, MemberExpr},
+	message::MessageResult,
+};
 
 use super::{
 	diags::SyntaxErr,
 	types::{Type, TypeId},
-	Checker, TyResult,
+	Checker,
 };
 
 impl Checker<'_> {
-	pub fn check_assign_expr(&mut self, assign_expr: &mut ast::AssignExpr) -> TyResult<TypeId> {
+	pub fn check_assign_expr(&mut self, assign_expr: &mut ast::AssignExpr) -> MessageResult<TypeId> {
 		let found = self.check_expr(&mut assign_expr.right)?;
 		if self.ctx.type_store.is_module(found) {
 			return Err(SyntaxErr::cannot_reassign_module(assign_expr.get_range()));
 		}
 		let expected = self.assign_left_expr(&mut assign_expr.left, found)?;
-		assign_expr.set_type_id(expected);
+		self.register_type(expected, assign_expr.get_range());
 		Ok(TypeId::UNIT)
 	}
 
-	fn assign_left_expr(&mut self, expr: &mut ast::Expr, found_id: TypeId) -> TyResult<TypeId> {
+	fn assign_left_expr(&mut self, expr: &mut ast::Expr, found_id: TypeId) -> MessageResult<TypeId> {
 		match expr {
 			ast::Expr::Ident(ident) => self.assign_ident_expr(ident, found_id),
 			ast::Expr::Deref(deref) => self.assign_deref_expr(deref, found_id),
@@ -26,10 +29,10 @@ impl Checker<'_> {
 		}
 	}
 
-	fn assign_ident_expr(&mut self, ident: &mut ast::Ident, found: TypeId) -> TyResult<TypeId> {
+	fn assign_ident_expr(&mut self, ident: &mut ast::Ident, found: TypeId) -> MessageResult<TypeId> {
 		let lexeme = ident.lexeme();
-		if let Some(value) = self.ctx.get_value(lexeme) {
-			if !value.is_mut {
+		if let Some(value) = self.ctx.lookup_variable_value(lexeme) {
+			if !value.mutable {
 				return Err(SyntaxErr::cannot_assign_immutable(lexeme, ident.get_range()));
 			}
 			let found = self.infer_type_from_expected(value.type_id, found);
@@ -39,7 +42,11 @@ impl Checker<'_> {
 		Err(SyntaxErr::not_found_value(lexeme, ident.get_range()))
 	}
 
-	fn assign_deref_expr(&mut self, deref: &mut ast::DerefExpr, found: TypeId) -> TyResult<TypeId> {
+	fn assign_deref_expr(
+		&mut self,
+		deref: &mut ast::DerefExpr,
+		found: TypeId,
+	) -> MessageResult<TypeId> {
 		let expected = self.check_deref_expr(deref)?;
 
 		let (name, mutable) = self.try_mutate_expr(&deref.expr)?;
@@ -52,9 +59,14 @@ impl Checker<'_> {
 		Ok(expected)
 	}
 
-	fn assign_member_expr(&mut self, member: &mut MemberExpr, found: TypeId) -> TyResult<TypeId> {
+	fn assign_member_expr(
+		&mut self,
+		member: &mut MemberExpr,
+		found: TypeId,
+	) -> MessageResult<TypeId> {
 		let self_type = self.check_expr(&mut member.left)?;
-		let self_type = self.get_stored_type(self_type);
+		// todo: don;t clone type
+		let self_type = self.get_stored_type(self_type).clone();
 		if let Type::Struct(struct_type) = self_type {
 			let lexeme = member.method.lexeme();
 			let field = struct_type.get_field(lexeme);
@@ -64,19 +76,19 @@ impl Checker<'_> {
 					return Err(SyntaxErr::cannot_assign_immutable(&name, member.get_range()));
 				}
 				let found = self.infer_type_from_expected(field.type_id, found);
-				member.method.set_type_id(found);
+				self.register_type(found, member.get_range());
 				self.equal_type_expected(field.type_id, found, member.get_range())?;
 				return Ok(field.type_id);
 			}
 
 			let method = member.method.lexeme().to_owned();
-			let found = self.display_type_value(self_type);
+			let found = self._display_type_value(struct_type.into());
 			return Err(SyntaxErr::not_found_method_named(method, found, member.get_range()));
 		}
 		todo!("assign member expr {:?}", self_type)
 	}
 
-	pub fn try_mutate_expr(&self, expr: &ast::Expr) -> TyResult<(String, bool)> {
+	pub fn try_mutate_expr(&self, expr: &ast::Expr) -> MessageResult<(String, bool)> {
 		match expr {
 			ast::Expr::Ident(ident) => self.try_mutate_ident_expr(ident),
 			ast::Expr::Member(member) => self.try_mutate_expr(&member.left),
@@ -86,10 +98,10 @@ impl Checker<'_> {
 		}
 	}
 
-	fn try_mutate_ident_expr(&self, ident: &ast::Ident) -> TyResult<(String, bool)> {
+	fn try_mutate_ident_expr(&self, ident: &ast::Ident) -> MessageResult<(String, bool)> {
 		let lexeme = ident.lexeme();
-		if let Some(value) = self.ctx.get_value(lexeme) {
-			return Ok((lexeme.to_owned(), value.is_mut));
+		if let Some(value) = self.ctx.lookup_variable_value(lexeme) {
+			return Ok((lexeme.to_owned(), value.mutable));
 		}
 		Err(SyntaxErr::not_found_value(lexeme, ident.get_range()))
 	}

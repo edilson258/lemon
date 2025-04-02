@@ -1,4 +1,4 @@
-use crate::{checker::types::TypeId, report::throw_ir_build_error};
+use crate::{checker::types::TypeId, throw_error};
 use std::mem;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,7 +28,7 @@ impl BasicValue {
 	pub fn as_str(&self) -> &str {
 		match self {
 			Self::Register(register) => register,
-			_ => throw_ir_build_error("not a valid register"),
+			_ => throw_error!("expected register"),
 		}
 	}
 
@@ -85,7 +85,8 @@ macro_rules! impl_from {
 
 impl From<usize> for IrBasicValue {
 	fn from(value: usize) -> Self {
-		Self::new(BasicValue::Int(value as u64), TypeId::USIZE)
+		// todo: review this
+		Self::new(BasicValue::Int(value as u64), TypeId::I32)
 	}
 }
 

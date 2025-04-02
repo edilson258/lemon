@@ -1,9 +1,10 @@
 use super::types::TypeId;
-use super::{Checker, TyResult};
+use super::Checker;
 use crate::ast;
+use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_if_stmt(&mut self, if_expr: &mut ast::IfStmt) -> TyResult<TypeId> {
+	pub fn check_if_stmt(&mut self, if_expr: &mut ast::IfStmt) -> MessageResult<TypeId> {
 		let cond_type = self.check_expr(&mut if_expr.cond)?;
 		self.equal_type_expected(TypeId::BOOL, cond_type, if_expr.cond.get_range())?;
 

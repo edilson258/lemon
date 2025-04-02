@@ -11,7 +11,7 @@ impl Builder<'_> {
 		let mut ir_struct = Struct::with_capacity(struct_type.fields.len());
 		for field in struct_type.fields.iter() {
 			let field_name = field.ident.lexeme();
-			let field_type = self.build_type(field.get_type_id(), field.get_range());
+			let field_type = self.lookup_event_type(field.get_range());
 			let position = ir_struct.add_field(field_type);
 			field_table.insert(field_name.into(), (field_type, position));
 		}

@@ -4,8 +4,8 @@ use inkwell::{types::StructType, values::BasicValueEnum};
 
 use crate::{
 	checker::types::TypeId,
+	error_codegen,
 	ir::{self, Register},
-	report::throw_llvm_error,
 };
 
 use super::Llvm;

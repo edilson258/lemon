@@ -3,7 +3,7 @@ use inkwell::{
 	AddressSpace,
 };
 
-use crate::{ir::Register, report::throw_llvm_error};
+use crate::{error_codegen, ir::Register};
 
 use super::Llvm;
 impl<'ll> Llvm<'ll> {

@@ -2,7 +2,7 @@ use crate::checker::{types::TypeId, TyResult};
 
 use super::synthesise_ast_type;
 
-pub fn synthesise_struct_type() -> TyResult<TypeId> {
+pub fn synthesise_struct_type() -> MessageResult<TypeId> {
 	let str = 21;
 	todo!()
 	// let fields = synthesise_struct_fields(struct_type, ctx)?;
@@ -10,4 +10,4 @@ pub fn synthesise_struct_type() -> TyResult<TypeId> {
 	// Ok(struct_id)
 }
 
-fn synthesise_struct_fields() -> TyResult<Vec<TypeId>> {}
+fn synthesise_struct_fields() -> MessageResult<Vec<TypeId>> {}

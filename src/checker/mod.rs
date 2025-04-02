@@ -1,17 +1,17 @@
 #![allow(dead_code, unused_variables)]
 use crate::{
 	ast,
-	diag::{Diag, DiagGroup},
 	loader::{Loader, ModId},
-	report::throw_error,
+	message::MessageResult,
 };
 
+mod comptime;
 pub mod context;
+pub mod events;
+mod ownership;
 pub mod types;
 use context::Context;
 use types::{Type, TypeId};
-mod synthesis;
-
 mod check_assign_expr;
 mod check_associate_expr;
 mod check_binary_expr;
@@ -38,39 +38,32 @@ mod check_type_def_stmt;
 mod check_while_stmt;
 mod diags;
 mod equal_type;
+mod event;
 mod infer;
-mod infer_generic;
-
-type TyResult<T> = Result<T, Diag>;
+mod synthesis;
 
 pub struct Checker<'ckr> {
 	ctx: &'ckr mut Context,
 	loader: &'ckr mut Loader,
-	diag_group: &'ckr mut DiagGroup,
 }
 
 impl<'ckr> Checker<'ckr> {
-	pub fn new(
-		diag_group: &'ckr mut DiagGroup,
-		ctx: &'ckr mut Context,
-		loader: &'ckr mut Loader,
-	) -> Self {
-		Self { ctx, diag_group, loader }
+	pub fn new(ctx: &'ckr mut Context, loader: &'ckr mut Loader) -> Self {
+		Self { ctx, loader }
 	}
 
 	pub fn check(&mut self, mod_id: ModId) {
-		if let Err(diag) = self.check_program(mod_id) {
+		if let Err(message) = self.check_program(mod_id) {
 			let mod_id = self.ctx.mod_id;
-			let source = self.loader.get_source_unchecked(mod_id);
-			diag.report_type_err_wrap(source);
+			message.mod_id(mod_id).report(self.loader);
 		}
 	}
-	pub fn check_program(&mut self, mod_id: ModId) -> TyResult<TypeId> {
+
+	pub fn check_program(&mut self, mod_id: ModId) -> MessageResult<TypeId> {
 		self.ctx.add_entry_mod(mod_id);
-		#[rustfmt::skip]
-		let mut ast = self.loader.get_mod_result(mod_id).cloned().unwrap_or_else(|err| {
-		  // todo: using throw_error_with_range here...
-		  throw_error(err)
+		let mut ast = self.loader.lookup_mod_result(mod_id).cloned().unwrap_or_else(|message| {
+			// todo: using throw_error_with_range here...
+			message.report(self.loader);
 		});
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
@@ -78,7 +71,7 @@ impl<'ckr> Checker<'ckr> {
 		Ok(TypeId::UNIT)
 	}
 
-	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> TyResult<TypeId> {
+	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> MessageResult<TypeId> {
 		match stmt {
 			ast::Stmt::Expr(expr) => self.check_expr(expr),
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
@@ -128,6 +121,15 @@ impl<'ckr> Checker<'ckr> {
 		text
 	}
 	pub fn display_type_value(&self, type_value: &Type) -> String {
+		if let Type::Struct(struct_type) = type_value {
+			return format!("struct {}", struct_type.name);
+		}
+		let mut text = String::new();
+		type_value.display_type(&mut text, &self.ctx.type_store, false);
+		text
+	}
+
+	pub fn _display_type_value(&self, type_value: Type) -> String {
 		if let Type::Struct(struct_type) = type_value {
 			return format!("struct {}", struct_type.name);
 		}

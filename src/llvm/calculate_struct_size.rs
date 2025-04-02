@@ -1,6 +1,6 @@
 use inkwell::{types::StructType, values::IntValue, AddressSpace};
 
-use crate::report::throw_llvm_error;
+use crate::error_codegen;
 
 use super::Llvm;
 impl<'ll> Llvm<'ll> {

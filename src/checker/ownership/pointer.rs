@@ -1,0 +1,67 @@
+use core::fmt;
+
+use super::tracker::PtrId;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PtrKind {
+	Owned,
+	MutableBorrow,
+	ReadOnlyBorrow,
+	Copied,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Ptr {
+	pub id: PtrId,
+	pub address: usize,
+	pub kind: PtrKind,
+}
+
+impl Ptr {
+	pub fn new(id: PtrId, address: usize, kind: PtrKind) -> Self {
+		Self { id, address, kind }
+	}
+
+	pub fn new_owned(id: PtrId, address: usize) -> Self {
+		Self { id, address, kind: PtrKind::Owned }
+	}
+	pub fn new_mutable_borrow(id: PtrId, address: usize) -> Self {
+		Self { id, address, kind: PtrKind::MutableBorrow }
+	}
+	pub fn new_readonly_borrow(id: PtrId, address: usize) -> Self {
+		Self { id, address, kind: PtrKind::ReadOnlyBorrow }
+	}
+	pub fn new_copied(id: PtrId, address: usize) -> Self {
+		Self { id, address, kind: PtrKind::Copied }
+	}
+
+	pub fn is_owned(&self) -> bool {
+		matches!(self.kind, PtrKind::Owned)
+	}
+	pub fn is_mutable_borrow(&self) -> bool {
+		matches!(self.kind, PtrKind::MutableBorrow)
+	}
+	pub fn is_read_only_borrow(&self) -> bool {
+		matches!(self.kind, PtrKind::ReadOnlyBorrow)
+	}
+	pub fn is_copied(&self) -> bool {
+		matches!(self.kind, PtrKind::Copied)
+	}
+}
+
+impl fmt::Display for Ptr {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "pointer `{}` (addr: {:#x}, kind: {})", self.id, self.address, self.kind)
+	}
+}
+
+impl fmt::Display for PtrKind {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			PtrKind::Owned => write!(f, "owned"),
+			PtrKind::MutableBorrow => write!(f, "mutable"),
+			PtrKind::ReadOnlyBorrow => write!(f, "immutable"),
+			PtrKind::Copied => write!(f, "copied"),
+		}
+	}
+}

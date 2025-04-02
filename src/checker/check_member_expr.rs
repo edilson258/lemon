@@ -1,10 +1,11 @@
 use super::context::scope::ScopeKind;
 use super::types::{Type, TypeId};
-use super::{Checker, TyResult};
+use super::Checker;
 use crate::ast;
+use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_member_expr(&mut self, member_expr: &mut ast::MemberExpr) -> TyResult<TypeId> {
+	pub fn check_member_expr(&mut self, member_expr: &mut ast::MemberExpr) -> MessageResult<TypeId> {
 		let self_type = self.check_expr(&mut member_expr.left)?;
 		self.ctx.enter_scope(ScopeKind::accessor(self_type, false));
 		let ret = self.check_ident_expr(&mut member_expr.method)?;
@@ -17,7 +18,7 @@ impl Checker<'_> {
 
 		self.ctx.exit_scope();
 		// removo self type
-		member_expr.set_left_type(self_type);
+		self.register_type(self_type, member_expr.get_range());
 		Ok(ret)
 	}
 }

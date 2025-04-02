@@ -1,6 +1,6 @@
 use crate::{
 	ir::{self},
-	report::throw_ir_build_error,
+	throw_error,
 };
 
 use super::Disassembler;
@@ -22,7 +22,7 @@ impl<'ir> Disassembler<'ir> {
 			ir::BasicValue::Char(value) => format!("'{}'", value),
 			ir::BasicValue::Bool(value) => format!("{}", value),
 			ir::BasicValue::None => {
-				throw_ir_build_error("internal 'none' found in ir, please report bug.")
+				throw_error!("internal 'none' found in ir, please report bug.")
 			}
 		}
 	}

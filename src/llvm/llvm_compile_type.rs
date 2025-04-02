@@ -1,4 +1,4 @@
-use crate::{checker::types::TypeId, report::throw_llvm_error};
+use crate::{checker::types::TypeId, error_codegen};
 use inkwell::{types::BasicTypeEnum, AddressSpace};
 
 use super::Llvm;
@@ -7,7 +7,8 @@ impl<'ll> Llvm<'ll> {
 	pub fn compile_type_to_basic_type(&self, type_id: TypeId) -> BasicTypeEnum<'ll> {
 		self.find_llvm_equivalent_type(type_id).unwrap_or_else(|| {
 			let found = self.type_store.get_display_ir_type(type_id);
-			throw_llvm_error(format!("type '{}' not found", found))
+			let message = error_codegen!("cannot find llvm type for '{}'", found);
+			message.report(self.loader);
 		})
 	}
 
@@ -30,7 +31,7 @@ impl<'ll> Llvm<'ll> {
 			TypeId::F64    => Some(self.ctx.f64_type().into()),
 			TypeId::BOOL   => Some(self.ctx.bool_type().into()),
 			found => {
-				let struct_name = self.type_store.get_struct_name(found)?;
+				let struct_name = self.type_store.lookup_struct_name(found)?;
 				self.ctx.get_struct_type(struct_name).map(|t| t.into())
 			}
 		}

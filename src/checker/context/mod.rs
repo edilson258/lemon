@@ -1,29 +1,24 @@
-use super::types::{TypeId, TypeStore};
-use crate::loader::ModId;
-use flow::Flow;
+use super::{
+	events::Event,
+	ownership::tracker::{OwnershipTracker, PtrId},
+	types::{TypeId, TypeStore},
+};
+use crate::{loader::ModId, message::MessageResult};
 use module::Module;
-use ownership::OwnershipId;
 use rustc_hash::FxHashMap;
 use scope::{Scope, ScopeKind};
-use store::Store;
-use value::{Value, ValueId};
+use value::Value;
 
-mod bind;
-mod flow;
 mod module;
-mod ownership;
 pub mod scope;
-pub mod store;
 pub mod value;
 
 #[derive(Debug)]
 pub struct Context {
 	pub scopes: Vec<Scope>,
-	pub flow: Flow,
+	pub event: Event,
 	pub type_store: TypeStore,
-	pub store: Store,
-	pub value_id: ValueId,
-	pub store_id: usize,
+	pub ownership: OwnershipTracker,
 	pub mods: FxHashMap<ModId, Module>,
 	pub mod_id: ModId,
 }
@@ -34,16 +29,11 @@ impl Context {
 	}
 
 	fn new_with_defaults(mod_id: ModId) -> Self {
-		Self {
-			scopes: vec![Scope::default()],
-			flow: Flow::new(),
-			type_store: TypeStore::default(),
-			store: Store::new(),
-			value_id: ValueId::init(),
-			store_id: 0,
-			mods: FxHashMap::default(),
-			mod_id,
-		}
+		let event = Event::new();
+		let type_store = TypeStore::default();
+		let mods = FxHashMap::default();
+		let ownership = OwnershipTracker::new();
+		Self { ownership, scopes: vec![Scope::default()], event, type_store, mods, mod_id }
 	}
 
 	// ======= scope methods =======
@@ -57,7 +47,6 @@ impl Context {
 
 	pub fn enter_scope(&mut self, scope_kind: ScopeKind) {
 		self.scopes.push(Scope::new(scope_kind));
-		self.store_id += 1;
 	}
 
 	pub fn exit_scope(&mut self) {
@@ -154,52 +143,74 @@ impl Context {
 	}
 
 	// ======= value methods =======
-	pub fn add_value(&mut self, name: &str, type_id: TypeId, is_mut: bool) -> ValueId {
-		let value = Value::new_scoped(self.value_id, type_id, is_mut);
-		self.store.add_value_type(self.store_id, name.to_string(), type_id);
+	fn add_value(&mut self, name: &str, value: Value) {
 		self.get_scope_mut().add_variable(name.to_string(), value);
-		self.value_id.next_id()
 	}
 
-	pub fn get_value(&self, name: &str) -> Option<&Value> {
-		self.scopes.iter().rev().find_map(|scope| scope.get_variable(name))
+	pub fn add_type_definition(&mut self, name: String, type_id: TypeId) {
+		self.type_store.add_type_definition(name, type_id);
 	}
 
-	pub fn add_fn_value(&mut self, name: &str, type_id: TypeId) -> ValueId {
-		let value = Value::new_scoped(self.value_id, type_id, false);
-		self.store.add_value_type(self.store_id, name.to_string(), type_id);
+	pub fn lookup_type_definition(&self, name: &str) -> Option<&TypeId> {
+		self.type_store.lookup_type_definition(name)
+	}
+
+	pub fn add_owned_value(&mut self, name: &str, type_id: TypeId, mutable: bool) {
+		let ptr = self.ownership.owned_pointer();
+		let value = Value::new_ptr(type_id, ptr, mutable);
+		self.add_value(name, value);
+	}
+
+	pub fn add_copy_value(&mut self, name: &str, type_id: TypeId, mutable: bool) {
+		let ptr = self.ownership.copied_pointer();
+		let value = Value::new_ptr(type_id, ptr, mutable);
+		self.add_value(name, value);
+	}
+
+	pub fn add_borrowed_value(
+		&mut self,
+		name: &str,
+		type_id: TypeId,
+		mutable: bool,
+		ptr_id: PtrId,
+	) -> MessageResult<()> {
+		let (borrow, succ) = self.ownership.mutable_borrow(ptr_id)?;
+		let value = Value::new_ptr(type_id, succ, mutable);
+		self.add_value(name, value);
+		Ok(())
+	}
+
+	pub fn add_readonly_borrowed_value(
+		&mut self,
+		name: &str,
+		type_id: TypeId,
+		mutable: bool,
+		ptr_id: PtrId,
+	) -> MessageResult<()> {
+		let (borrow, succ) = self.ownership.readonly_borrow(ptr_id)?;
+		let value = Value::new_ptr(type_id, succ, mutable);
+		self.add_value(name, value);
+		Ok(())
+	}
+
+	pub fn lookup_variable_value(&self, name: &str) -> Option<&Value> {
+		self.scopes.iter().rev().find_map(|scope| scope.lookup_variable(name))
+	}
+	pub fn lookup_variable_value_mut(&mut self, name: &str) -> Option<&mut Value> {
+		self.scopes.iter_mut().rev().find_map(|scope| scope.lookup_variable_mut(name))
+	}
+
+	pub fn add_function_value(&mut self, name: &str, type_id: TypeId) {
+		let value = Value::new_fn(type_id);
 		self.get_scope_mut().add_function(name.to_string(), value);
-		self.value_id.next_id()
 	}
 
-	pub fn get_fn_value(&self, name: &str) -> Option<&Value> {
-		self.scopes.iter().rev().find_map(|scope| scope.get_function(name))
+	pub fn lookup_function_value(&self, name: &str) -> Option<&Value> {
+		self.scopes.iter().rev().find_map(|scope| scope.lookup_function(name))
 	}
 
 	pub fn contains_fn_value_in_current_scope(&self, name: &str) -> bool {
 		self.get_scope().has_function(name)
-	}
-
-	// ====== borrow methods =======
-	pub fn add_borrow(&mut self, value_id: ValueId, is_mut: bool) -> Option<OwnershipId> {
-		todo!()
-		// if self.get_scope().can_borrow_as(value_id, is_mut) {
-		// 	Some(self.get_scope_mut().add_borrow_value(value_id, is_mut))
-		// } else {
-		// 	None
-		// }
-	}
-
-	pub fn release_borrow(&mut self, borrow_id: OwnershipId) {
-		// self.get_scope_mut().drop_borrows(borrow_id);
-	}
-
-	#[rustfmt::skip]
-	pub fn can_borrow_as(&self, name: &str, is_mut: bool) -> bool {
-		todo!()
-		// self.get_value(name).map(|value|
-		//   // we should throw an error?
-		// 	self.get_scope().can_borrow_as(value.id, is_mut)).unwrap_or(true)
 	}
 }
 

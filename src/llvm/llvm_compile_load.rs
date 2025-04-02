@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 
 use super::Llvm;
 
@@ -12,6 +12,6 @@ impl Llvm<'_> {
 			self.env.set_value(binary.dest.value.as_str(), value);
 			return;
 		}
-		throw_llvm_error(format!("cannot load from non-pointer '{:#?}'", binary.src));
+		error_codegen!("cannot load from non-pointer '{:#?}'", binary.src).report(self.loader);
 	}
 }
