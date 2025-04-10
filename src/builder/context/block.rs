@@ -1,7 +1,8 @@
 use super::label::Label;
 use crate::{
+	error_build,
 	ir::{Instr, IrBlock},
-	report::throw_error,
+	message::MessageResult,
 };
 
 pub struct Block {
@@ -41,26 +42,29 @@ impl Block {
 	}
 
 	pub fn extract_blocks(&mut self) -> Vec<IrBlock> {
+		let blocks = std::mem::take(&mut self.ir_blocks);
 		self.reset_state();
-		std::mem::take(&mut self.ir_blocks)
+		blocks
 	}
 
-	pub fn append_instr(&mut self, instr: Instr) {
-		self.current_block_mut().append_instr(instr);
+	pub fn append_instr(&mut self, instr: Instr) -> MessageResult<()> {
+		self.current_block_mut()?.append_instr(instr);
+		Ok(())
 	}
 
-	pub fn switch_to_label(&mut self, label: Label) {
+	pub fn switch_to_label(&mut self, label: Label) -> MessageResult<()> {
 		self.has_returned = false;
 		self.current_label = label;
-		self.validate_label_index(label);
+		self.validate_label_index(label)
 	}
 
-	pub fn block_mut(&mut self, label: Label) -> &mut IrBlock {
-		self.validate_label_index(label);
-		&mut self.ir_blocks[label.id.wrapping_sub(1)]
+	pub fn block_mut(&mut self, label: Label) -> MessageResult<&mut IrBlock> {
+		self.validate_label_index(label)?;
+		let block = &mut self.ir_blocks[label.id.wrapping_sub(1)];
+		Ok(block)
 	}
 
-	fn current_block_mut(&mut self) -> &mut IrBlock {
+	fn current_block_mut(&mut self) -> MessageResult<&mut IrBlock> {
 		self.block_mut(self.current_label)
 	}
 
@@ -71,14 +75,13 @@ impl Block {
 		self.ir_blocks = vec![IrBlock::new(self.current_label.into())];
 	}
 
-	fn validate_label_index(&self, label: Label) {
+	fn validate_label_index(&self, label: Label) -> MessageResult<()> {
 		let index = label.id.wrapping_sub(1);
 		if index >= self.ir_blocks.len() {
-			throw_error(format!(
-				"Block index out of range: {}, blocks: {}",
-				label.id,
-				self.ir_blocks.len()
-			));
+			let max = self.ir_blocks.len();
+			let message = error_build!("tried to jump to non-existent block '{}', max '{}'", index, max);
+			return Err(message.note_internal());
 		}
+		Ok(())
 	}
 }

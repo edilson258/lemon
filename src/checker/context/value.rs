@@ -1,54 +1,44 @@
-use crate::checker::types::TypeId;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ValueId(usize);
-
-impl ValueId {
-	pub fn as_usize(self) -> usize {
-		self.0
-	}
-
-	pub fn init() -> Self {
-		Self(0)
-	}
-
-	pub fn next_id(&mut self) -> Self {
-		let id = self.0;
-		self.0 += 1;
-		Self(id)
-	}
-}
+use crate::checker::{ownership::tracker::PtrId, types::TypeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Value {
-	pub id: ValueId,
 	pub type_id: TypeId,
-	pub is_scoped: bool,
-	pub is_mut: bool,
+	pub ptr: PtrId,
+	pub mutable: bool,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FunctionValue {
+	pub type_id: TypeId,
+	pub comptime: bool,
 }
 
 impl Value {
-	pub fn new(id: ValueId, type_id: TypeId, is_mut: bool, is_scoped: bool) -> Self {
-		Self { id, type_id, is_mut, is_scoped }
+	pub fn new(type_id: TypeId, ptr: PtrId, mutable: bool) -> Self {
+		Self { type_id, ptr, mutable }
+	}
+	pub fn new_ptr(type_id: TypeId, ptr: PtrId, mutable: bool) -> Self {
+		Self::new(type_id, ptr, mutable)
+	}
+	pub fn new_mutable(type_id: TypeId, ptr: PtrId) -> Self {
+		Self::new(type_id, ptr, true)
+	}
+	pub fn new_immutable(type_id: TypeId, ptr: PtrId) -> Self {
+		Self::new(type_id, ptr, false)
 	}
 
-	pub fn new_mutable(id: ValueId, type_id: TypeId, is_scoped: bool) -> Self {
-		Self::new(id, type_id, true, is_scoped)
+	pub fn add_ptr(&mut self, ptr: PtrId) {
+		self.ptr = ptr;
 	}
+}
 
-	pub fn new_immutable(id: ValueId, type_id: TypeId, is_scoped: bool) -> Self {
-		Self::new(id, type_id, false, is_scoped)
+impl FunctionValue {
+	pub fn new(type_id: TypeId, comptime: bool) -> Self {
+		Self { type_id, comptime }
 	}
-
-	pub fn new_scoped(id: ValueId, type_id: TypeId, is_mut: bool) -> Self {
-		Self::new(id, type_id, is_mut, true)
+	pub fn new_comptime(type_id: TypeId) -> Self {
+		Self::new(type_id, true)
 	}
-
-	pub fn new_external(id: ValueId, type_id: TypeId, is_mut: bool) -> Self {
-		Self::new(id, type_id, is_mut, false)
-	}
-
-	pub fn get_type_id(self) -> TypeId {
-		self.type_id
+	pub fn new_runtime(type_id: TypeId) -> Self {
+		Self::new(type_id, false)
 	}
 }

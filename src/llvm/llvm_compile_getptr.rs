@@ -1,4 +1,4 @@
-use crate::{ir::GetPtrInstr, report::throw_llvm_error};
+use crate::{error_codegen, ir::GetPtrInstr};
 
 use super::Llvm;
 
@@ -17,13 +17,13 @@ impl Llvm<'_> {
 		let self_name = getptr_instr.self_name.as_str();
 		let self_type = match self.ctx.get_struct_type(self_name) {
 			Some(value) => value,
-			None => throw_llvm_error(format!("failed to get self type: {}", self_name)),
+			None => error_codegen!("failed to get self type: {}", self_name).report(self.loader),
 		};
 
 		let field_ptr = unsafe {
 			match self.builder.build_gep(self_type, self_ptr, &[i32_type.const_zero(), offset], dest) {
 				Ok(value) => value,
-				Err(e) => throw_llvm_error(format!("failed grep: {}", e)),
+				Err(e) => error_codegen!("failed grep: {}", e).report(self.loader),
 			}
 		};
 

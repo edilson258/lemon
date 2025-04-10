@@ -3,8 +3,8 @@ use std::ffi::CString;
 use inkwell::values::{BasicValueEnum, UnnamedAddress};
 
 use crate::{
+	error_codegen,
 	ir::{self},
-	report::throw_llvm_error,
 };
 
 use super::Llvm;

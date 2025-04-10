@@ -6,6 +6,8 @@ use std::{
 	path::{Path, PathBuf},
 };
 
+use crate::{error_resolve, message::MessageResult};
+
 /// Represents the file system context for loading mods and dependencies.
 pub struct FileSystem {
 	/// directory where dependency mods are stored (e.g., ~/.shio/deps/)
@@ -56,19 +58,19 @@ impl FileSystem {
 	}
 
 	/// loads a mod entry from a given path.
-	pub fn load_mod_entry(&mut self, path: &str) -> Result<(String, PathBuf), String> {
+	pub fn load_mod_entry(&mut self, path: &str) -> MessageResult<(String, PathBuf)> {
 		let abs = Self::abs_and_canonical(path);
 		self.load_and_cache_file(&abs, path).map(|contents| (contents, abs))
 	}
 
 	/// loads a dependency from the dependency directory.
-	pub fn load_dependency(&mut self, path: &str) -> Result<(String, PathBuf), String> {
+	pub fn load_dependency(&mut self, path: &str) -> MessageResult<(String, PathBuf)> {
 		let abs = Self::resolve_mod_path(&self.dependency_dir, path);
 		self.load_and_cache_file(&abs, path).map(|contents| (contents, abs))
 	}
 
 	/// loads a dependency path to the current directory.
-	pub fn load_dependency_from_cwd(&mut self, path: &str) -> Result<(String, PathBuf), String> {
+	pub fn load_dependency_from_cwd(&mut self, path: &str) -> MessageResult<(String, PathBuf)> {
 		let abs = Self::resolve_mod_path(&self.current_dir, path);
 		self.load_and_cache_file(&abs, path).map(|contents| (contents, abs))
 	}
@@ -78,37 +80,39 @@ impl FileSystem {
 		&mut self,
 		base: PathBuf,
 		path: &str,
-	) -> Result<(String, PathBuf), String> {
+	) -> MessageResult<(String, PathBuf)> {
 		let abs = Self::resolve_mod_path(&base, path);
 		self.load_and_cache_file(&abs, path).map(|contents| (contents, abs))
 	}
 
 	/// Loads a custom dependency using the custom dependency mapping.
-	pub fn load_custom_dependency(&mut self, key: &str) -> Result<(String, PathBuf), String> {
+	pub fn load_custom_dependency(&mut self, key: &str) -> MessageResult<(String, PathBuf)> {
 		if let Some(dep_base) = self.custom_dependencies.get(key) {
 			let abs = Self::resolve_mod_path(dep_base, key);
 			return self.load_and_cache_file(&abs, key).map(|contents| (contents, abs));
 		}
-		Err(format!("Custom dependency '{}' not found", key))
+		let message = error_resolve!("custom dependency '{}' not found", key);
+		Err(message)
 	}
 
 	/// loads a remote dependency from the remote directory.
-	pub fn load_remote_mod(&mut self, relative: &str) -> Result<(String, PathBuf), String> {
+	pub fn load_remote_mod(&mut self, relative: &str) -> MessageResult<(String, PathBuf)> {
 		let abs = Self::resolve_mod_path(&self.remote_dir, relative);
 		self.load_and_cache_file(&abs, relative).map(|contents| (contents, abs))
 	}
 
 	/// loads a mod from the workspace directory.
-	pub fn load_workspace_mod(&mut self, relative: &str) -> Result<(String, PathBuf), String> {
+	pub fn load_workspace_mod(&mut self, relative: &str) -> MessageResult<(String, PathBuf)> {
 		if let Some(workspace) = &self.workspace_dir {
 			let abs = Self::resolve_mod_path(workspace, relative);
 			return self.load_and_cache_file(&abs, relative).map(|contents| (contents, abs));
 		}
-		Err(format!("Workspace file '{}' not found", relative))
+		let message = error_resolve!("workspace file '{}' not found", relative);
+		Err(message)
 	}
 
 	/// reads a file from disk and caches its contents.
-	fn load_and_cache_file(&mut self, abs: &Path, relative: &str) -> Result<String, String> {
+	fn load_and_cache_file(&mut self, abs: &Path, relative: &str) -> MessageResult<String> {
 		if let Some(contents) = self.in_memory_cache.get(abs) {
 			return Ok(contents.clone());
 		}
@@ -117,15 +121,15 @@ impl FileSystem {
 		Ok(contents)
 	}
 
-	fn read_file(file_path: &Path, relative: &str) -> Result<String, String> {
+	fn read_file(file_path: &Path, relative: &str) -> MessageResult<String> {
 		fs::read_to_string(file_path).map_err(|err| match err.kind() {
-			io::ErrorKind::NotFound => format!("File '{}' not found", relative),
-			io::ErrorKind::PermissionDenied => format!("Permission denied reading '{}'", relative),
+			io::ErrorKind::NotFound => error_resolve!("file '{}' not found", relative),
+			io::ErrorKind::PermissionDenied => error_resolve!("permission denied reading '{}'", relative),
 			io::ErrorKind::IsADirectory => {
-				format!("Expected a file, found directory '{}'", relative)
+				error_resolve!("expected a file, found directory '{}'", relative)
 			}
-			io::ErrorKind::InvalidData => format!("Invalid data encoding in '{}'", relative),
-			_ => format!("Failed to read '{}', unexpected error", relative),
+			io::ErrorKind::InvalidData => error_resolve!("Invalid data encoding in '{}'", relative),
+			_ => error_resolve!("failed to read '{}', unexpected error", relative),
 		})
 	}
 

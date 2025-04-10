@@ -3,7 +3,7 @@ use inkwell::types::BasicType;
 use inkwell::values::{BasicValue, FunctionValue};
 use inkwell::AddressSpace;
 
-use crate::report::throw_llvm_error;
+use crate::error_codegen;
 
 use super::Llvm;
 
@@ -15,20 +15,21 @@ impl<'ll> Llvm<'ll> {
 	pub fn alloc<T: BasicType<'ll>>(&mut self, llvm_t: T, dest: &str) -> Ptr<'ll> {
 		 self.builder.build_alloca(llvm_t, dest)
 			.unwrap_or_else(|err| {
-			throw_llvm_error(format!("cannot allocate at stack, reason `{}`", err))
+			let message = error_codegen!("cannot allocate at stack, reason `{}`", err);
+			message.report(self.loader);
 		})
 	}
 
 	pub fn load<T: BasicType<'ll>>(&mut self, t: T, ptr: Ptr<'ll>, dest: &str) -> ValueEnum<'ll> {
 		match self.builder.build_load(t, ptr, dest) {
 			Ok(value) => value,
-			Err(err) => throw_llvm_error(format!("cannot load from stack, reason `{}`", err)),
+			Err(err) => error_codegen!("cannot load from stack, reason `{}`", err).report(self.loader),
 		}
 	}
 
 	pub fn store<V: BasicValue<'ll>>(&mut self, ptr: Ptr<'ll>, value: V) {
 		if let Err(err) = self.builder.build_store(ptr, value) {
-			throw_llvm_error(format!("cannot store to stack/heap, reason `{}`", err));
+			error_codegen!("cannot store to stack/heap, reason `{}`", err).report(self.loader);
 		}
 	}
 
@@ -37,12 +38,15 @@ impl<'ll> Llvm<'ll> {
 		let llvm_value = self.ctx.i64_type().const_int(size, false);
 		let value = match self.builder.build_call(function_value, &[llvm_value.into()], dest) {
 			Ok(site_value) => site_value,
-			Err(err) => throw_llvm_error(format!("cannot allocate at heap, reason `{}`", err)),
+			Err(err) => error_codegen!("cannot allocate at heap, reason `{}`", err).report(self.loader),
 		};
 
 		match value.try_as_basic_value().left() {
 			Some(value) => value.into_pointer_value(),
-			None => throw_llvm_error("cannot allocate at heap, reason `cannot convert to pointer`"),
+			None => {
+				let message = error_codegen!("cannot allocate at heap, reason `cannot convert to pointer`");
+				message.report(self.loader);
+			}
 		}
 	}
 
@@ -51,7 +55,7 @@ impl<'ll> Llvm<'ll> {
 		let params = [ptr.into()];
 		#[rustfmt::skip]
 		self.builder.build_call(function_value, &params, "r_droped")
-			.unwrap_or_else(|err| throw_llvm_error(format!("cannot drop at heap, reason `{}`", err)));
+			.unwrap_or_else(|err| error_codegen!("cannot drop at heap, reason `{}`", err).report(self.loader));
 	}
 
 	// heap memory

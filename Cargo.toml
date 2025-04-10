@@ -1,5 +1,5 @@
 [package]
-name = "lemonlang"
+name = "lemonc"
 version = "0.0.4"
 edition = "2021"
 description = "an experimental, modern, purely safe, programming language."

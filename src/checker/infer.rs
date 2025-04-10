@@ -1,9 +1,11 @@
+use crate::message::MessageResult;
+
 use super::types::{Type, TypeId};
-use super::{Checker, TyResult};
+use super::Checker;
 
 impl Checker<'_> {
 	pub fn infer_type_from_expected(&self, expected: TypeId, found: TypeId) -> TypeId {
-		if found.is_known() {
+		if found.is_builtin_type() {
 			return found;
 		}
 		if let Type::NumRange(found_range) = self.get_stored_type(found) {
@@ -13,7 +15,7 @@ impl Checker<'_> {
 	}
 
 	pub fn infer_default_type(&self, found: TypeId) -> TypeId {
-		if found.is_known() {
+		if found.is_builtin_type() {
 			return found;
 		}
 		if let Type::NumRange(found_range) = self.get_stored_type(found) {
@@ -22,8 +24,8 @@ impl Checker<'_> {
 		found
 	}
 
-	pub fn unify_types(&self, left: TypeId, right: TypeId) -> TyResult<Option<TypeId>> {
-		if left.is_known() && right.is_known() {
+	pub fn unify_types(&self, left: TypeId, right: TypeId) -> MessageResult<Option<TypeId>> {
+		if left.is_builtin_type() && right.is_builtin_type() {
 			return Ok(None);
 		}
 		let left_type = self.get_stored_type(left);

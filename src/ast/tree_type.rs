@@ -15,6 +15,7 @@ pub enum AstType {
 	Borrow(BorrowType),
 }
 impl AstType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
 		match self {
 			AstType::Number(number) => number.get_range(),
@@ -37,8 +38,9 @@ pub struct BaseType {
 }
 
 impl BaseType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
-		self.range.clone()
+		self.range
 	}
 }
 
@@ -68,8 +70,9 @@ impl NumberType {
 }
 
 impl NumberType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
-		self.range.clone()
+		self.range
 	}
 }
 
@@ -81,13 +84,14 @@ pub struct BorrowType {
 }
 
 impl BorrowType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.value.get_range())
 	}
 
 	pub fn extract_ident(&self) -> Option<(String, Range)> {
 		if let AstType::Ident(ident) = &*self.value {
-			return Some((ident.text.clone(), ident.range.clone()));
+			return Some((ident.text.clone(), ident.range));
 		}
 		if let AstType::Borrow(borrow) = &*self.value {
 			return borrow.extract_ident();
@@ -102,6 +106,7 @@ pub struct DerefType {
 }
 
 impl DerefType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
 		self.range.merged_with(&self.value.get_range())
 	}
@@ -122,8 +127,9 @@ impl FloatType {
 		}
 	}
 
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
-		self.range.clone()
+		self.range
 	}
 }
 
@@ -134,8 +140,9 @@ pub struct IdentType {
 }
 
 impl IdentType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
-		self.range.clone()
+		self.range
 	}
 
 	pub fn lexeme(&self) -> &str {
@@ -152,10 +159,11 @@ pub struct FnType {
 }
 
 impl FnType {
+	#[inline(always)]
 	pub fn get_range(&self) -> Range {
 		if let Some(ret_type) = &self.ret_type {
 			return self.range.merged_with(&ret_type.get_range());
 		}
-		self.range.clone()
+		self.range
 	}
 }

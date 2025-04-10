@@ -1,6 +1,6 @@
 use inkwell::values::BasicValueEnum;
 
-use crate::{checker::types::TypeId, ir, report::throw_llvm_error};
+use crate::{checker::types::TypeId, error_codegen, ir};
 
 use super::Llvm;
 
@@ -11,8 +11,8 @@ impl<'ll> Llvm<'ll> {
 			ir::BasicValue::Float(value) => self.llvm_compile_float(ir_basic_value.get_type(), *value),
 			ir::BasicValue::Bool(value) => self.ctx.bool_type().const_int(*value as u64, false).into(),
 			ir::BasicValue::String(value) => self.llvm_compile_string(value),
-			ir::BasicValue::Char(_) => throw_llvm_error("unsupported char value"),
-			ir::BasicValue::None => throw_llvm_error("unsupported none value"),
+			ir::BasicValue::Char(_) => error_codegen!("unsupported char value").report(self.loader),
+			ir::BasicValue::None => error_codegen!("unsupported none value").report(self.loader),
 			ir::BasicValue::Register(name) => self.llvm_compile_register(name),
 			// ir::BasicValue::String(value) => self.ctx.const_string(value.as_bytes(), true).into(),
 		}
@@ -31,7 +31,10 @@ impl<'ll> Llvm<'ll> {
 
 			TypeId::I64 => self.ctx.i64_type().const_int(value, false).into(),
 			TypeId::U64 => self.ctx.i64_type().const_int(value, true).into(),
-			_ => throw_llvm_error("unsupported int type"),
+			_ => {
+				let display = self.type_store.get_display_type(type_id);
+				error_codegen!("expected integer type, found '{}'", display).report(self.loader)
+			}
 		}
 	}
 
@@ -39,7 +42,10 @@ impl<'ll> Llvm<'ll> {
 		match type_id {
 			TypeId::F32 => self.ctx.f32_type().const_float(value).into(),
 			TypeId::F64 => self.ctx.f64_type().const_float(value).into(),
-			_ => throw_llvm_error("unsupported float type"),
+			_ => {
+				let display = self.type_store.get_display_type(type_id);
+				error_codegen!("expected float type, found '{}'", display).report(self.loader)
+			}
 		}
 	}
 
@@ -62,6 +68,6 @@ impl<'ll> Llvm<'ll> {
 		if let Some(value) = self.env.get_value(name) {
 			return *value;
 		}
-		throw_llvm_error(format!("register not found '{}'", name));
+		error_codegen!("register not found '{}'", name).report(self.loader);
 	}
 }

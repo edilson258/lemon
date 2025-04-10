@@ -1,11 +1,14 @@
-use crate::ast::{self};
+use crate::{
+	ast::{self},
+	message::MessageResult,
+};
 
-use super::{context::scope::ScopeKind, diags::SyntaxErr, types::TypeId, Checker, TyResult};
+use super::{context::scope::ScopeKind, diags::SyntaxErr, Checker, TypedValue};
 
 impl Checker<'_> {
-	pub fn check_impl_stmt(&mut self, impl_stmt: &mut ast::ImplStmt) -> TyResult<TypeId> {
+	pub fn check_impl_stmt(&mut self, impl_stmt: &mut ast::ImplStmt) -> MessageResult<TypedValue> {
 		let self_name = impl_stmt.self_name.lexeme();
-		let self_type_id = self.ctx.type_store.get_type_by_name(self_name).copied();
+		let self_type_id = self.ctx.type_store.lookup_type_definition(self_name).copied();
 		if self_type_id.is_none() {
 			return Err(SyntaxErr::not_found_type(self_name, impl_stmt.self_name.get_range()));
 		}
@@ -30,6 +33,6 @@ impl Checker<'_> {
 
 		self.ctx.exit_scope();
 
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 }

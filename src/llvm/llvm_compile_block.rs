@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 use inkwell::values::FunctionValue;
 
 use super::Llvm;
@@ -7,7 +7,7 @@ impl<'ll> Llvm<'ll> {
 	pub fn llvm_compile_block(&mut self, block: &ir::IrBlock) {
 		let llvm_block = match self.env.get_block(block.llvm_name().as_str()) {
 			Some(block) => block,
-			None => throw_llvm_error(format!("block {} not found", block.llvm_name())),
+			None => error_codegen!("block {} not found", block.llvm_name()).report(self.loader),
 		};
 		self.builder.position_at_end(*llvm_block);
 

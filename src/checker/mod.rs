@@ -1,17 +1,21 @@
 #![allow(dead_code, unused_variables)]
 use crate::{
 	ast,
-	diag::{Diag, DiagGroup},
 	loader::{Loader, ModId},
-	report::throw_error,
+	message::MessageResult,
 };
 
+mod comptime;
 pub mod context;
+pub mod events;
+mod ownership;
 pub mod types;
 use context::Context;
+use ownership::{
+	pointer::PtrKind,
+	tracker::{PtrId, PTR_ID_NONE},
+};
 use types::{Type, TypeId};
-mod synthesis;
-
 mod check_assign_expr;
 mod check_associate_expr;
 mod check_binary_expr;
@@ -38,47 +42,73 @@ mod check_type_def_stmt;
 mod check_while_stmt;
 mod diags;
 mod equal_type;
+mod event;
 mod infer;
-mod infer_generic;
+mod synthesis;
 
-type TyResult<T> = Result<T, Diag>;
+pub struct TypedValue {
+	type_id: TypeId,
+	ptr: PtrId,
+}
+
+impl TypedValue {
+	pub fn new(type_id: TypeId, ptr: PtrId) -> Self {
+		Self { type_id, ptr }
+	}
+
+	pub fn change_type(&mut self, type_id: TypeId) {
+		self.type_id = type_id;
+	}
+
+	pub fn is_unit(&self) -> bool {
+		self.type_id == TypeId::UNIT
+	}
+}
+
+impl Default for TypedValue {
+	fn default() -> Self {
+		Self { type_id: TypeId::UNIT, ptr: PTR_ID_NONE }
+	}
+}
 
 pub struct Checker<'ckr> {
 	ctx: &'ckr mut Context,
 	loader: &'ckr mut Loader,
-	diag_group: &'ckr mut DiagGroup,
 }
 
 impl<'ckr> Checker<'ckr> {
-	pub fn new(
-		diag_group: &'ckr mut DiagGroup,
-		ctx: &'ckr mut Context,
-		loader: &'ckr mut Loader,
-	) -> Self {
-		Self { ctx, diag_group, loader }
+	pub fn new(ctx: &'ckr mut Context, loader: &'ckr mut Loader) -> Self {
+		Self { ctx, loader }
 	}
 
 	pub fn check(&mut self, mod_id: ModId) {
-		if let Err(diag) = self.check_program(mod_id) {
+		if let Err(message) = self.check_program(mod_id) {
 			let mod_id = self.ctx.mod_id;
-			let source = self.loader.get_source_unchecked(mod_id);
-			diag.report_type_err_wrap(source);
+			message.mod_id(mod_id).report(self.loader);
 		}
 	}
-	pub fn check_program(&mut self, mod_id: ModId) -> TyResult<TypeId> {
+
+	pub fn check_program(&mut self, mod_id: ModId) -> MessageResult<TypedValue> {
 		self.ctx.add_entry_mod(mod_id);
-		#[rustfmt::skip]
-		let mut ast = self.loader.get_mod_result(mod_id).cloned().unwrap_or_else(|err| {
-		  // todo: using throw_error_with_range here...
-		  throw_error(err)
+		let mut ast = self.loader.lookup_mod_result(mod_id).cloned().unwrap_or_else(|message| {
+			// todo: using throw_error_with_range here...
+			message.report(self.loader);
 		});
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 
-	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> TyResult<TypeId> {
+	#[inline(always)]
+	pub fn ptr_kind(&self, type_id: TypeId) -> PtrKind {
+		if type_id.is_builtin_type() {
+			return PtrKind::Copied;
+		}
+		PtrKind::Owned
+	}
+
+	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> MessageResult<TypedValue> {
 		match stmt {
 			ast::Stmt::Expr(expr) => self.check_expr(expr),
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
@@ -101,6 +131,11 @@ impl<'ckr> Checker<'ckr> {
 			Some(type_value) => type_value,
 			None => panic!("error: type not found"), // TODO: error handling
 		}
+	}
+
+	pub fn owned_typed_value(&mut self, type_id: TypeId) -> TypedValue {
+		let ptr = self.ctx.ownership.owned_pointer();
+		TypedValue::new(type_id, ptr)
 	}
 
 	pub fn get_stored_type_without_borrow(&self, type_id: TypeId) -> &Type {
@@ -128,6 +163,15 @@ impl<'ckr> Checker<'ckr> {
 		text
 	}
 	pub fn display_type_value(&self, type_value: &Type) -> String {
+		if let Type::Struct(struct_type) = type_value {
+			return format!("struct {}", struct_type.name);
+		}
+		let mut text = String::new();
+		type_value.display_type(&mut text, &self.ctx.type_store, false);
+		text
+	}
+
+	pub fn _display_type_value(&self, type_value: Type) -> String {
 		if let Type::Struct(struct_type) = type_value {
 			return format!("struct {}", struct_type.name);
 		}

@@ -1,4 +1,4 @@
-use crate::report::throw_llvm_error;
+use crate::error_codegen;
 
 use super::Llvm;
 

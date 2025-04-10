@@ -1,5 +1,4 @@
 mod display_type;
-pub mod monomorphic;
 mod store;
 mod type_id;
 
@@ -10,6 +9,8 @@ pub use store::*;
 pub use type_id::*;
 
 use crate::loader::ModId;
+
+use super::ownership::tracker::PtrId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -22,9 +23,12 @@ pub enum Type {
 	// Number
 	NumRange(NumRange),
 	Number(Number),
+
 	Borrow(BorrowType),
+
 	Const(ConstType),
 	Fn(FnType),
+
 	ExternFn(ExternFnType),
 
 	// struct
@@ -254,23 +258,6 @@ impl Number {
 	pub fn is_float(&self) -> bool {
 		matches!(self, Number::F32 | Number::F64)
 	}
-
-	pub fn as_type(&self) -> Type {
-		match self {
-			Number::I8 => Type::Number(Number::I8),
-			Number::I16 => Type::Number(Number::I16),
-			Number::I32 => Type::Number(Number::I32),
-			Number::I64 => Type::Number(Number::I64),
-			Number::Isize => Type::Number(Number::Isize),
-			Number::Usize => Type::Number(Number::Usize),
-			Number::U8 => Type::Number(Number::U8),
-			Number::U16 => Type::Number(Number::U16),
-			Number::U32 => Type::Number(Number::U32),
-			Number::U64 => Type::Number(Number::U64),
-			Number::F32 => Type::Number(Number::F32),
-			Number::F64 => Type::Number(Number::F64),
-		}
-	}
 }
 
 #[derive(Debug, Clone, Eq, Hash)]
@@ -429,13 +416,14 @@ impl StructType {
 pub struct FieldType {
 	pub name: String,
 	pub type_id: TypeId,
+	pub ptr_id: PtrId,
 	pub is_mut: bool,
 	pub is_pub: bool,
 }
 
 impl FieldType {
-	pub fn new(name: String, type_id: TypeId) -> Self {
-		Self { name, type_id, is_mut: false, is_pub: false }
+	pub fn new(name: String, type_id: TypeId, ptr_id: PtrId) -> Self {
+		Self { name, type_id, ptr_id, is_mut: false, is_pub: false }
 	}
 }
 
