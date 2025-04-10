@@ -1,38 +1,42 @@
-use super::{diags::SyntaxErr, types::TypeId, Checker};
+use super::{diags::SyntaxErr, types::TypeId, Checker, TypedValue};
 use crate::{
 	ast::{self, Operator, OperatorKind},
 	message::MessageResult,
 };
 
 impl Checker<'_> {
-	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> MessageResult<TypeId> {
+	pub fn check_binary_expr(
+		&mut self,
+		binary_expr: &mut ast::BinaryExpr,
+	) -> MessageResult<TypedValue> {
 		let left = self.check_expr(&mut binary_expr.left)?;
 		let right = self.check_expr(&mut binary_expr.right)?;
 		let range = binary_expr.get_range();
 		let operator = &binary_expr.operator;
 		let type_id = match operator.kind {
 			// math
-			OperatorKind::ADD | OperatorKind::SUB => self._check_math_operator(left, right, operator)?,
-			OperatorKind::MUL | OperatorKind::DIV => self._check_math_operator(left, right, operator)?,
-
+			OperatorKind::ADD | OperatorKind::SUB | OperatorKind::MUL | OperatorKind::DIV => {
+				self._check_math_operator(left.type_id, right.type_id, operator)?
+			}
 			// compare
-			OperatorKind::GT | OperatorKind::LE => self.check_cmp_operator(left, right, operator)?,
-			OperatorKind::GE | OperatorKind::EQ => self.check_cmp_operator(left, right, operator)?,
-			OperatorKind::LT => self.check_cmp_operator(left, right, operator)?,
+			OperatorKind::GT | OperatorKind::LE | OperatorKind::GE | OperatorKind::EQ => {
+				self.check_cmp_operator(left.type_id, right.type_id, operator)?
+			}
+			OperatorKind::LT => self.check_cmp_operator(left.type_id, right.type_id, operator)?,
 
 			// range and mod
-			OperatorKind::RANGE => self._check_range_operator(left, right, operator)?,
-			OperatorKind::MOD => self._check_mod_operator(left, right, operator)?,
+			OperatorKind::RANGE => self._check_range_operator(left.type_id, right.type_id, operator)?,
+			OperatorKind::MOD => self._check_mod_operator(left.type_id, right.type_id, operator)?,
 
 			// bitwise
-			OperatorKind::AND | OperatorKind::OR => self._check_bitwise(left, right, operator)?,
-			OperatorKind::SHL | OperatorKind::XOR => self._check_bitwise(left, right, operator)?,
-			OperatorKind::SHR => self._check_bitwise(left, right, operator)?,
+			OperatorKind::AND | OperatorKind::OR | OperatorKind::SHL | OperatorKind::XOR => {
+				self._check_bitwise(left.type_id, right.type_id, operator)?
+			}
+			OperatorKind::SHR => self._check_bitwise(left.type_id, right.type_id, operator)?,
 			_ => todo!(),
 		};
-
 		self.register_type(type_id, range);
-		Ok(type_id)
+		Ok(self.owned_typed_value(type_id))
 	}
 
 	fn _check_bitwise(
@@ -43,7 +47,7 @@ impl Checker<'_> {
 	) -> MessageResult<TypeId> {
 		let left = self.infer_type_from_expected(_right, _left);
 		let right = self.infer_type_from_expected(_left, _right);
-		if !left.is_int() || !right.is_int() {
+		if !left.is_int_type() || !right.is_int_type() {
 			let (left, right) = self.display_double_type(left, right);
 			return Err(SyntaxErr::unsupported_operator(left, right, operator));
 		}

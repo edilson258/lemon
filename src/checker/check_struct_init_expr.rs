@@ -1,6 +1,5 @@
 use super::diags::SyntaxErr;
-use super::types::TypeId;
-use super::Checker;
+use super::{Checker, TypedValue};
 use crate::ast;
 use crate::message::MessageResult;
 
@@ -8,7 +7,7 @@ impl Checker<'_> {
 	pub fn check_struct_init_expr(
 		&mut self,
 		init: &mut ast::StructInitExpr,
-	) -> MessageResult<TypeId> {
+	) -> MessageResult<TypedValue> {
 		let lexeme = init.name.lexeme();
 		let range = init.get_range();
 		let found_id = self.ctx.type_store.lookup_type_definition(lexeme).copied();
@@ -54,11 +53,11 @@ impl Checker<'_> {
 			// }
 			//
 			let expect = field_type.type_id;
-			let found = self.infer_type_from_expected(expect, value);
+			let found = self.infer_type_from_expected(expect, value.type_id);
 			self.equal_type_expected(expect, found, range)?;
 			self.register_type(found, range);
 		}
-
-		Ok(found_id)
+		let ptr = self.ctx.ownership.owned_pointer();
+		Ok(TypedValue::new(found_id, ptr))
 	}
 }

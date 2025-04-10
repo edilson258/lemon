@@ -1,6 +1,6 @@
 use crate::{
 	ast::{self},
-	checker::{context::Context, events::EventId, types::FieldType},
+	checker::{context::Context, events::EventId, ownership::tracker::PTR_ID_NONE, types::FieldType},
 	loader::ModId,
 	message::MessageResult,
 };
@@ -24,5 +24,5 @@ pub fn synthesise_field(
 	let name = field.lexeme().to_owned();
 	let type_id = synthesise_ast_type(&field.ast_type, false, ctx)?;
 	ctx.event.add_type(EventId::new(mod_id, field.get_range()), type_id);
-	Ok(FieldType::new(name, type_id))
+	Ok(FieldType::new(name, type_id, PTR_ID_NONE))
 }

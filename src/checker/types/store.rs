@@ -4,9 +4,7 @@ use rustc_hash::{FxHashMap, FxHasher};
 
 use crate::loader::ModId;
 
-use super::{
-	monomorphic::MonomorphicStore, type_id::TypeId, ExternFnType, FnType, InferType, Number, Type,
-};
+use super::{type_id::TypeId, InferType, Number, Type};
 
 // #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 // pub enum LookUpGeneric {
@@ -26,33 +24,15 @@ pub struct TypeStore {
 	// is good?
 	cache: FxHashMap<u64, TypeId>,
 	pub mods: FxHashMap<ModId, TypeId>,
-	pub monomorphic_store: MonomorphicStore,
 }
 
 impl TypeStore {
 	pub fn new(types: Vec<Type>) -> Self {
-		let monomorphic_store = MonomorphicStore::default();
 		let type_definitions = FxHashMap::default();
 		let cache = FxHashMap::default();
 		let generics = FxHashMap::default();
 		let mods = FxHashMap::default();
-		Self { types, type_definitions, cache, generics, monomorphic_store, mods }
-	}
-
-	pub fn add_monomo_fn(&mut self, fn_type: FnType) {
-		self.monomorphic_store.add_fn(fn_type);
-	}
-
-	pub fn add_monomo_extern_fn(&mut self, fn_type: ExternFnType) {
-		self.monomorphic_store.add_extern_fn(fn_type);
-	}
-
-	pub fn create_monomo_fn(&mut self, name: String) {
-		self.monomorphic_store.create_fn(name);
-	}
-
-	pub fn end_monomo_fn(&mut self) {
-		self.monomorphic_store.end_fn();
+		Self { types, type_definitions, cache, generics, mods }
 	}
 
 	pub fn add_mod(&mut self, mod_id: ModId, type_id: TypeId) {
@@ -64,7 +44,7 @@ impl TypeStore {
 	}
 
 	pub fn add_mod_name(&mut self, type_id: TypeId, name: impl Into<String>) {
-		if type_id.is_known() {
+		if type_id.is_builtin_type() {
 			return;
 		}
 		if let Some(Type::Mod(module_type)) = self.get_mut_type(type_id) {
@@ -125,7 +105,7 @@ impl TypeStore {
 	}
 
 	pub fn resolve_borrow_type(&self, type_id: TypeId) -> TypeId {
-		if type_id.is_known() {
+		if type_id.is_builtin_type() {
 			return type_id;
 		}
 		let type_value = self.get_type(type_id).unwrap();
@@ -162,7 +142,7 @@ impl TypeStore {
 	}
 
 	pub fn is_borrow(&self, type_id: TypeId) -> bool {
-		if type_id.is_known() {
+		if type_id.is_builtin_type() {
 			return false;
 		}
 		let type_value = self.get_type(type_id).expect("type not found");
@@ -170,7 +150,7 @@ impl TypeStore {
 	}
 
 	pub fn is_module(&self, type_id: TypeId) -> bool {
-		if type_id.is_known() {
+		if type_id.is_builtin_type() {
 			return false;
 		}
 		let type_value = self.get_type(type_id).expect("type not found");
@@ -203,7 +183,6 @@ impl Default for TypeStore {
 			Number::F64.into(), // 16
 			// internal
 			Type::Unit, // 17
-			Type::Any,  // 18
 		];
 		assert_eq!(types.len(), TypeId::LENGTH);
 		Self::new(types)

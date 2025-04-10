@@ -1,44 +1,44 @@
-use crate::checker::{
-	ownership::{pointer::Ptr, tracker::PtrId},
-	types::TypeId,
-};
+use crate::checker::{ownership::tracker::PtrId, types::TypeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Value {
 	pub type_id: TypeId,
-	pub ptr: Option<Ptr>,
-	pub function: bool,
+	pub ptr: PtrId,
 	pub mutable: bool,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FunctionValue {
+	pub type_id: TypeId,
+	pub comptime: bool,
 }
 
 impl Value {
-	pub fn new(type_id: TypeId, ptr: Option<Ptr>, mutable: bool) -> Self {
-		Self { type_id, ptr, mutable, function: false }
+	pub fn new(type_id: TypeId, ptr: PtrId, mutable: bool) -> Self {
+		Self { type_id, ptr, mutable }
 	}
-	pub fn new_ptr(type_id: TypeId, ptr: Ptr, mutable: bool) -> Self {
-		Self::new(type_id, Some(ptr), mutable)
+	pub fn new_ptr(type_id: TypeId, ptr: PtrId, mutable: bool) -> Self {
+		Self::new(type_id, ptr, mutable)
 	}
-
-	pub fn new_fn(type_id: TypeId) -> Self {
-		Self { type_id, ptr: None, mutable: false, function: true }
+	pub fn new_mutable(type_id: TypeId, ptr: PtrId) -> Self {
+		Self::new(type_id, ptr, true)
 	}
-
-	pub fn new_mutable(type_id: TypeId, ptr: Ptr) -> Self {
-		Self::new(type_id, Some(ptr), true)
+	pub fn new_immutable(type_id: TypeId, ptr: PtrId) -> Self {
+		Self::new(type_id, ptr, false)
 	}
 
-	pub fn new_immutable(type_id: TypeId, ptr: Ptr) -> Self {
-		Self::new(type_id, Some(ptr), false)
+	pub fn add_ptr(&mut self, ptr: PtrId) {
+		self.ptr = ptr;
 	}
+}
 
-	pub fn add_ptr(&mut self, ptr: Ptr) {
-		self.ptr = Some(ptr);
+impl FunctionValue {
+	pub fn new(type_id: TypeId, comptime: bool) -> Self {
+		Self { type_id, comptime }
 	}
-
-	pub fn lookup_ptr_id(&self) -> Option<PtrId> {
-		self.ptr.map(|ptr| ptr.id)
+	pub fn new_comptime(type_id: TypeId) -> Self {
+		Self::new(type_id, true)
 	}
-	pub fn lookup_ptr_id_unchecked(&self) -> PtrId {
-		self.lookup_ptr_id().unwrap()
+	pub fn new_runtime(type_id: TypeId) -> Self {
+		Self::new(type_id, false)
 	}
 }

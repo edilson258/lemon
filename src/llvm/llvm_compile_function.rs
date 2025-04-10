@@ -43,7 +43,7 @@ impl<'ll> Llvm<'ll> {
 		// todo: ignore ret type of main function?
 		let ret_type = if function.is_main() { TypeId::I32 } else { function.ret };
 		let ret_type = self.type_store.resolve_borrow_type(ret_type);
-		if ret_type.is_unit() || ret_type.is_void() {
+		if ret_type.is_empty_type() {
 			return self.ctx.void_type().fn_type(&args_type, function.is_variadic_args());
 		}
 		let llvm_type = self.compile_type_to_basic_type(ret_type);
@@ -79,7 +79,7 @@ impl<'ll> Llvm<'ll> {
 			return;
 		}
 
-		if function.ret.is_nothing() {
+		if function.ret.is_empty_type() {
 			if let Err(err) = self.builder.build_return(None) {
 				error_codegen!("cannot build void return, error: {}", err).report(self.loader);
 			}

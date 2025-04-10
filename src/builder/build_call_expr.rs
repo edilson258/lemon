@@ -21,7 +21,7 @@ impl Builder<'_> {
 			args.insert(0, self_value);
 		}
 
-		if !ret_type.is_nothing() {
+		if !ret_type.is_empty_type() {
 			if let Some(size) = self.is_need_heap_allocation(ret_type) {
 				self.ctx.register_unbound_value(dest.clone());
 				let unary_instr = ir::UnInstr::new(dest.clone(), size.into());
@@ -37,6 +37,7 @@ impl Builder<'_> {
 				});
 			}
 		}
+
 		let call_instr = ir::CallInstr::new(dest.clone(), callee, ret_type, args);
 		let result = self.ctx.current_block.append_instr(call_instr.into());
 		result.unwrap_or_else(|message| {

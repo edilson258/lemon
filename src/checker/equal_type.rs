@@ -11,7 +11,7 @@ impl Checker<'_> {
 		if expected == found {
 			return true;
 		}
-		if expected.is_nothing() && found.is_nothing() {
+		if expected.is_empty_type() && found.is_empty_type() {
 			return true;
 		}
 		let expected_type = self.get_stored_type(expected);

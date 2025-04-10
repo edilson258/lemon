@@ -58,7 +58,7 @@ fn check(matches: &clap::ArgMatches) {
 	parse_mod(mod_id, &mut loader);
 	let mut checker = Checker::new(&mut ctx, &mut loader);
 	checker.check(mod_id);
-	println!("ok in {}.", format_time(timer.elapsed()));
+	println!("ok in {}.", format_time(timer.elapsed(), true));
 }
 
 fn lex(path_name: &str) {

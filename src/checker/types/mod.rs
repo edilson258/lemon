@@ -1,5 +1,4 @@
 mod display_type;
-pub mod monomorphic;
 mod store;
 mod type_id;
 
@@ -10,6 +9,8 @@ pub use store::*;
 pub use type_id::*;
 
 use crate::loader::ModId;
+
+use super::ownership::tracker::PtrId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -415,13 +416,14 @@ impl StructType {
 pub struct FieldType {
 	pub name: String,
 	pub type_id: TypeId,
+	pub ptr_id: PtrId,
 	pub is_mut: bool,
 	pub is_pub: bool,
 }
 
 impl FieldType {
-	pub fn new(name: String, type_id: TypeId) -> Self {
-		Self { name, type_id, is_mut: false, is_pub: false }
+	pub fn new(name: String, type_id: TypeId, ptr_id: PtrId) -> Self {
+		Self { name, type_id, ptr_id, is_mut: false, is_pub: false }
 	}
 }
 

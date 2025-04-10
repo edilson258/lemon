@@ -1,14 +1,14 @@
 use super::context::scope::ScopeKind;
 use super::diags::SyntaxErr;
 use super::types::TypeId;
-use super::{synthesis, Checker};
+use super::{synthesis, Checker, TypedValue};
 
 use crate::ast;
 use crate::message::MessageResult;
 use crate::range::Range;
 
 impl Checker<'_> {
-	pub fn check_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) -> MessageResult<TypeId> {
+	pub fn check_fn_stmt(&mut self, fn_stmt: &mut ast::FnStmt) -> MessageResult<TypedValue> {
 		let mod_id = self.ctx.mod_id;
 		let range = fn_stmt.get_range();
 		let fn_type = synthesis::synthesise_fn_stmt(fn_stmt, self.ctx, mod_id)?;
@@ -40,7 +40,7 @@ impl Checker<'_> {
 			self.ctx.add_pub_function(lexeme.into(), fn_type_id);
 		}
 
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 
 	#[inline(always)]
@@ -67,7 +67,7 @@ impl Checker<'_> {
 	}
 
 	#[inline(always)]
-	pub fn check_fn_body(&mut self, stmt: &mut ast::FnBody) -> MessageResult<TypeId> {
+	pub fn check_fn_body(&mut self, stmt: &mut ast::FnBody) -> MessageResult<TypedValue> {
 		match stmt {
 			ast::FnBody::Block(block_stmt) => self.check_fn_block_stmt(block_stmt),
 			ast::FnBody::Expr(expr) => self.check_ret_expr(expr),
@@ -75,8 +75,8 @@ impl Checker<'_> {
 	}
 
 	#[inline(always)]
-	pub fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> MessageResult<TypeId> {
-		let mut ret_type = TypeId::UNIT;
+	pub fn check_fn_block_stmt(&mut self, stmt: &mut ast::BlockStmt) -> MessageResult<TypedValue> {
+		let mut ret_type = TypedValue::default();
 		for stmt in stmt.stmts.iter_mut() {
 			ret_type = self.check_stmt(stmt)?;
 		}
@@ -84,20 +84,20 @@ impl Checker<'_> {
 	}
 
 	#[inline(always)]
-	pub fn check_ret_expr(&mut self, expr: &mut ast::Expr) -> MessageResult<TypeId> {
+	pub fn check_ret_expr(&mut self, expr: &mut ast::Expr) -> MessageResult<TypedValue> {
 		if !self.ctx.has_function_scope() {
 			// todo: change this error
 			return Err(SyntaxErr::return_outside_fn(expr.get_range()));
 		}
 
 		let expected_ret_id = self.ctx.get_return_type().unwrap();
-		let ret_id = self.check_expr(expr)?;
-		if !self.equal_type_id(expected_ret_id, ret_id) {
+		let ret_value = self.check_expr(expr)?;
+		if !self.equal_type_id(expected_ret_id, ret_value.type_id) {
 			let expected = self.display_type(expected_ret_id);
-			let found = self.display_type(ret_id);
+			let found = self.display_type(ret_value.type_id);
 			return Err(SyntaxErr::type_mismatch(expected, found, expr.get_range()));
 		}
-		Ok(ret_id)
+		Ok(ret_value)
 	}
 
 	pub fn check_exist_fn_name(&mut self, name: &str, range: Range) -> MessageResult<()> {

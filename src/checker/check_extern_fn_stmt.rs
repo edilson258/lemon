@@ -2,15 +2,13 @@ use crate::ast;
 use crate::message::MessageResult;
 
 use super::synthesis::synthesise_extren_fn_stmt;
-use super::Checker;
-
-use super::types::TypeId;
+use super::{Checker, TypedValue};
 
 impl Checker<'_> {
 	pub fn check_extern_fn_stmt(
 		&mut self,
 		extrn_fn: &mut ast::ExternFnStmt,
-	) -> MessageResult<TypeId> {
+	) -> MessageResult<TypedValue> {
 		let fn_type = synthesise_extren_fn_stmt(extrn_fn, self.ctx, self.ctx.mod_id)?;
 		let lexeme = extrn_fn.name.lexeme();
 
@@ -18,6 +16,6 @@ impl Checker<'_> {
 
 		self.ctx.add_function_value(lexeme, type_id);
 
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 }

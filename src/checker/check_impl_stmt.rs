@@ -3,10 +3,10 @@ use crate::{
 	message::MessageResult,
 };
 
-use super::{context::scope::ScopeKind, diags::SyntaxErr, types::TypeId, Checker};
+use super::{context::scope::ScopeKind, diags::SyntaxErr, Checker, TypedValue};
 
 impl Checker<'_> {
-	pub fn check_impl_stmt(&mut self, impl_stmt: &mut ast::ImplStmt) -> MessageResult<TypeId> {
+	pub fn check_impl_stmt(&mut self, impl_stmt: &mut ast::ImplStmt) -> MessageResult<TypedValue> {
 		let self_name = impl_stmt.self_name.lexeme();
 		let self_type_id = self.ctx.type_store.lookup_type_definition(self_name).copied();
 		if self_type_id.is_none() {
@@ -33,6 +33,6 @@ impl Checker<'_> {
 
 		self.ctx.exit_scope();
 
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 }

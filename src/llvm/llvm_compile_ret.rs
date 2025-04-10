@@ -12,7 +12,7 @@ impl Llvm<'_> {
 			return;
 		}
 		let ret_value = ret_value.as_ref().unwrap();
-		if ret_value.type_id.is_void() || ret_value.type_id.is_unit() {
+		if ret_value.type_id.is_empty_type() {
 			self.builder.build_return(None).unwrap_or_else(|err| {
 				error_codegen!("while return void, resson '{}'", err).report(self.loader)
 			});

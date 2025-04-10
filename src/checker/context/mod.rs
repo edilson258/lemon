@@ -7,7 +7,7 @@ use crate::{loader::ModId, message::MessageResult};
 use module::Module;
 use rustc_hash::FxHashMap;
 use scope::{Scope, ScopeKind};
-use value::Value;
+use value::{FunctionValue, Value};
 
 mod module;
 pub mod scope;
@@ -21,6 +21,7 @@ pub struct Context {
 	pub ownership: OwnershipTracker,
 	pub mods: FxHashMap<ModId, Module>,
 	pub mod_id: ModId,
+	pub mark_use: bool,
 }
 
 impl Context {
@@ -33,7 +34,15 @@ impl Context {
 		let type_store = TypeStore::default();
 		let mods = FxHashMap::default();
 		let ownership = OwnershipTracker::new();
-		Self { ownership, scopes: vec![Scope::default()], event, type_store, mods, mod_id }
+		Self {
+			ownership,
+			scopes: vec![Scope::default()],
+			event,
+			type_store,
+			mods,
+			mod_id,
+			mark_use: false,
+		}
 	}
 
 	// ======= scope methods =======
@@ -143,7 +152,7 @@ impl Context {
 	}
 
 	// ======= value methods =======
-	fn add_value(&mut self, name: &str, value: Value) {
+	pub fn add_value(&mut self, name: &str, value: Value) {
 		self.get_scope_mut().add_variable(name.to_string(), value);
 	}
 
@@ -175,7 +184,7 @@ impl Context {
 		ptr_id: PtrId,
 	) -> MessageResult<()> {
 		let (borrow, succ) = self.ownership.mutable_borrow(ptr_id)?;
-		let value = Value::new_ptr(type_id, succ, mutable);
+		let value = Value::new_ptr(type_id, succ.id, mutable);
 		self.add_value(name, value);
 		Ok(())
 	}
@@ -188,7 +197,7 @@ impl Context {
 		ptr_id: PtrId,
 	) -> MessageResult<()> {
 		let (borrow, succ) = self.ownership.readonly_borrow(ptr_id)?;
-		let value = Value::new_ptr(type_id, succ, mutable);
+		let value = Value::new_ptr(type_id, succ.id, mutable);
 		self.add_value(name, value);
 		Ok(())
 	}
@@ -201,11 +210,11 @@ impl Context {
 	}
 
 	pub fn add_function_value(&mut self, name: &str, type_id: TypeId) {
-		let value = Value::new_fn(type_id);
+		let value = FunctionValue::new_runtime(type_id);
 		self.get_scope_mut().add_function(name.to_string(), value);
 	}
 
-	pub fn lookup_function_value(&self, name: &str) -> Option<&Value> {
+	pub fn lookup_function_value(&self, name: &str) -> Option<&FunctionValue> {
 		self.scopes.iter().rev().find_map(|scope| scope.lookup_function(name))
 	}
 

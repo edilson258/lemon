@@ -1,7 +1,7 @@
 use crate::checker::types::TypeId;
 use rustc_hash::FxHashMap;
 
-use super::value::Value;
+use super::value::{FunctionValue, Value};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScopeKind {
@@ -77,7 +77,7 @@ impl ScopeId {
 #[derive(Debug, Clone)]
 pub struct Scope {
 	pub variables: FxHashMap<String, Value>,
-	pub functions: FxHashMap<String, Value>,
+	pub functions: FxHashMap<String, FunctionValue>,
 	pub type_definitions: FxHashMap<String, TypeId>,
 	// pub borrow_tracker: BorrowTracker,
 	pub kind: ScopeKind,
@@ -105,7 +105,7 @@ impl Scope {
 		self.variables.insert(name, value);
 	}
 
-	pub fn add_function(&mut self, name: String, value: Value) {
+	pub fn add_function(&mut self, name: String, value: FunctionValue) {
 		self.functions.insert(name, value);
 	}
 
@@ -116,7 +116,7 @@ impl Scope {
 		self.variables.get_mut(name)
 	}
 
-	pub fn lookup_function(&self, name: &str) -> Option<&Value> {
+	pub fn lookup_function(&self, name: &str) -> Option<&FunctionValue> {
 		self.functions.get(name)
 	}
 

@@ -106,7 +106,7 @@ pub fn compile(path_name: &str, matches: &ArgMatches) {
 	linker.link();
 	execute_term(term.clear_last_lines(1), "");
 
-	let text = format!(" finished in {}.", format_time(timer.elapsed()));
+	let text = format!(" finished in {}.", format_time(timer.elapsed(), true));
 	write_in_term(&term, text, false);
 }
 

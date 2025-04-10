@@ -1,10 +1,9 @@
 use crate::ast;
 use crate::message::MessageResult;
 
-use super::types::TypeId;
-use super::Checker;
+use super::{Checker, TypedValue};
 impl Checker<'_> {
-	pub fn check_expr(&mut self, expr: &mut ast::Expr) -> MessageResult<TypeId> {
+	pub fn check_expr(&mut self, expr: &mut ast::Expr) -> MessageResult<TypedValue> {
 		match expr {
 			ast::Expr::Binary(binary_expr) => self.check_binary_expr(binary_expr),
 			ast::Expr::Literal(literal) => self.check_literal(literal),

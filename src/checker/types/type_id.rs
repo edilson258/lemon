@@ -31,44 +31,53 @@ impl TypeId {
 	// internal
 	pub const UNIT: TypeId = TypeId(17);
 
-	// internal
-	pub const ANY: TypeId = TypeId(18);
-
-	pub const LENGTH: usize = 19; // internal
+	pub const LENGTH: usize = 18; // internal
 
 	// methods
 	pub fn as_usize(&self) -> usize {
 		self.0 as usize
 	}
-	pub fn is_known(&self) -> bool {
+	pub fn is_builtin_type(&self) -> bool {
 		self.0 < TypeId::LENGTH as u64
 	}
 
-	pub fn is_unit(&self) -> bool {
+	pub fn is_unit_type(&self) -> bool {
 		self.0 == TypeId::UNIT.0
 	}
 
-	pub fn is_void(&self) -> bool {
+	pub fn is_void_type(&self) -> bool {
 		self.0 == TypeId::VOID.0
 	}
 
-	pub fn is_int(&self) -> bool {
-		self.0 >= TypeId::I8.0 && self.0 <= TypeId::I64.0 || self.is_unit()
+	pub fn is_bool_type(&self) -> bool {
+		self.0 == TypeId::BOOL.0
 	}
 
-	pub fn is_number(&self) -> bool {
+	pub fn is_usize_type(&self) -> bool {
+		self.0 == TypeId::USIZE.0
+	}
+
+	pub fn is_int_type(&self) -> bool {
+		self.0 >= TypeId::I8.0 && self.0 <= TypeId::I64.0
+	}
+
+	pub fn is_number_type(&self) -> bool {
 		self.0 >= TypeId::I8.0 && self.0 <= TypeId::F64.0
 	}
 
-	pub fn is_string(&self) -> bool {
-		self.0 == TypeId::STRING.0
-	}
-
-	pub fn is_str(&self) -> bool {
+	pub fn is_str_type(&self) -> bool {
 		self.0 == TypeId::STR.0
 	}
 
-	pub fn is_char(&self) -> bool {
+	pub fn is_string_type(&self) -> bool {
+		self.0 == TypeId::STRING.0
+	}
+
+	pub fn is_textual_type(&self) -> bool {
+		self.is_str_type() || self.is_string_type()
+	}
+
+	pub fn is_char_type(&self) -> bool {
 		self.0 == TypeId::CHAR.0
 	}
 
@@ -76,12 +85,9 @@ impl TypeId {
 		self.0 >= TypeId::F32.0 && self.0 <= TypeId::F64.0
 	}
 
-	pub fn is_any(&self) -> bool {
-		self.0 == TypeId::ANY.0
-	}
-
-	pub fn is_nothing(&self) -> bool {
-		self.is_void() || self.is_unit()
+	/// true if the type is empty, void or unit
+	pub fn is_empty_type(&self) -> bool {
+		self.is_void_type() || self.is_unit_type()
 	}
 
 	pub fn get_size(&self) -> usize {
@@ -107,15 +113,11 @@ impl TypeId {
 	}
 
 	pub fn equals(&self, other: &Self) -> bool {
-		if self.is_nothing() && other.is_nothing() {
+		if self.is_empty_type() && other.is_empty_type() {
 			return true;
 		}
 		self.0 == other.0
 	}
-
-	// pub fn is_infer(&self) -> bool {
-	// 	self.0 >= TypeId::INFER.0
-	// }
 }
 
 impl From<&Number> for TypeId {

@@ -4,7 +4,7 @@ use super::Builder;
 
 impl Builder<'_> {
 	pub fn is_need_heap_allocation(&self, value_type: TypeId) -> Option<usize> {
-		if value_type.is_known() || self.type_store.is_borrow(value_type) {
+		if value_type.is_builtin_type() || self.type_store.is_borrow(value_type) {
 			return None;
 		}
 		let value_name = match self.type_store.lookup_struct_name(value_type) {

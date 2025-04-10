@@ -23,7 +23,7 @@ impl Builder<'_> {
 		let value = self.ctx.create_register(kind);
 		// fix: remove this
 		//
-		if !kind.is_str() {
+		if !kind.is_str_type() {
 			self.ctx.mark_skip_loading(value.get_value().as_str());
 		}
 

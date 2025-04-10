@@ -6,18 +6,21 @@ use crate::{
 use super::{
 	diags::SyntaxErr,
 	types::{Type, TypeId},
-	Checker,
+	Checker, TypedValue,
 };
 
 impl Checker<'_> {
-	pub fn check_assign_expr(&mut self, assign_expr: &mut ast::AssignExpr) -> MessageResult<TypeId> {
+	pub fn check_assign_expr(
+		&mut self,
+		assign_expr: &mut ast::AssignExpr,
+	) -> MessageResult<TypedValue> {
 		let found = self.check_expr(&mut assign_expr.right)?;
-		if self.ctx.type_store.is_module(found) {
+		if self.ctx.type_store.is_module(found.type_id) {
 			return Err(SyntaxErr::cannot_reassign_module(assign_expr.get_range()));
 		}
-		let expected = self.assign_left_expr(&mut assign_expr.left, found)?;
+		let expected = self.assign_left_expr(&mut assign_expr.left, found.type_id)?;
 		self.register_type(expected, assign_expr.get_range());
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 
 	fn assign_left_expr(&mut self, expr: &mut ast::Expr, found_id: TypeId) -> MessageResult<TypeId> {
@@ -54,9 +57,9 @@ impl Checker<'_> {
 			return Err(SyntaxErr::cannot_assign_immutable(&name, deref.get_range()));
 		}
 
-		let found = self.infer_type_from_expected(expected, found);
-		self.equal_type_expected(expected, found, deref.get_range())?;
-		Ok(expected)
+		let found = self.infer_type_from_expected(expected.type_id, found);
+		self.equal_type_expected(expected.type_id, found, deref.get_range())?;
+		Ok(expected.type_id)
 	}
 
 	fn assign_member_expr(
@@ -66,7 +69,7 @@ impl Checker<'_> {
 	) -> MessageResult<TypeId> {
 		let self_type = self.check_expr(&mut member.left)?;
 		// todo: don;t clone type
-		let self_type = self.get_stored_type(self_type).clone();
+		let self_type = self.get_stored_type(self_type.type_id).clone();
 		if let Type::Struct(struct_type) = self_type {
 			let lexeme = member.method.lexeme();
 			let field = struct_type.get_field(lexeme);

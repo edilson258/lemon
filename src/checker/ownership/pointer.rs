@@ -1,5 +1,7 @@
 use core::fmt;
 
+use rustc_hash::FxHashSet;
+
 use super::tracker::PtrId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -10,29 +12,50 @@ pub enum PtrKind {
 	Copied,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+impl PtrKind {
+	pub fn is_mutable_borrow(&self) -> bool {
+		matches!(self, PtrKind::MutableBorrow)
+	}
+
+	pub fn is_read_only_borrow(&self) -> bool {
+		matches!(self, PtrKind::ReadOnlyBorrow)
+	}
+}
+
+pub const MAX_ADDRESS_BY_PTR: usize = 4;
+pub type Addresses = FxHashSet<usize>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ptr {
 	pub id: PtrId,
-	pub address: usize,
+	pub addresses: FxHashSet<usize>,
 	pub kind: PtrKind,
 }
 
 impl Ptr {
 	pub fn new(id: PtrId, address: usize, kind: PtrKind) -> Self {
-		Self { id, address, kind }
+		let addresses = FxHashSet::default();
+		Self { id, addresses, kind }
 	}
 
 	pub fn new_owned(id: PtrId, address: usize) -> Self {
-		Self { id, address, kind: PtrKind::Owned }
+		let addresses = FxHashSet::default();
+		Self { id, addresses, kind: PtrKind::Owned }
 	}
 	pub fn new_mutable_borrow(id: PtrId, address: usize) -> Self {
-		Self { id, address, kind: PtrKind::MutableBorrow }
+		let addresses = FxHashSet::default();
+		Self { id, addresses, kind: PtrKind::MutableBorrow }
 	}
 	pub fn new_readonly_borrow(id: PtrId, address: usize) -> Self {
-		Self { id, address, kind: PtrKind::ReadOnlyBorrow }
+		let addresses = FxHashSet::default();
+		Self { id, addresses, kind: PtrKind::ReadOnlyBorrow }
 	}
 	pub fn new_copied(id: PtrId, address: usize) -> Self {
-		Self { id, address, kind: PtrKind::Copied }
+		let addresses = FxHashSet::default();
+		Self { id, addresses, kind: PtrKind::Copied }
+	}
+	pub fn new_addresses(id: PtrId, addresses: Addresses, kind: PtrKind) -> Self {
+		Self { id, addresses, kind }
 	}
 
 	pub fn is_owned(&self) -> bool {
@@ -51,7 +74,7 @@ impl Ptr {
 
 impl fmt::Display for Ptr {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "pointer `{}` (addr: {:#x}, kind: {})", self.id, self.address, self.kind)
+		write!(f, "pointer '{}'  kind '{}'", self.id, self.kind)
 	}
 }
 

@@ -11,6 +11,10 @@ pub mod events;
 mod ownership;
 pub mod types;
 use context::Context;
+use ownership::{
+	pointer::PtrKind,
+	tracker::{PtrId, PTR_ID_NONE},
+};
 use types::{Type, TypeId};
 mod check_assign_expr;
 mod check_associate_expr;
@@ -42,6 +46,31 @@ mod event;
 mod infer;
 mod synthesis;
 
+pub struct TypedValue {
+	type_id: TypeId,
+	ptr: PtrId,
+}
+
+impl TypedValue {
+	pub fn new(type_id: TypeId, ptr: PtrId) -> Self {
+		Self { type_id, ptr }
+	}
+
+	pub fn change_type(&mut self, type_id: TypeId) {
+		self.type_id = type_id;
+	}
+
+	pub fn is_unit(&self) -> bool {
+		self.type_id == TypeId::UNIT
+	}
+}
+
+impl Default for TypedValue {
+	fn default() -> Self {
+		Self { type_id: TypeId::UNIT, ptr: PTR_ID_NONE }
+	}
+}
+
 pub struct Checker<'ckr> {
 	ctx: &'ckr mut Context,
 	loader: &'ckr mut Loader,
@@ -59,7 +88,7 @@ impl<'ckr> Checker<'ckr> {
 		}
 	}
 
-	pub fn check_program(&mut self, mod_id: ModId) -> MessageResult<TypeId> {
+	pub fn check_program(&mut self, mod_id: ModId) -> MessageResult<TypedValue> {
 		self.ctx.add_entry_mod(mod_id);
 		let mut ast = self.loader.lookup_mod_result(mod_id).cloned().unwrap_or_else(|message| {
 			// todo: using throw_error_with_range here...
@@ -68,10 +97,18 @@ impl<'ckr> Checker<'ckr> {
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}
-		Ok(TypeId::UNIT)
+		Ok(TypedValue::default())
 	}
 
-	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> MessageResult<TypeId> {
+	#[inline(always)]
+	pub fn ptr_kind(&self, type_id: TypeId) -> PtrKind {
+		if type_id.is_builtin_type() {
+			return PtrKind::Copied;
+		}
+		PtrKind::Owned
+	}
+
+	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> MessageResult<TypedValue> {
 		match stmt {
 			ast::Stmt::Expr(expr) => self.check_expr(expr),
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
@@ -94,6 +131,11 @@ impl<'ckr> Checker<'ckr> {
 			Some(type_value) => type_value,
 			None => panic!("error: type not found"), // TODO: error handling
 		}
+	}
+
+	pub fn owned_typed_value(&mut self, type_id: TypeId) -> TypedValue {
+		let ptr = self.ctx.ownership.owned_pointer();
+		TypedValue::new(type_id, ptr)
 	}
 
 	pub fn get_stored_type_without_borrow(&self, type_id: TypeId) -> &Type {
