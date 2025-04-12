@@ -13,10 +13,9 @@ impl Builder<'_> {
 		let rhs = self.build_expr(&mut binary_expr.right);
 
 		let type_id = self.lookup_event_type(range);
-
-		let dest = self.ctx.create_register(type_id);
-
-		let alloc_instr = ir::SallocInstr::new(dest.clone(), type_id);
+		let operator_id = self.lookup_event_type(binary_expr.operator.get_range());
+		let dest = self.ctx.create_register(operator_id);
+		let alloc_instr = ir::SallocInstr::new(dest.clone(), operator_id);
 		let result = self.ctx.current_block.append_instr(alloc_instr.into());
 		result.unwrap_or_else(|message| {
 			message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
