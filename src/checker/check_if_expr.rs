@@ -15,6 +15,7 @@ impl Checker<'_> {
 				self.equal_type_expected(then.type_id, otherwise.type_id, if_expr.otherwise.get_range())?
 			}
 		};
-		Ok(TypedValue { type_id: if_expr_typed, ptr: 0 })
+		self.register_type(if_expr_typed, if_expr.get_range());
+		Ok(self.owned_typed_value(if_expr_typed))
 	}
 }
