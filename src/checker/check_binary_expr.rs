@@ -36,6 +36,7 @@ impl Checker<'_> {
 			GT | LE | GE | EQ | LT => {
 				let type_id = self.unify_types(left, right)?.unwrap_or(left);
 				self.register_type(type_id, range);
+				self.register_type(TypeId::BOOL, operator.get_range());
 				return self.check_cmp_operator(left, right, operator);
 			}
 
@@ -49,6 +50,7 @@ impl Checker<'_> {
 			_ => todo!(),
 		};
 		self.register_type(found_id, range);
+		self.register_type(found_id, operator.get_range());
 		Ok(found_id)
 	}
 
