@@ -158,6 +158,8 @@ l0: own 50 -> r0 # compute constant values at compile time
 3. lemon runtime (dev mode)
 
 -->
+##### WIP
+This is highly in progress, so it's accepted and even expected that at any point the main branch may be broken.
 
 #### Versioning strategy
 
