@@ -639,9 +639,9 @@ impl<'p> Parser<'p> {
 		let range = self.expect(Token::If)?;
 		self.expect(Token::LParen)?;
 		let cond = self.parse_expr(MIN_PDE)?;
-		self.expect_many(vec![Token::RParen, Token::LBrace])?;
+		self.expect_many(&[Token::RParen, Token::LBrace])?;
 		let then = self.parse_expr(MIN_PDE)?;
-		self.expect_many(vec![Token::RBrace, Token::Else, Token::LBrace])?;
+		self.expect_many(&[Token::RBrace, Token::Else, Token::LBrace])?;
 		let otherwise = self.parse_expr(MIN_PDE)?;
 		self.expect(Token::RBrace)?;
 		Ok(ast::IfExpr::new(Box::new(cond), Box::new(then), Box::new(otherwise), range))
@@ -795,15 +795,14 @@ impl<'p> Parser<'p> {
 		}
 	}
 
-	fn expect_many(&mut self, tokens: Vec<Token>) -> MessageResult<Range> {
-		Ok(if tokens.is_empty() {
-			Range::default()
-		} else {
-			tokens
-				.iter()
-				.skip(1)
-				.try_fold(self.expect(tokens[0])?, |acc, &t| Ok(acc.merged_with(&self.expect(t)?)))?
-		})
+	fn expect_many(&mut self, tokens: &[Token]) -> MessageResult<Option<Range>> {
+		let mut tokens = tokens.iter().copied();
+		let Some(first) = tokens.next() else {
+			return Ok(None);
+		};
+		tokens
+			.try_fold(self.expect(first)?, |acc, token| Ok(acc.merged_with(&self.expect(token)?)))
+			.map(Some)
 	}
 
 	fn expect(&mut self, token: Token) -> MessageResult<Range> {
