@@ -27,10 +27,6 @@ insta = "1.41.1"
 stdext = "0.3.3"
 walkdir = "2.5.0"
 
-[[bin]]
-name = "lemon"
-path = "src/main.rs"
-
 
 [profile.release]
 # Configurations explicitly listed here for clarity.
