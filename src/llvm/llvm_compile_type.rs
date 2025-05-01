@@ -6,7 +6,7 @@ impl<'ll> Llvm<'ll> {
 	#[inline(always)]
 	pub fn compile_type_to_basic_type(&self, type_id: TypeId) -> BasicTypeEnum<'ll> {
 		self.find_llvm_equivalent_type(type_id).unwrap_or_else(|| {
-			let found = self.type_store.get_display_ir_type(type_id);
+			let found = self.type_store.lookup_display_ir_type(type_id);
 			let message = error_codegen!("cannot find llvm type for '{}'", found);
 			message.report(self.loader);
 		})

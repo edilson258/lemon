@@ -1,16 +1,16 @@
-use super::{diags::SyntaxErr, types::TypeId, Checker, TypedValue};
+use super::{
+	diags::SyntaxErr, typed_value::TypedValue, types::TypeId, CheckResult, Checker, ExpectSome,
+};
 use crate::{
 	ast::{self, Operator, OperatorKind},
 	message::MessageResult,
 };
 
 impl Checker<'_> {
-	pub fn check_binary_expr(
-		&mut self,
-		binary_expr: &mut ast::BinaryExpr,
-	) -> MessageResult<TypedValue> {
-		let left = self.check_expr(&mut binary_expr.left)?;
-		let right = self.check_expr(&mut binary_expr.right)?;
+	pub fn check_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> CheckResult {
+		let left = self.check_expr(&mut binary_expr.left).some(binary_expr.left.get_range())?;
+		let right = self.check_expr(&mut binary_expr.right).some(binary_expr.right.get_range())?;
+
 		let range = binary_expr.get_range();
 		let operator = &binary_expr.operator;
 		let type_id = match operator.kind {
@@ -36,7 +36,8 @@ impl Checker<'_> {
 			_ => todo!(),
 		};
 		self.register_type(type_id, range);
-		Ok(self.owned_typed_value(type_id))
+		let owner = self.ctx.borrow.create_owner();
+		Ok(Some(TypedValue::new(type_id, owner)))
 	}
 
 	fn _check_bitwise(

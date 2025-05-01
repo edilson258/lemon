@@ -35,7 +35,7 @@ fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> MessageRe
 		};
 		return Ok(self_type);
 	}
-	if let Some(infer_id) = ctx.type_store.get_infer_id(ident.lexeme()) {
+	if let Some(infer_id) = ctx.type_store.lookup_infer_id(ident.lexeme()) {
 		return Ok(*infer_id);
 	}
 

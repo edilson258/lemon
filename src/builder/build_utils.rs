@@ -10,7 +10,7 @@ impl Builder<'_> {
 		let value_name = match self.type_store.lookup_struct_name(value_type) {
 			Some(name) => name,
 			None => {
-				let type_text = self.type_store.get_display_ir_type(value_type);
+				let type_text = self.type_store.lookup_display_ir_type(value_type);
 				error_build!("cannot find struct name for type {}", type_text).report(self.loader);
 			}
 		};

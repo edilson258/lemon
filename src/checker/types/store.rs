@@ -39,7 +39,7 @@ impl TypeStore {
 		self.mods.insert(mod_id, type_id);
 	}
 
-	pub fn get_mod(&self, mod_id: ModId) -> Option<&TypeId> {
+	pub fn lookup_mod(&self, mod_id: ModId) -> Option<&TypeId> {
 		self.mods.get(&mod_id)
 	}
 
@@ -47,7 +47,7 @@ impl TypeStore {
 		if type_id.is_builtin_type() {
 			return;
 		}
-		if let Some(Type::Mod(module_type)) = self.get_mut_type(type_id) {
+		if let Some(Type::Mod(module_type)) = self.lookup_mut_type(type_id) {
 			module_type.set_name(name.into());
 		}
 	}
@@ -59,15 +59,15 @@ impl TypeStore {
 		type_id
 	}
 
-	pub fn get_infer_type(&self, id: &str) -> Option<&InferType> {
-		let type_id = self.get_infer_id(id)?;
-		match self.get_type(*type_id) {
+	pub fn lookup_infer_type(&self, id: &str) -> Option<&InferType> {
+		let type_id = self.lookup_infer_id(id)?;
+		match self.lookup_type(*type_id) {
 			Some(Type::Infer(infer)) => Some(infer),
 			_ => None,
 		}
 	}
 
-	pub fn get_infer_id(&self, id: &str) -> Option<&TypeId> {
+	pub fn lookup_infer_id(&self, id: &str) -> Option<&TypeId> {
 		self.generics.get(id)
 	}
 
@@ -97,10 +97,10 @@ impl TypeStore {
 		ty.hash(&mut hasher);
 		hasher.finish()
 	}
-	pub fn get_type(&self, type_id: TypeId) -> Option<&Type> {
+	pub fn lookup_type(&self, type_id: TypeId) -> Option<&Type> {
 		self.types.get(type_id.as_usize())
 	}
-	pub fn get_mut_type(&mut self, type_id: TypeId) -> Option<&mut Type> {
+	pub fn lookup_mut_type(&mut self, type_id: TypeId) -> Option<&mut Type> {
 		self.types.get_mut(type_id.as_usize())
 	}
 
@@ -108,23 +108,23 @@ impl TypeStore {
 		if type_id.is_builtin_type() {
 			return type_id;
 		}
-		let type_value = self.get_type(type_id).unwrap();
+		let type_value = self.lookup_type(type_id).unwrap();
 		match type_value {
 			Type::Borrow(borrow) => self.resolve_borrow_type(borrow.value),
 			_ => type_id,
 		}
 	}
 
-	pub fn get_display_type(&self, type_id: TypeId) -> String {
+	pub fn lookup_display_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
-		let type_value = self.get_type(type_id).unwrap();
+		let type_value = self.lookup_type(type_id).unwrap();
 		type_value.display_type(&mut text, self, false);
 		text
 	}
 
-	pub fn get_display_ir_type(&self, type_id: TypeId) -> String {
+	pub fn lookup_display_ir_type(&self, type_id: TypeId) -> String {
 		let mut text = String::new();
-		let type_value = self.get_type(type_id).unwrap();
+		let type_value = self.lookup_type(type_id).unwrap();
 		if type_value.is_borrow() {
 			return "ptr".to_owned();
 		}
@@ -133,7 +133,7 @@ impl TypeStore {
 	}
 
 	pub fn lookup_struct_name(&self, type_id: TypeId) -> Option<&str> {
-		let type_value = self.get_type(type_id);
+		let type_value = self.lookup_type(type_id);
 		if let Some(Type::Struct(struct_type)) = type_value {
 			Some(struct_type.name.as_str())
 		} else {
@@ -145,7 +145,7 @@ impl TypeStore {
 		if type_id.is_builtin_type() {
 			return false;
 		}
-		let type_value = self.get_type(type_id).expect("type not found");
+		let type_value = self.lookup_type(type_id).expect("type not found");
 		type_value.is_borrow()
 	}
 
@@ -153,7 +153,7 @@ impl TypeStore {
 		if type_id.is_builtin_type() {
 			return false;
 		}
-		let type_value = self.get_type(type_id).expect("type not found");
+		let type_value = self.lookup_type(type_id).expect("type not found");
 		type_value.is_module()
 	}
 }

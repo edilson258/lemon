@@ -1,14 +1,12 @@
-use super::{diags::SyntaxErr, Checker, TypedValue};
-use crate::{ast, message::MessageResult};
+use super::{diags::SyntaxErr, CheckResult, Checker};
+use crate::ast;
 
 impl Checker<'_> {
-	pub fn check_const_fn_stmt(
-		&mut self,
-		const_fn: &mut ast::ConstFnStmt,
-	) -> MessageResult<TypedValue> {
+	pub fn check_const_fn_stmt(&mut self, c: &mut ast::ConstFnStmt) -> CheckResult {
 		if !self.ctx.is_global_scope() {
-			return Err(SyntaxErr::const_outside_global_scope(const_fn.range));
+			return Err(SyntaxErr::const_outside_global_scope(c.range));
 		}
-		Ok(TypedValue::default())
+		todo!()
+		// Ok(TypedValue::default())
 	}
 }

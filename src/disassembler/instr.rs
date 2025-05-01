@@ -46,7 +46,7 @@ impl<'ir> Disassembler<'ir> {
 
 	pub fn disassemble_salloc_instr(&self, instr: &'ir ir::SallocInstr, output: &mut String) {
 		let dest = self.disassemble_basic_value(&instr.dest);
-		let size = self.type_store.get_display_ir_type(instr.size);
+		let size = self.type_store.lookup_display_ir_type(instr.size);
 		output.push_str(&format!("{} = stack {}", dest, size));
 	}
 	pub fn disassemble_halloc_instr(&self, instr: &'ir ir::UnInstr, output: &mut String) {
@@ -102,7 +102,7 @@ impl<'ir> Disassembler<'ir> {
 			args.push(self.disassemble_value(arg));
 		}
 		let dest = self.disassemble_basic_value(&instr.dest);
-		let type_name = self.type_store.get_display_ir_type(instr.ret_id);
+		let type_name = self.type_store.lookup_display_ir_type(instr.ret_id);
 
 		let fmt = format!("{} = call {} {}({})", dest, type_name, instr.callee, args.join(", "));
 		output.push_str(&fmt);

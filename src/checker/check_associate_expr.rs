@@ -1,14 +1,10 @@
 use super::context::scope::ScopeKind;
 use super::diags::SyntaxErr;
-use super::{Checker, TypedValue};
+use super::{CheckResult, Checker};
 use crate::ast;
-use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_associate_expr(
-		&mut self,
-		associate: &mut ast::AssociateExpr,
-	) -> MessageResult<TypedValue> {
+	pub fn check_associate_expr(&mut self, associate: &mut ast::AssociateExpr) -> CheckResult {
 		let self_name = associate.self_name.lexeme();
 		let self_type_id = match self.ctx.type_store.lookup_type_definition(self_name) {
 			Some(type_id) => *type_id,

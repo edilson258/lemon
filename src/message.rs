@@ -203,6 +203,11 @@ impl Message {
 		}
 	}
 
+	pub fn error_internal(text: impl Into<String>, stage: Stage, range: Range) -> Message {
+		let message = Message::error(text);
+		message.stage(stage).range(range).note_internal()
+	}
+
 	pub fn warning(text: impl Into<String>) -> Message {
 		Message {
 			severity: Severity::Warning,

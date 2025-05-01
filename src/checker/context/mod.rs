@@ -1,9 +1,9 @@
 use super::{
+	borrow::BorrowChecker,
 	events::Event,
-	ownership::tracker::{OwnershipTracker, PtrId},
 	types::{TypeId, TypeStore},
 };
-use crate::{loader::ModId, message::MessageResult};
+use crate::loader::ModId;
 use module::Module;
 use rustc_hash::FxHashMap;
 use scope::{Scope, ScopeKind};
@@ -18,7 +18,7 @@ pub struct Context {
 	pub scopes: Vec<Scope>,
 	pub event: Event,
 	pub type_store: TypeStore,
-	pub ownership: OwnershipTracker,
+	pub borrow: BorrowChecker,
 	pub mods: FxHashMap<ModId, Module>,
 	pub mod_id: ModId,
 	pub mark_use: bool,
@@ -33,11 +33,11 @@ impl Context {
 		let event = Event::new();
 		let type_store = TypeStore::default();
 		let mods = FxHashMap::default();
-		let ownership = OwnershipTracker::new();
+		let borrow = BorrowChecker::new();
 		Self {
-			ownership,
 			scopes: vec![Scope::default()],
 			event,
+			borrow,
 			type_store,
 			mods,
 			mod_id,
@@ -59,7 +59,10 @@ impl Context {
 	}
 
 	pub fn exit_scope(&mut self) {
-		self.scopes.pop();
+		let Some(scope) = self.scopes.pop() else {
+			return;
+		};
+		self.borrow.release_all_from_scope(&scope);
 	}
 
 	pub fn is_global_scope(&self) -> bool {
@@ -164,44 +167,6 @@ impl Context {
 		self.type_store.lookup_type_definition(name)
 	}
 
-	pub fn add_owned_value(&mut self, name: &str, type_id: TypeId, mutable: bool) {
-		let ptr = self.ownership.owned_pointer();
-		let value = Value::new_ptr(type_id, ptr, mutable);
-		self.add_value(name, value);
-	}
-
-	pub fn add_copy_value(&mut self, name: &str, type_id: TypeId, mutable: bool) {
-		let ptr = self.ownership.copied_pointer();
-		let value = Value::new_ptr(type_id, ptr, mutable);
-		self.add_value(name, value);
-	}
-
-	pub fn add_borrowed_value(
-		&mut self,
-		name: &str,
-		type_id: TypeId,
-		mutable: bool,
-		ptr_id: PtrId,
-	) -> MessageResult<()> {
-		let (borrow, succ) = self.ownership.mutable_borrow(ptr_id)?;
-		let value = Value::new_ptr(type_id, succ.id, mutable);
-		self.add_value(name, value);
-		Ok(())
-	}
-
-	pub fn add_readonly_borrowed_value(
-		&mut self,
-		name: &str,
-		type_id: TypeId,
-		mutable: bool,
-		ptr_id: PtrId,
-	) -> MessageResult<()> {
-		let (borrow, succ) = self.ownership.readonly_borrow(ptr_id)?;
-		let value = Value::new_ptr(type_id, succ.id, mutable);
-		self.add_value(name, value);
-		Ok(())
-	}
-
 	pub fn lookup_variable_value(&self, name: &str) -> Option<&Value> {
 		self.scopes.iter().rev().find_map(|scope| scope.lookup_variable(name))
 	}
@@ -216,10 +181,6 @@ impl Context {
 
 	pub fn lookup_function_value(&self, name: &str) -> Option<&FunctionValue> {
 		self.scopes.iter().rev().find_map(|scope| scope.lookup_function(name))
-	}
-
-	pub fn contains_fn_value_in_current_scope(&self, name: &str) -> bool {
-		self.get_scope().has_function(name)
 	}
 }
 

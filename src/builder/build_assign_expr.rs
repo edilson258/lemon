@@ -12,7 +12,7 @@ impl Builder<'_> {
 		let dest = self.build_expr(&mut assign_expr.left);
 		let type_id = self.lookup_event_type(range);
 
-		let basic_type = self.type_store.get_type(type_id).unwrap_or_else(|| {
+		let basic_type = self.type_store.lookup_type(type_id).unwrap_or_else(|| {
 			let message = error_build!("not found type id {} in type store", type_id.as_usize());
 			message.report(self.loader);
 		});
