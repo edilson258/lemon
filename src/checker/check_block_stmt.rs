@@ -1,14 +1,13 @@
-use crate::ast::{self};
+use crate::ast;
 
-use super::{context::scope::ScopeType, types::TypeId, Checker, TyResult};
+use super::{context::scope::ScopeKind, CheckResult, Checker};
 
 impl Checker<'_> {
-	pub fn check_block_stmt(&mut self, block: &mut ast::BlockStmt) -> TyResult<TypeId> {
+	pub fn check_block_stmt(&mut self, block: &mut ast::BlockStmt) -> CheckResult {
 		// todo: warn unreachable code
-		self.ctx.enter_scope(ScopeType::new_block());
-		let mut ret_type = TypeId::UNIT;
+		self.ctx.enter_scope(ScopeKind::block_scope());
+		let mut ret_type = None;
 		for stmt in block.stmts.iter_mut() {
-			self.ctx.flow.set_paths_return(stmt.ends_with_ret());
 			ret_type = self.check_stmt(stmt)?;
 		}
 		self.ctx.exit_scope();

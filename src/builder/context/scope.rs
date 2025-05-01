@@ -1,26 +1,18 @@
+use crate::{checker::types::TypeId, ir::IrBasicValue};
 use rustc_hash::FxHashMap;
 
-use crate::{checker::types::TypeId, ir::IrBasicValue};
-
 pub enum ScopeKind {
-	Function {
-		ret_type: TypeId,
-	},
-	Impl {
-		self_name: String,
-		self_type: TypeId,
-	},
-	Member {
-		// self_value: Option<IrBasicValue>
-	},
-	Block,
+	Function { return_type: TypeId },
+	Implementation { receiver_name: String, receiver_type: TypeId },
+	StructMember,
+	CodeBlock,
 }
 
 pub struct Scope {
-	pub kind: ScopeKind,
-	pub locals: FxHashMap<String, IrBasicValue>,
-	pub dont_load: FxHashMap<String, bool>,
-	pub free_values: FxHashMap<String, IrBasicValue>,
+	kind: ScopeKind,
+	local_variables: FxHashMap<String, IrBasicValue>,
+	skip_loading: FxHashMap<String, bool>,
+	unbound_values: FxHashMap<String, IrBasicValue>,
 }
 
 impl Default for Scope {
@@ -31,90 +23,82 @@ impl Default for Scope {
 
 impl Scope {
 	pub fn new() -> Self {
-		let dont_load = FxHashMap::default();
-		let locals = FxHashMap::default();
-		let free_values = FxHashMap::default();
-		Scope { dont_load, locals, free_values, kind: ScopeKind::Block }
+		Self::new_with_kind(ScopeKind::CodeBlock)
 	}
 
-	pub fn new_function(ret_type: TypeId) -> Self {
-		let dont_load = FxHashMap::default();
-		let locals = FxHashMap::default();
-		let free_values = FxHashMap::default();
-		Scope { dont_load, locals, free_values, kind: ScopeKind::Function { ret_type } }
+	pub fn new_function_scope(return_type: TypeId) -> Self {
+		Self::new_with_kind(ScopeKind::Function { return_type })
 	}
 
-	pub fn new_impl(self_name: String, self_type: TypeId) -> Self {
-		let dont_load = FxHashMap::default();
-		let locals = FxHashMap::default();
-		let free_values = FxHashMap::default();
-		Scope { dont_load, locals, free_values, kind: ScopeKind::Impl { self_name, self_type } }
+	pub fn new_implementation_scope(receiver_name: String, receiver_type: TypeId) -> Self {
+		Self::new_with_kind(ScopeKind::Implementation { receiver_name, receiver_type })
 	}
 
-	pub fn new_member() -> Self {
-		let dont_load = FxHashMap::default();
-		let locals = FxHashMap::default();
-		let free_values = FxHashMap::default();
-		Scope { dont_load, locals, free_values, kind: ScopeKind::Member {} }
+	pub fn new_struct_member_scope() -> Self {
+		Self::new_with_kind(ScopeKind::StructMember)
 	}
 
-	pub fn get_ret_type(&self) -> Option<TypeId> {
-		match self.kind {
-			ScopeKind::Function { ret_type } => Some(ret_type),
-			_ => None,
+	fn new_with_kind(kind: ScopeKind) -> Self {
+		Self {
+			kind,
+			local_variables: FxHashMap::default(),
+			skip_loading: FxHashMap::default(),
+			unbound_values: FxHashMap::default(),
 		}
 	}
 
-	pub fn add_free_value(&mut self, value: IrBasicValue) {
+	pub fn return_type(&self) -> Option<TypeId> {
+		if let ScopeKind::Function { return_type } = self.kind {
+			Some(return_type)
+		} else {
+			None
+		}
+	}
+
+	pub fn register_unbound_value(&mut self, value: IrBasicValue) {
 		if value.is_register() {
-			self.free_values.insert(value.value.as_str().into(), value);
+			self.unbound_values.insert(value.value.as_str().into(), value);
 		}
 	}
 
-	pub fn get_free_values(&self) -> Vec<IrBasicValue> {
-		self.free_values.values().cloned().collect()
+	pub fn collect_unbound_values(&self) -> Vec<IrBasicValue> {
+		self.unbound_values.values().cloned().collect()
 	}
 
-	pub fn is_impl_scope(&self) -> bool {
-		matches!(&self.kind, ScopeKind::Impl { .. })
+	pub fn is_implementation(&self) -> bool {
+		matches!(self.kind, ScopeKind::Implementation { .. })
 	}
 
-	pub fn is_member_scope(&self) -> bool {
-		matches!(&self.kind, ScopeKind::Member {})
+	pub fn is_struct_member(&self) -> bool {
+		matches!(self.kind, ScopeKind::StructMember)
+	}
+	#[allow(dead_code)]
+	pub fn is_function(&self) -> bool {
+		matches!(self.kind, ScopeKind::Function { .. })
 	}
 
-	pub fn get_self_info(&self) -> Option<(String, TypeId)> {
+	pub fn receiver_info(&self) -> Option<(String, TypeId)> {
 		match &self.kind {
-			ScopeKind::Impl { self_name, self_type, .. } => Some((self_name.clone(), *self_type)),
+			ScopeKind::Implementation { receiver_name, receiver_type } => {
+				Some((receiver_name.clone(), *receiver_type))
+			}
 			_ => None,
 		}
 	}
 
-	pub fn is_function_scope(&self) -> bool {
-		matches!(&self.kind, ScopeKind::Function { .. })
+	pub fn mark_skip_loading(&mut self, key: impl Into<String>) {
+		self.skip_loading.insert(key.into(), true);
 	}
 
-	pub fn add_dont_load(&mut self, key: impl Into<String>) {
-		self.dont_load.insert(key.into(), true);
+	pub fn should_skip_loading(&self, key: &str) -> bool {
+		self.skip_loading.contains_key(key)
 	}
 
-	pub fn is_dont_load(&self, key: &str) -> bool {
-		self.dont_load.contains_key(key)
+	pub fn define_local_variable(&mut self, key: String, basic_value: IrBasicValue) {
+		self.local_variables.insert(key, basic_value);
 	}
 
-	pub fn add_local(&mut self, key: String, basic_value: IrBasicValue) {
-		self.locals.insert(key, basic_value);
+	pub fn lookup_local_variable(&self, name: &str) -> Option<&IrBasicValue> {
+		self.local_variables.get(name)
 	}
-
-	pub fn get_local(&self, name: &str) -> Option<&IrBasicValue> {
-		self.locals.get(name)
-	}
-
-	// pub fn get_local_mut(&mut self, name: &str) -> Option<&mut IrBasicValue> {
-	// 	self.locals.get_mut(name)
-	// }
-
-	// pub fn get_local_type(&self, name: &str) -> Option<&TypeId> {
-	// 	self.get_local(name).map(|local| &local.type_id)
-	// }
 }

@@ -1,6 +1,6 @@
 use crate::{
 	ast::{TypeDefKind, TypeDefStmt},
-	report::throw_ir_build_error,
+	error_build,
 };
 
 use super::Builder;
@@ -12,11 +12,13 @@ impl Builder<'_> {
 				// todo: is the best way? but why :( two data structures? we relly need?
 				let (mut ir_struct, field_table) = self.build_struct_def_stmt(struct_def_stmt);
 				ir_struct.set_name(type_def_stmt.lexeme());
-				self.ctx.set_struct_field(type_def_stmt.lexeme().into(), field_table);
-				self.ctx.struct_table_size.insert(type_def_stmt.lexeme().into(), ir_struct.size);
+				self.ctx.define_struct_fields(type_def_stmt.lexeme().into(), field_table);
+				self.ctx.struct_sizes.insert(type_def_stmt.lexeme().into(), ir_struct.size);
 				self.ir.add_struct(ir_struct);
 			}
-			_ => throw_ir_build_error("unsupported type definition kind"),
+			_ => error_build!("unsupported type definition kind")
+				.range(type_def_stmt.get_range())
+				.report(self.loader),
 		}
 	}
 }

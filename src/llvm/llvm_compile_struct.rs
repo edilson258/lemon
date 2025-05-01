@@ -1,8 +1,8 @@
 use inkwell::types::BasicTypeEnum;
 
 use crate::{
+	error_codegen,
 	ir::{self},
-	report::throw_llvm_error,
 };
 
 use super::Llvm;
@@ -11,7 +11,7 @@ impl<'ll> Llvm<'ll> {
 		#[rustfmt::skip]
 		let struct_name = struct_instr.name.as_ref().unwrap_or_else(|| {
 		  // todo: support it
-		  throw_llvm_error("cannot support unnamed struct")
+		  error_codegen!("cannot support unnamed struct").report(self.loader);
 		});
 
 		let llvm_struct_type = self.ctx.opaque_struct_type(struct_name);

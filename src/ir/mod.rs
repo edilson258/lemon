@@ -201,7 +201,7 @@ impl IrBlock {
 		Self { label, instrs: Vec::new() }
 	}
 
-	pub fn add_instr(&mut self, instr: Instr) {
+	pub fn append_instr(&mut self, instr: Instr) {
 		self.instrs.push(instr);
 	}
 
@@ -326,19 +326,20 @@ impl Default for Struct {
 }
 
 pub struct IR {
+	pub pathnname: String,
 	pub functions: Vec<Function>,
 	pub structs: Vec<Struct>,
 }
 
 impl Default for IR {
 	fn default() -> Self {
-		Self::new()
+		Self::new("untitled.ln".to_string())
 	}
 }
 
 impl IR {
-	pub fn new() -> Self {
-		Self { functions: Vec::new(), structs: Vec::new() }
+	pub fn new(pathnname: String) -> Self {
+		Self { pathnname, functions: Vec::new(), structs: Vec::new() }
 	}
 
 	pub fn add_function(&mut self, function: Function) {

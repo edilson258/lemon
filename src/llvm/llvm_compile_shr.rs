@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 
 use super::Llvm;
 
@@ -14,12 +14,12 @@ impl Llvm<'_> {
 			let sign_extend = false;
 			let value = match self.builder.build_right_shift(left_int, right_int, sign_extend, temp) {
 				Ok(result) => result,
-				Err(_) => throw_llvm_error("build int shr"),
+				Err(_) => error_codegen!("build int shr").report(self.loader),
 			};
 			let ptr = self.env.get_ptr_value_unwrap(dest);
 			return self.store(ptr, value);
 		}
-		let error = format!("unsupported 'and' {} to {}", left.get_type(), right.get_type());
-		throw_llvm_error(error);
+		let message = error_codegen!("unsupported 'and' {} to {}", left.get_type(), right.get_type());
+		message.report(self.loader);
 	}
 }

@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 
 use super::Llvm;
 
@@ -13,12 +13,12 @@ impl Llvm<'_> {
 			let right_int = right.into_int_value();
 			let value = match self.builder.build_or(left_int, right_int, temp) {
 				Ok(result) => result,
-				Err(_) => throw_llvm_error("build int or"),
+				Err(_) => error_codegen!("build int or").report(self.loader),
 			};
 			let ptr = self.env.get_ptr_value_unwrap(dest);
 			return self.store(ptr, value);
 		}
-		let error = format!("unsupported 'or' {} to {}", left.get_type(), right.get_type());
-		throw_llvm_error(error);
+		let message = error_codegen!("unsupported 'or' {} to {}", left.get_type(), right.get_type());
+		message.report(self.loader);
 	}
 }

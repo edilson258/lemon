@@ -1,5 +1,6 @@
 use crate::checker::types::TypeStore;
 use crate::ir::{self};
+use crate::loader::Loader;
 use crate::source::Source;
 use env::Env;
 use inkwell::{builder::Builder, context::Context, module::Module};
@@ -54,7 +55,7 @@ mod llvm_compile_type;
 mod llvm_compile_value;
 
 pub fn create_module_from_source<'ll>(ctx: &'ll Context, source: &Source) -> Module<'ll> {
-	let module = ctx.create_module(source.file_name());
+	let module = ctx.create_module(&source.pathname);
 	module
 }
 
@@ -64,13 +65,19 @@ pub struct Llvm<'ll> {
 	pub builder: Builder<'ll>,
 	pub env: Env<'ll>,
 	pub type_store: &'ll TypeStore,
+	pub loader: &'ll Loader,
 }
 
 impl<'ll> Llvm<'ll> {
-	pub fn new(ctx: &'ll Context, module: Module<'ll>, type_store: &'ll TypeStore) -> Self {
+	pub fn new(
+		ctx: &'ll Context,
+		module: Module<'ll>,
+		loader: &'ll Loader,
+		type_store: &'ll TypeStore,
+	) -> Self {
 		let builder = ctx.create_builder();
 		let env = Env::new();
-		Self { ctx, module, builder, type_store, env }
+		Self { ctx, module, loader, builder, type_store, env }
 	}
 
 	pub fn compile_ir(&mut self, root: &ir::IR) {

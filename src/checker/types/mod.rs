@@ -1,5 +1,4 @@
 mod display_type;
-pub mod monomorphic;
 mod store;
 mod type_id;
 
@@ -8,6 +7,10 @@ use std::hash::{Hash, Hasher};
 use rustc_hash::FxHashMap;
 pub use store::*;
 pub use type_id::*;
+
+use crate::loader::ModId;
+
+use super::borrow::ptr::RefId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -20,13 +23,20 @@ pub enum Type {
 	// Number
 	NumRange(NumRange),
 	Number(Number),
+
 	Borrow(BorrowType),
+
 	Const(ConstType),
 	Fn(FnType),
+
 	ExternFn(ExternFnType),
 
 	// struct
 	Struct(StructType),
+
+	// module
+	//
+	Mod(ModuleType),
 
 	// internal
 	Unit,
@@ -40,6 +50,10 @@ impl Type {
 	}
 	pub fn is_struct(&self) -> bool {
 		matches!(self, Type::Struct(_))
+	}
+
+	pub fn is_module(&self) -> bool {
+		matches!(self, Type::Mod(_))
 	}
 
 	pub fn can_implemented(&self) -> bool {
@@ -105,6 +119,47 @@ impl Type {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ModuleType {
+	pub name: Option<String>,
+	pub mod_id: ModId,
+}
+
+impl ModuleType {
+	pub fn new(mod_id: ModId) -> Self {
+		Self { name: None, mod_id }
+	}
+
+	pub fn new_with_name(mod_id: ModId, name: String) -> Self {
+		Self { name: Some(name), mod_id }
+	}
+
+	pub fn get_name(&self) -> Option<&str> {
+		self.name.as_deref()
+	}
+
+	pub fn set_name(&mut self, name: String) {
+		self.name = Some(name);
+	}
+}
+
+impl From<ModId> for ModuleType {
+	fn from(mod_id: ModId) -> Self {
+		Self::new(mod_id)
+	}
+}
+
+impl From<ModuleType> for ModId {
+	fn from(module_type: ModuleType) -> Self {
+		module_type.mod_id
+	}
+}
+impl From<ModuleType> for Type {
+	fn from(module_type: ModuleType) -> Self {
+		Type::Mod(module_type)
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NumRange {
 	pub bits: u8, // bits of the number
 	pub is_float: bool,
@@ -116,7 +171,7 @@ impl NumRange {
 		Self { bits, is_float }
 	}
 
-	pub fn as_float(&self) -> Number {
+	pub fn to_float(&self) -> Number {
 		match self.bits {
 			32 => Number::F32,
 			64 => Number::F64,
@@ -124,9 +179,9 @@ impl NumRange {
 		}
 	}
 
-	pub fn as_number(&self) -> Number {
+	pub fn to_number(&self) -> Number {
 		if self.is_float {
-			return self.as_float();
+			return self.to_float();
 		}
 		match self.bits {
 			0..=32 => Number::I32,
@@ -134,7 +189,7 @@ impl NumRange {
 			_ => unreachable!(),
 		}
 	}
-	pub fn infer_with_type_id(&self, expected: TypeId) -> Option<TypeId> {
+	pub fn try_resolve_with_type(&self, expected: TypeId) -> Option<TypeId> {
 		if self.is_float != expected.is_float() {
 			return None;
 		};
@@ -149,7 +204,7 @@ impl NumRange {
 		};
 		Some(number)
 	}
-	pub fn as_infer_number(&self, expected: &Number) -> Option<Number> {
+	pub fn try_resolve_with_number(&self, expected: &Number) -> Option<Number> {
 		if self.is_float != expected.is_float() {
 			return None;
 		};
@@ -164,7 +219,16 @@ impl NumRange {
 		};
 		Some(number)
 	}
+
+	pub fn unify_range(&self, other: &NumRange) -> Option<NumRange> {
+		if self.is_float != other.is_float {
+			return None;
+		}
+		let bits = self.bits.max(other.bits);
+		Some(NumRange::new(bits, self.is_float))
+	}
 }
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Number {
 	// isize
@@ -193,23 +257,6 @@ impl Number {
 	}
 	pub fn is_float(&self) -> bool {
 		matches!(self, Number::F32 | Number::F64)
-	}
-
-	pub fn as_type(&self) -> Type {
-		match self {
-			Number::I8 => Type::Number(Number::I8),
-			Number::I16 => Type::Number(Number::I16),
-			Number::I32 => Type::Number(Number::I32),
-			Number::I64 => Type::Number(Number::I64),
-			Number::Isize => Type::Number(Number::Isize),
-			Number::Usize => Type::Number(Number::Usize),
-			Number::U8 => Type::Number(Number::U8),
-			Number::U16 => Type::Number(Number::U16),
-			Number::U32 => Type::Number(Number::U32),
-			Number::U64 => Type::Number(Number::U64),
-			Number::F32 => Type::Number(Number::F32),
-			Number::F64 => Type::Number(Number::F64),
-		}
 	}
 }
 
@@ -326,7 +373,7 @@ impl StructType {
 	pub fn with_fields(&mut self, fields: Vec<FieldType>) {
 		self.fields = fields.into_iter().map(|field| (field.name.clone(), field)).collect();
 	}
-	pub fn add_fn(&mut self, name: String, fn_id: TypeId) {
+	pub fn add_function(&mut self, name: String, fn_id: TypeId) {
 		self.fns.insert(name, fn_id);
 	}
 
@@ -337,7 +384,7 @@ impl StructType {
 	// ceck methods
 	//
 
-	pub fn has_fn(&self, name: &str) -> bool {
+	pub fn has_function(&self, name: &str) -> bool {
 		self.fns.contains_key(name)
 	}
 
@@ -369,13 +416,14 @@ impl StructType {
 pub struct FieldType {
 	pub name: String,
 	pub type_id: TypeId,
+	pub ptr_id: RefId,
 	pub is_mut: bool,
 	pub is_pub: bool,
 }
 
 impl FieldType {
-	pub fn new(name: String, type_id: TypeId) -> Self {
-		Self { name, type_id, is_mut: false, is_pub: false }
+	pub fn new(name: String, type_id: TypeId, ptr_id: RefId) -> Self {
+		Self { name, type_id, ptr_id, is_mut: false, is_pub: false }
 	}
 }
 
@@ -456,6 +504,13 @@ impl From<NumRange> for Type {
 		Type::NumRange(value)
 	}
 }
+
+impl From<&NumRange> for TypeId {
+	fn from(value: &NumRange) -> Self {
+		TypeId::from(&value.to_number())
+	}
+}
+
 impl From<Number> for Type {
 	fn from(value: Number) -> Self {
 		Type::Number(value)

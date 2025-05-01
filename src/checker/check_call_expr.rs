@@ -1,74 +1,82 @@
-use super::diags::SyntaxErr;
-use super::types::{Type, TypeId};
-use super::{Checker, TyResult};
+use super::{CheckResult, Checker, ExpectSome, TypedValue};
 use crate::ast::{self};
-use crate::range::Range;
+use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_call_expr(&mut self, call_expr: &mut ast::CallExpr) -> TyResult<TypeId> {
-		let callee = self.check_expr(&mut call_expr.callee)?;
-		let call_args = self.check_call_args(&mut call_expr.args)?;
-		let infered = self.infer_generic(callee, &call_args)?;
-		match infered {
-			Type::Fn(fn_type) => {
-				self.args_mismatch(fn_type.args.len(), call_args.len(), call_expr.get_range())?;
-				self.call_args_match(&fn_type.args, &call_args)?;
-				self.monomorphic_call(fn_type.clone().into())?;
-				call_expr.set_ret_type_id(fn_type.ret);
-				call_expr.set_args_type(fn_type.args);
-				return Ok(fn_type.ret);
-			}
+	pub fn check_call_expr(&mut self, c: &mut ast::CallExpr) -> CheckResult {
+		let callee = self.check_expr(&mut c.callee).some(c.callee.get_range())?;
+		let args = self.check_call_args(&mut c.args)?;
 
-			Type::ExternFn(fn_type) => {
-				if !fn_type.var_packed {
-					self.call_args_match(&fn_type.args, &call_args)?;
-				}
-				self.monomorphic_call(fn_type.clone().into())?;
-				call_expr.set_ret_type_id(fn_type.ret);
-				call_expr.set_args_type(fn_type.args);
-				return Ok(fn_type.ret);
-			}
-			_ => {}
-		}
-		Err(SyntaxErr::not_a_fn(self.display_type(callee), call_expr.get_range()))
-	}
+		let (params, ret_ty) = self.fn_signature(callee.type_id, c.get_range())?;
+		self.call_args_match(&params, &args, c.get_range())?;
+		self.register_multi_type(params, c.get_range());
+		self.register_type(ret_ty, c.get_range());
 
-	fn monomorphic_call(&mut self, callee: Type) -> TyResult<()> {
-		match callee {
-			Type::Fn(fn_type) => {
-				if !fn_type.generics.is_empty() {
-					self.ctx.type_store.add_monomo_fn(fn_type.clone());
-				}
-			}
-			Type::ExternFn(fn_type) => {
-				// self.ctx.type_store.add_monomo_extern_fn(fn_type.clone());
-			}
-			_ => {}
-		}
-		Ok(())
+		let owner = self.ctx.borrow.create_owner();
+		let value = TypedValue::new(ret_ty, owner);
+		Ok(Some(value))
+		// self.make_ret_value(&args, ret_ty, c.get_range())
 	}
+	pub fn check_call_args(&mut self, args: &mut [ast::Expr]) -> MessageResult<Vec<TypedValue>> {
+		let mut values = Vec::with_capacity(args.len());
+		for argument in args {
+			let arg_range = argument.get_range();
+			let tv = self.check_expr(argument).some(arg_range)?;
+			self.register_type(tv.type_id, arg_range);
+			values.push(tv);
+		}
+		Ok(values)
+	}
+	// pub fn make_ret_value(&mut self, args: &[TypedValue], ret: TypeId, span: Range) -> CheckResult {
+	// 	match self.lookup_stored_type(ret) {
+	// 		Type::Borrow(b) => self.ret_borrow(args, b, ret, span),
+	// 		// t if t.is_copy() => Ok(self.ret_copy(ret)),
+	// 		_ => Ok(self.ret_owned(ret)),
+	// 	}
+	// }
 
-	fn check_call_args(&mut self, exprs: &mut [ast::Expr]) -> TyResult<Vec<(TypeId, Range)>> {
-		let mut results = Vec::with_capacity(exprs.len());
-		for expr in exprs {
-			let found = self.check_expr(expr)?;
-			results.push((found, expr.get_range()));
-		}
-		Ok(results)
-	}
+	// // ---------- caso &T / &mut T --------------------------------------
+	// fn ret_borrow(
+	// 	&mut self,
+	// 	args: &[TypedValue],
+	// 	borrow: BorrowType,
+	// 	ret_id: TypeId,
+	// 	span: Range,
+	// ) -> CheckResult {
+	// 	let src_ids = self.collect_borrow_sources(args, &borrow);
 
-	fn call_args_match(&mut self, expects: &[TypeId], founds: &[(TypeId, Range)]) -> TyResult<()> {
-		for (expected, (found, range)) in expects.iter().zip(founds) {
-			let found = self.infer_type(*expected, *found)?;
-			self.equal_type_expected(*expected, found, range.clone())?;
-		}
-		Ok(())
-	}
+	// 	if src_ids.is_empty() {
+	// 		return Err(SyntaxErr::internal("borrow return: no matching argument", span));
+	// 	}
 
-	fn args_mismatch(&self, left: usize, found: usize, range: Range) -> TyResult<()> {
-		if left != found {
-			return Err(SyntaxErr::args_mismatch(left, found, range));
-		}
-		Ok(())
-	}
+	// 	let kind = if borrow.mutable { RefKind::Mutable } else { RefKind::Shared };
+	// 	let union = self.ctx.borrow.union_borrow(kind, &src_ids);
+
+	// 	Ok(TypedValue::from_borrow(&mut self.ctx.borrow, ret_id, union))
+	// }
+
+	// fn collect_borrow_sources(&self, args: &[TypedValue], borrow: &BorrowType) -> Vec<PtrId> {
+	// 	args
+	// 		.iter()
+	// 		.filter(|tv| tv.type_id == borrow.value)
+	// 		.filter_map(|tv| tv.ptr.as_ref())
+	// 		.filter(|ptr| match (borrow.mutable, ptr.kind) {
+	// 			(true, RefKind::Mutable) | (false, RefKind::Shared) => true,
+	// 			_ => false,
+	// 		})
+	// 		.map(|ptr| ptr.id)
+	// 		.collect()
+	// }
+
+	// fn ret_copy(&mut self, ret_id: TypeId) -> TypedValue {
+	// 	let id = self.ctx.borrow.alloc(RefKind::Copy);
+	// 	let ptr = self.ctx.borrow.get_ref(id);
+	// 	TypedValue::new(ret_id, Some(ptr))
+	// }
+
+	// fn ret_owned(&mut self, ret_id: TypeId) -> TypedValue {
+	// 	let id = self.ctx.borrow.alloc(RefKind::Owned);
+	// 	let ptr = self.ctx.borrow.get_ref(id);
+	// 	TypedValue::new(ret_id, Some(ptr))
+	// }
 }

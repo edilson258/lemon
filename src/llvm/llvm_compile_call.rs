@@ -1,4 +1,4 @@
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 
 use super::Llvm;
 
@@ -6,7 +6,7 @@ impl Llvm<'_> {
 	pub fn llvm_compile_call(&mut self, call: &ir::CallInstr) {
 		let llvm_callee = match self.module.get_function(&call.callee) {
 			Some(llvm_callee) => llvm_callee,
-			None => throw_llvm_error(format!("function '{}' not found", call.callee)),
+			None => error_codegen!("function '{}' not found", call.callee).report(self.loader),
 		};
 
 		let args: Vec<_> = call.args.iter().map(|arg| self.llvm_compile_value(arg).into()).collect();
@@ -14,7 +14,7 @@ impl Llvm<'_> {
 		let temp = self.env.get_temp();
 		let call_result = match self.builder.build_call(llvm_callee, &args, temp.as_str()) {
 			Ok(result) => result,
-			Err(err) => throw_llvm_error(format!("call '{}'", err)),
+			Err(err) => error_codegen!("call '{}'", err).report(self.loader),
 		};
 
 		if let Some(return_value) = call_result.try_as_basic_value().left() {

@@ -1,27 +1,29 @@
-use rustc_hash::FxHashMap;
-use scope::Scope;
-
 use crate::{
 	checker::types::TypeId,
 	ir::{BasicValue, IrBasicValue},
-	report::throw_ir_build_error,
+	loader::ModId,
+	throw_error,
 };
+use rustc_hash::FxHashMap;
+use scope::Scope;
+
 mod block;
 mod label;
 mod scope;
 
-pub type FieldTable = FxHashMap<String, (TypeId, usize)>;
-
-pub type StructTable = FxHashMap<String, FieldTable>;
+pub type StructFieldMap = FxHashMap<String, (TypeId, usize)>;
+pub type StructDefinitions = FxHashMap<String, StructFieldMap>;
 
 pub struct Context {
-	pub scopes: Vec<Scope>,
-	pub block: block::Block,
-	pub register_count: usize,
-	pub struct_table: StructTable,
-	// todo: improve it
-	pub struct_table_size: FxHashMap<String, usize>,
+	scope_stack: Vec<Scope>,
+	next_register_id: usize,
+	struct_definitions: StructDefinitions,
+	pub struct_sizes: FxHashMap<String, usize>,
+	pub current_block: block::Block,
+	#[allow(dead_code)]
+	pub mod_id: ModId,
 }
+
 impl Default for Context {
 	fn default() -> Self {
 		Self::new()
@@ -29,118 +31,111 @@ impl Default for Context {
 }
 
 impl Context {
-	pub fn new() -> Context {
-		let struct_table = StructTable::default();
-		let block = block::Block::new();
-		let scopes = Vec::new();
-		let struct_table_size = FxHashMap::default();
-		Context { scopes, block, register_count: 1, struct_table, struct_table_size }
+	pub fn new() -> Self {
+		Self::new_with_defaults(ModId::default())
 	}
 
-	pub fn get_struct_field(&self, struct_name: &str, field_name: &str) -> Option<(TypeId, usize)> {
-		self.struct_table.get(struct_name).and_then(|fields| fields.get(field_name).copied())
+	fn new_with_defaults(mod_id: ModId) -> Self {
+		Self {
+			scope_stack: Vec::new(),
+			current_block: block::Block::new(),
+			next_register_id: 1,
+			struct_definitions: FxHashMap::default(),
+			struct_sizes: FxHashMap::default(),
+			mod_id,
+		}
 	}
 
-	pub fn set_struct_field(&mut self, struct_name: String, table: FieldTable) {
-		self.struct_table.insert(struct_name, table);
+	pub fn lookup_struct_field(
+		&self,
+		struct_name: &str,
+		field_name: &str,
+	) -> Option<(TypeId, usize)> {
+		self.struct_definitions.get(struct_name)?.get(field_name).copied()
+	}
+
+	pub fn define_struct_fields(&mut self, name: String, fields: StructFieldMap) {
+		self.struct_definitions.insert(name, fields);
+	}
+
+	pub fn push_scope(&mut self, scope: Scope) {
+		self.scope_stack.push(scope);
+	}
+
+	pub fn push_function_scope(&mut self, return_type: TypeId) {
+		self.push_scope(Scope::new_function_scope(return_type));
+	}
+
+	pub fn push_implementation_scope(&mut self, name: impl Into<String>, type_id: TypeId) {
+		let receiver_name = name.into();
+		let scope = Scope::new_implementation_scope(receiver_name, type_id);
+		self.push_scope(scope);
+	}
+
+	pub fn push_struct_member_scope(&mut self) {
+		self.push_scope(Scope::new_struct_member_scope());
 	}
 
 	#[allow(dead_code)]
-	pub fn push_scope(&mut self) {
-		self.scopes.push(Scope::new());
+	pub fn in_function_scope(&self) -> bool {
+		self.scope_stack.iter().rev().any(Scope::is_function)
 	}
 
-	pub fn push_function_scope(&mut self, ret_type: TypeId) {
-		self.scopes.push(Scope::new_function(ret_type));
+	pub fn in_implementation_scope(&self) -> bool {
+		self.scope_stack.iter().rev().any(Scope::is_implementation)
 	}
 
-	pub fn push_impl_scope(&mut self, self_name: impl Into<String>, self_type: TypeId) {
-		self.scopes.push(Scope::new_impl(self_name.into(), self_type));
+	pub fn in_struct_member_scope(&self) -> bool {
+		self.current_scope().is_struct_member()
 	}
 
-	pub fn push_member_scope(&mut self) {
-		self.scopes.push(Scope::new_member());
+	pub fn function_return_type(&self) -> Option<TypeId> {
+		self.scope_stack.iter().rev().find_map(Scope::return_type)
 	}
 
-	#[allow(dead_code)]
-	pub fn is_function_scope(&self) -> bool {
-		self.scopes.iter().rev().any(|scope| scope.is_function_scope())
+	pub fn receiver_info(&self) -> Option<(String, TypeId)> {
+		self.scope_stack.iter().rev().find_map(Scope::receiver_info)
 	}
 
-	pub fn is_impl_scope(&self) -> bool {
-		self.scopes.iter().rev().any(|scope| scope.is_impl_scope())
-	}
-
-	pub fn is_member_scope(&self) -> bool {
-		// todo: we need to find all scops?
-		self.get_current_scope().is_member_scope()
-	}
-
-	pub fn get_ret_type(&self) -> Option<TypeId> {
-		for scope in self.scopes.iter().rev() {
-			if scope.is_function_scope() {
-				return scope.get_ret_type();
-			}
-		}
-		None
-	}
-
-	pub fn get_self_info(&self) -> Option<(String, TypeId)> {
-		for scope in self.scopes.iter().rev() {
-			if scope.is_impl_scope() {
-				return scope.get_self_info();
-			}
-		}
-		None
-	}
-
-	pub fn new_register(&mut self, type_id: TypeId) -> IrBasicValue {
-		let register = format!("r{}", self.register_count);
-		self.register_count += 1;
-		let register_value = BasicValue::Register(register);
-
-		IrBasicValue::new(register_value, type_id)
+	pub fn create_register(&mut self, type_id: TypeId) -> IrBasicValue {
+		let register = format!("r{}", self.next_register_id);
+		self.next_register_id += 1;
+		IrBasicValue::new(BasicValue::Register(register), type_id)
 	}
 
 	pub fn pop_scope(&mut self) {
-		self.scopes.pop();
+		self.scope_stack.pop();
 	}
 
-	pub fn get_current_scope(&self) -> &Scope {
-		match self.scopes.last() {
-			Some(scope) => scope,
-			None => throw_ir_build_error("scope not found"),
-		}
+	fn current_scope(&self) -> &Scope {
+		self.scope_stack.last().unwrap_or_else(|| throw_error!("scope not found"))
 	}
 
-	pub fn get_current_scope_mut(&mut self) -> &mut Scope {
-		match self.scopes.last_mut() {
-			Some(scope) => scope,
-			None => throw_ir_build_error("scope not found"),
-		}
+	fn current_scope_mut(&mut self) -> &mut Scope {
+		self.scope_stack.last_mut().unwrap_or_else(|| throw_error!("scope not found"))
 	}
 
-	pub fn add_local(&mut self, key: String, basic_value: IrBasicValue) {
-		self.get_current_scope_mut().add_local(key, basic_value);
+	pub fn define_local_variable(&mut self, name: String, value: IrBasicValue) {
+		self.current_scope_mut().define_local_variable(name, value);
 	}
 
-	pub fn get_local(&self, name: &str) -> Option<&IrBasicValue> {
-		self.scopes.iter().rev().find_map(|scope| scope.get_local(name))
+	pub fn lookup_local_variable(&self, name: &str) -> Option<&IrBasicValue> {
+		self.scope_stack.iter().rev().find_map(|scope| scope.lookup_local_variable(name))
 	}
 
-	pub fn add_dont_load(&mut self, key: impl Into<String>) {
-		self.get_current_scope_mut().add_dont_load(key);
+	pub fn mark_skip_loading(&mut self, key: impl Into<String>) {
+		self.current_scope_mut().mark_skip_loading(key);
 	}
 
-	pub fn is_dont_load(&self, key: &str) -> bool {
-		self.get_current_scope().is_dont_load(key)
+	pub fn should_skip_loading(&self, key: &str) -> bool {
+		self.current_scope().should_skip_loading(key)
 	}
 
-	pub fn add_free_value(&mut self, value: IrBasicValue) {
-		self.get_current_scope_mut().add_free_value(value);
+	pub fn register_unbound_value(&mut self, value: IrBasicValue) {
+		self.current_scope_mut().register_unbound_value(value);
 	}
 
-	pub fn get_free_values(&self) -> Vec<IrBasicValue> {
-		self.get_current_scope().get_free_values()
+	pub fn collect_unbound_values(&self) -> Vec<IrBasicValue> {
+		self.current_scope().collect_unbound_values()
 	}
 }

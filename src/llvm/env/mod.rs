@@ -4,7 +4,8 @@ use inkwell::{
 };
 use scope::Scope;
 
-use crate::report::throw_llvm_error;
+use crate::throw_error;
+
 mod scope;
 
 pub struct Env<'ll> {
@@ -52,7 +53,7 @@ impl<'ll> Env<'ll> {
 		if let Some(value) = self.get_ptr_value(name) {
 			return value;
 		};
-		throw_llvm_error(format!("no ptr value named {}", name));
+		throw_error!("no ptr value named {}", name);
 	}
 
 	pub fn get_temp(&mut self) -> String {

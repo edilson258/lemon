@@ -1,42 +1,53 @@
-use logos::Lexer;
+use logos::{Lexer, Logos};
 
 use crate::ast::{self, AstType, OperatorKind, BASE_BIN, BASE_DECIMAL, BASE_HEX, MIN_PDE};
-use crate::diag::Diag;
 use crate::lexer::Token;
-use crate::loader::FileId;
+use crate::loader::{Loader, ModId};
+use crate::message::{Message, MessageResult};
 use crate::range::Range;
+use crate::{error_syntax, throw_error};
 mod parse_type;
 
+pub fn parse_mod(mod_id: ModId, loader: &mut Loader) {
+	let source = loader.lookup_source_unchecked(mod_id).clone();
+	let mut lexer = Token::lexer(source.raw.as_str());
+	let mut parser = Parser::new(&mut lexer, mod_id, loader);
+	let ast = parser.parse_program().unwrap_or_else(|message| message.report(loader));
+	loader.add_mod(mod_id, ast);
+}
 // --- pde utils -----
 
 // state
 
-pub struct Parser<'lex> {
-	pub lex: &'lex mut Lexer<'lex, Token>,
+pub struct Parser<'p> {
 	token: Option<Token>,
 	range: Range,
-	file_id: FileId,
+	mod_id: ModId,
+	lexer: &'p mut Lexer<'p, Token>,
+	loader: &'p mut Loader,
 }
 // --- parser  -----
 
-type PResult<'lex, T> = Result<T, Diag>;
+// typeMessageResult<T> = Result<T, D iag>;
 
-impl<'lex> Parser<'lex> {
-	pub fn new(lex: &'lex mut Lexer<'lex, Token>, file_id: FileId) -> Self {
-		// todo: remove unwrap
-		let token = lex.next().map(|t| t.unwrap());
-		let range = Range::from_span(lex.span());
-		Self { lex, token, range, file_id }
+impl<'p> Parser<'p> {
+	pub fn new(lexer: &'p mut Lexer<'p, Token>, mod_id: ModId, loader: &'p mut Loader) -> Self {
+		let token = lexer.next().map(|t| t.unwrap_or_else(|_| throw_error!("unexpected end of file")));
+		let range = Range::from_span(lexer.span());
+		Self { lexer, token, range, mod_id, loader }
 	}
-	pub fn parse_program(&mut self) -> PResult<'lex, ast::Program> {
+	pub fn parse_program(&mut self) -> MessageResult<ast::Program> {
 		let mut stmts = vec![];
 		while !self.is_end() {
-			stmts.push(self.parse_stmt()?);
+			match self.parse_stmt() {
+				Ok(stmt) => stmts.push(stmt),
+				Err(message) => return Err(message.mod_id(self.mod_id)),
+			};
 		}
 		Ok(ast::Program { stmts })
 	}
 
-	fn parse_stmt(&mut self) -> PResult<'lex, ast::Stmt> {
+	fn parse_stmt(&mut self) -> MessageResult<ast::Stmt> {
 		let stmt = match self.token {
 			Some(Token::Pub) => self.parse_pub_stmt(),
 			Some(Token::Let) => self.parse_let_stmt().map(ast::Stmt::Let),
@@ -56,7 +67,7 @@ impl<'lex> Parser<'lex> {
 		stmt
 	}
 
-	fn parse_impl_stmt(&mut self) -> PResult<'lex, ast::ImplStmt> {
+	fn parse_impl_stmt(&mut self) -> MessageResult<ast::ImplStmt> {
 		let range = self.expect(Token::Impl)?;
 		let self_name = self.parse_ident()?;
 		self.expect(Token::Assign)?;
@@ -76,7 +87,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::ImplStmt { range, self_name, items })
 	}
 
-	fn parse_pub_stmt(&mut self) -> PResult<'lex, ast::Stmt> {
+	fn parse_pub_stmt(&mut self) -> MessageResult<ast::Stmt> {
 		self.expect(Token::Pub)?;
 		match self.token {
 			Some(Token::Fn) => {
@@ -89,27 +100,36 @@ impl<'lex> Parser<'lex> {
 				extern_fn_stmt.set_is_pub(true);
 				Ok(ast::Stmt::ExternFn(extern_fn_stmt))
 			}
+			Some(Token::Const) => {
+				let mut const_stmt = self.parse_const_stmt()?;
+				match const_stmt {
+					ast::Stmt::ConstFn(ref mut const_fn_stmt) => const_fn_stmt.has_pub(),
+					ast::Stmt::ConstDel(ref mut const_del_stmt) => const_del_stmt.has_pub(),
+					_ => unreachable!(),
+				}
+				Ok(const_stmt)
+			}
 			Some(Token::Type) => {
 				let mut type_def_stmt = self.parse_type_def_stmt()?;
 				type_def_stmt.set_is_pub(true);
 				Ok(ast::Stmt::TypeDef(type_def_stmt))
 			}
 			_ => {
-				let diag = Diag::error("expected fn, extern or type", self.range.clone());
-				Err(diag.with_file_id(self.file_id))
+				let message = error_syntax!("expected 'const', 'fn' or 'type'");
+				Err(message.range(self.range))
 			}
 		}
 	}
 
-	fn parse_ret_stmt(&mut self) -> PResult<'lex, ast::RetStmt> {
+	fn parse_ret_stmt(&mut self) -> MessageResult<ast::RetStmt> {
 		let range = self.expect(Token::Ret)?;
 		let mut expr = None;
 		if !self.match_token(Token::Semi) {
 			expr = Some(Box::new(self.parse_expr(MIN_PDE)?));
 		}
-		Ok(ast::RetStmt { expr, range, type_id: None })
+		Ok(ast::RetStmt { expr, range })
 	}
-	fn parse_const_stmt(&mut self) -> PResult<'lex, ast::Stmt> {
+	fn parse_const_stmt(&mut self) -> MessageResult<ast::Stmt> {
 		let range = self.expect(Token::Const)?;
 		if self.match_token(Token::Fn) {
 			return self.parse_const_fn_stmt(range).map(ast::Stmt::ConstFn);
@@ -117,7 +137,7 @@ impl<'lex> Parser<'lex> {
 		self.parse_const_del_stmt(range).map(ast::Stmt::ConstDel)
 	}
 
-	fn parse_if_stmt(&mut self) -> PResult<'lex, ast::IfStmt> {
+	fn parse_if_stmt(&mut self) -> MessageResult<ast::IfStmt> {
 		let range = self.expect(Token::If)?;
 		self.expect(Token::LParen)?; // take '('
 		let cond = Box::new(self.parse_expr(MIN_PDE)?);
@@ -131,7 +151,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::IfStmt { cond, then, otherwise, range })
 	}
 
-	fn parse_const_fn_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstFnStmt> {
+	fn parse_const_fn_stmt(&mut self, range: Range) -> MessageResult<ast::ConstFnStmt> {
 		let fn_range = self.expect(Token::Fn)?;
 		let name = self.parse_ident()?;
 		self.expect(Token::LParen)?;
@@ -152,31 +172,31 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = self.parse_fn_body()?;
-		Ok(ast::ConstFnStmt { name, params, ret_type, body, range, fn_range, ret_id: None })
+		Ok(ast::ConstFnStmt { name, params, ret_type, body, range, fn_range, is_pub: false })
 	}
 
-	fn parse_const_del_stmt(&mut self, range: Range) -> PResult<'lex, ast::ConstDelStmt> {
+	fn parse_const_del_stmt(&mut self, range: Range) -> MessageResult<ast::ConstDelStmt> {
 		let name = self.parse_binding(false)?;
 		self.expect(Token::Assign)?; // take '='
 		let expr = self.parse_expr(MIN_PDE)?;
-		Ok(ast::ConstDelStmt { name, expr, range, type_id: None })
+		Ok(ast::ConstDelStmt { name, expr, range, is_pub: false })
 	}
 
 	// type <name> = {} or type <name> = <type>
-	fn parse_type_def_stmt(&mut self) -> PResult<'lex, ast::TypeDefStmt> {
+	fn parse_type_def_stmt(&mut self) -> MessageResult<ast::TypeDefStmt> {
 		let range = self.expect(Token::Type)?;
 		let name = self.parse_ident()?;
 		self.expect(Token::Assign)?; // take '='
 
 		if self.match_token(Token::LBrace) {
 			let kind = ast::TypeDefKind::Struct(self.parse_struct_def()?);
-			return Ok(ast::TypeDefStmt { is_pub: false, name, type_id: None, range, kind });
+			return Ok(ast::TypeDefStmt { is_pub: false, name, range, kind });
 		}
 		let kind = ast::TypeDefKind::Alias(self.parse_type()?);
-		Ok(ast::TypeDefStmt { is_pub: false, name, range, kind, type_id: None })
+		Ok(ast::TypeDefStmt { is_pub: false, name, range, kind })
 	}
 
-	pub fn parse_struct_def(&mut self) -> PResult<'lex, ast::StructType> {
+	pub fn parse_struct_def(&mut self) -> MessageResult<ast::StructType> {
 		let mut range = self.expect(Token::LBrace)?;
 		let mut fields = vec![];
 		while !self.match_token(Token::RBrace) {
@@ -192,7 +212,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::StructType { fields, range })
 	}
 
-	fn parse_let_stmt(&mut self) -> PResult<'lex, ast::LetStmt> {
+	fn parse_let_stmt(&mut self) -> MessageResult<ast::LetStmt> {
 		let range = self.expect(Token::Let)?;
 		let mut mutable = None;
 
@@ -203,10 +223,10 @@ impl<'lex> Parser<'lex> {
 		let bind = self.parse_binding(false)?;
 		self.expect(Token::Assign)?; // =
 		let expr = self.parse_expr(MIN_PDE)?;
-		Ok(ast::LetStmt { bind, mutable, expr, range, type_id: None })
+		Ok(ast::LetStmt { bind, mutable, expr, range })
 	}
 
-	fn parse_fn_stmt(&mut self) -> PResult<'lex, ast::FnStmt> {
+	fn parse_fn_stmt(&mut self) -> MessageResult<ast::FnStmt> {
 		let range = self.expect(Token::Fn)?;
 		let name = self.parse_ident()?;
 		let generics = self.parse_generics()?;
@@ -228,11 +248,11 @@ impl<'lex> Parser<'lex> {
 		}
 		self.expect(Token::Assign)?; // take '='
 		let body = self.parse_fn_body()?;
-		Ok(ast::FnStmt { is_pub: false, name, generics, params, ret_type, body, range, ret_id: None })
+		Ok(ast::FnStmt { is_pub: false, name, generics, params, ret_type, body, range })
 	}
 
 	// <T, U: Eq>
-	fn parse_generics(&mut self) -> PResult<'lex, Vec<ast::Generic>> {
+	fn parse_generics(&mut self) -> MessageResult<Vec<ast::Generic>> {
 		let mut generics = vec![];
 		if !self.match_token(Token::Less) {
 			return Ok(generics);
@@ -250,7 +270,7 @@ impl<'lex> Parser<'lex> {
 		Ok(generics)
 	}
 
-	fn parse_generic(&mut self) -> PResult<'lex, ast::Generic> {
+	fn parse_generic(&mut self) -> MessageResult<ast::Generic> {
 		let ident = self.parse_ident()?;
 		let mut bound = None;
 		if self.match_token(Token::Colon) {
@@ -260,7 +280,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::Generic { ident, bound })
 	}
 
-	fn parse_fn_body(&mut self) -> PResult<'lex, ast::FnBody> {
+	fn parse_fn_body(&mut self) -> MessageResult<ast::FnBody> {
 		if self.match_token(Token::LBrace) {
 			let block = self.parse_block_stmt()?;
 			return Ok(ast::FnBody::Block(block));
@@ -269,7 +289,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::FnBody::Expr(expr))
 	}
 
-	fn parse_block_stmt(&mut self) -> PResult<'lex, ast::BlockStmt> {
+	fn parse_block_stmt(&mut self) -> MessageResult<ast::BlockStmt> {
 		let mut range = self.expect(Token::LBrace)?;
 		let mut stmts = vec![];
 		while !self.match_token(Token::RBrace) {
@@ -282,8 +302,8 @@ impl<'lex> Parser<'lex> {
 	}
 
 	// extern fn <name>(<pats>): <type> = { }
-	fn parse_extern_fn_stmt(&mut self) -> PResult<'lex, ast::ExternFnStmt> {
-		let range = self.expect(Token::Extern)?;
+	fn parse_extern_fn_stmt(&mut self) -> MessageResult<ast::ExternFnStmt> {
+		let extern_range = self.expect(Token::Extern)?;
 		let fn_range = self.expect(Token::Fn)?;
 		let name = self.parse_ident()?;
 		self.expect(Token::LParen)?;
@@ -310,8 +330,7 @@ impl<'lex> Parser<'lex> {
 
 		// we need to parse block stmt here?
 		self.expect(Token::LBrace)?;
-		self.expect(Token::RBrace)?;
-		let ret_id = None;
+		let range = extern_range.merged_with(&self.expect(Token::RBrace)?);
 		Ok(ast::ExternFnStmt {
 			is_pub: false,
 			name,
@@ -320,11 +339,11 @@ impl<'lex> Parser<'lex> {
 			range,
 			fn_range,
 			var_packed,
-			ret_id,
+			extern_range,
 		})
 	}
 
-	fn parse_while_stmt(&mut self) -> PResult<'lex, ast::WhileStmt> {
+	fn parse_while_stmt(&mut self) -> MessageResult<ast::WhileStmt> {
 		let range = self.expect(Token::While)?;
 		self.expect(Token::LParen)?;
 		let test = Box::new(self.parse_expr(MIN_PDE)?);
@@ -337,11 +356,11 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::WhileStmt { test, body, range })
 	}
 
-	fn parse_for_stmt(&mut self) -> PResult<'lex, ast::ForStmt> {
+	fn parse_for_stmt(&mut self) -> MessageResult<ast::ForStmt> {
 		todo!("parse for stmt");
 	}
 
-	fn parse_expr(&mut self, min_pde: u8) -> PResult<'lex, ast::Expr> {
+	fn parse_expr(&mut self, min_pde: u8) -> MessageResult<ast::Expr> {
 		let mut left = self.parse_primary()?;
 		while let Some(operator) = self.match_operator(min_pde)? {
 			let right = self.parse_expr(operator.pde())?;
@@ -350,7 +369,7 @@ impl<'lex> Parser<'lex> {
 		Ok(left)
 	}
 
-	fn match_operator(&mut self, min_pde: u8) -> PResult<'lex, Option<ast::Operator>> {
+	fn match_operator(&mut self, min_pde: u8) -> MessageResult<Option<ast::Operator>> {
 		if let Some(operator) = self.parse_operator()? {
 			if operator.pde() >= min_pde {
 				return Ok(Some(operator));
@@ -359,7 +378,7 @@ impl<'lex> Parser<'lex> {
 		Ok(None)
 	}
 
-	fn parse_operator(&mut self) -> PResult<'lex, Option<ast::Operator>> {
+	fn parse_operator(&mut self) -> MessageResult<Option<ast::Operator>> {
 		let kind = match self.token {
 			Some(Token::Plus) => OperatorKind::ADD,
 			Some(Token::Minus) => OperatorKind::SUB,
@@ -386,12 +405,12 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Bang) => OperatorKind::NOT,
 			_ => return Ok(None),
 		};
-		let range = self.range.clone();
+		let range = self.range;
 		self.next()?;
 		Ok(Some(ast::Operator { kind, range }))
 	}
 
-	fn parse_primary(&mut self) -> PResult<'lex, ast::Expr> {
+	fn parse_primary(&mut self) -> MessageResult<ast::Expr> {
 		let expr = match self.token {
 			Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident)?,
 			Some(Token::And) => self.parse_borrow_expr().map(ast::Expr::Borrow)?,
@@ -399,6 +418,7 @@ impl<'lex> Parser<'lex> {
 			Some(Token::Char) => self.parse_char().map(ast::Expr::Literal)?,
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
+			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
 			Some(Token::Import) => self.parse_import_expr().map(ast::Expr::Import)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
@@ -408,7 +428,7 @@ impl<'lex> Parser<'lex> {
 		self.parse_right_hand_expr(expr)
 	}
 
-	fn parse_right_hand_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
+	fn parse_right_hand_expr(&mut self, left: ast::Expr) -> MessageResult<ast::Expr> {
 		let mut expr = left;
 		while let Some(next_token) = self.token {
 			expr = match next_token {
@@ -426,7 +446,7 @@ impl<'lex> Parser<'lex> {
 		Ok(expr)
 	}
 	// {  ident, ident: <expr> ... } todo: suport only { ident } maybe convert to { ident: ident }?
-	fn parse_struct_init_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
+	fn parse_struct_init_expr(&mut self, expr: ast::Expr) -> MessageResult<ast::Expr> {
 		if let ast::Expr::Ident(name) = expr {
 			let mut range = self.expect(Token::LBrace)?;
 			let mut fields = vec![];
@@ -448,64 +468,81 @@ impl<'lex> Parser<'lex> {
 				}
 			}
 			range.merge(&self.expect(Token::RBrace)?);
-			let init = ast::StructInitExpr { name, fields, range, type_id: None };
+			let init = ast::StructInitExpr { name, fields, range };
 			return Ok(ast::Expr::StructInit(init));
 		}
 		//
-		let diag = self.custom_diag("expected struct name", &expr.get_range());
-		Err(diag.with_file_id(self.file_id))
+		let message = error_syntax!("expected struct name");
+		Err(message.range(expr.get_range()))
 	}
 
 	// ::<expr>
-	fn parse_associate_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
+	fn parse_associate_expr(&mut self, expr: ast::Expr) -> MessageResult<ast::Expr> {
 		if let ast::Expr::Ident(self_name) = expr {
 			let range = self.expect(Token::ColonColon)?;
 			let method = self.parse_ident()?;
-			Ok(ast::Expr::Associate(ast::AssociateExpr { self_name, method, range, self_type: None }))
+			Ok(ast::Expr::Associate(ast::AssociateExpr { self_name, method, range }))
 		} else {
-			let diag = self.custom_diag("expected identifier", &expr.get_range());
-			Err(diag.with_file_id(self.file_id))
+			let message = error_syntax!("expected identifier");
+			Err(message.range(expr.get_range()))
 		}
 	}
 
 	// exper.<expr>
-	fn parse_member_expr(&mut self, expr: ast::Expr) -> PResult<'lex, ast::Expr> {
+	fn parse_member_expr(&mut self, expr: ast::Expr) -> MessageResult<ast::Expr> {
 		let range = self.expect(Token::Dot)?;
 		let method = self.parse_ident()?;
-		let member = ast::MemberExpr { left: Box::new(expr), method, left_type: None, range };
+		let member = ast::MemberExpr { left: Box::new(expr), method, range };
 		Ok(ast::Expr::Member(member))
 	}
 
 	// import("std/mem.ln", os = "windows")
-	fn parse_import_expr(&mut self) -> PResult<'lex, ast::ImportExpr> {
+	//
+	//
+	// main.ln -> min.ln
+	// or
+	// main.ln -> std(mod.ln) -> max.ln
+	//
+	//
+	fn parse_import_expr(&mut self) -> MessageResult<ast::ImportExpr> {
 		let range = self.expect(Token::Import)?;
 		self.expect(Token::LParen)?;
 		let path = match self.parse_string()? {
 			ast::Literal::String(string) => string,
 			_ => return Err(self.unexpected_token()),
 		};
-		self.expect(Token::RParen)?;
-		Ok(ast::ImportExpr { path, range })
+		let end = self.expect(Token::RParen)?;
+		let max_range = range.merged_with(&end);
+
+		let mod_id = match self.loader.load_source(&path.text, self.mod_id) {
+			Ok(mod_id) => mod_id,
+			Err(message) => return Err(message.range(max_range)),
+		};
+		parse_mod(mod_id, self.loader);
+		Ok(ast::ImportExpr { path, range: max_range, mod_id: Some(mod_id) })
 	}
+
+	// fn parse_mod(&mut self, mod_id: ModId) ->MessageResult<()> {}
+
 	// &mut <expr>
-	fn parse_borrow_expr(&mut self) -> PResult<'lex, ast::BorrowExpr> {
+	fn parse_borrow_expr(&mut self) -> MessageResult<ast::BorrowExpr> {
 		let range = self.expect(Token::And)?;
 		let mut mutable = None;
 		if self.match_token(Token::Mut) {
 			mutable = Some(self.expect(Token::Mut)?);
 		}
 		let expr = self.parse_primary()?;
-		Ok(ast::BorrowExpr { expr: Box::new(expr), range, mutable, type_id: None })
+		Ok(ast::BorrowExpr { expr: Box::new(expr), range, mutable })
 	}
 
 	// *<expr>
-	fn parse_deref_expr(&mut self) -> PResult<'lex, ast::DerefExpr> {
+	fn parse_deref_expr(&mut self) -> MessageResult<ast::DerefExpr> {
 		let range = self.expect(Token::Star)?;
 		let expr = self.parse_primary()?;
-		Ok(ast::DerefExpr { expr: Box::new(expr), range, type_id: None })
+		Ok(ast::DerefExpr { expr: Box::new(expr), range })
 	}
 
-	fn parse_char(&mut self) -> PResult<'lex, ast::Literal> {
+	fn parse_char(&mut self) -> MessageResult<ast::Literal> {
 		self.ensure_char()?;
 		let range = self.take_range();
 		let inner = self.take_text_and_next()?;
@@ -513,18 +550,18 @@ impl<'lex> Parser<'lex> {
 		let mut chars = value.chars();
 		let value = match chars.next() {
 			Some(char) => char,
-			None => return Err(self.custom_diag("expected char literal", &range)),
+			None => return Err(error_syntax!("expected char literal").range(range)),
 		};
 
 		if chars.next().is_some() {
-			return Err(self.custom_diag("expected char literal", &range));
+			return Err(error_syntax!("expected char literal").range(range));
 		}
 
 		let char = ast::CharLiteral { value, range };
 		Ok(ast::Literal::Char(char))
 	}
 
-	fn parse_string(&mut self) -> PResult<'lex, ast::Literal> {
+	fn parse_string(&mut self) -> MessageResult<ast::Literal> {
 		if !self.match_token(Token::String) {
 			self.expect(Token::String)?;
 		}
@@ -535,7 +572,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::Literal::String(string))
 	}
 
-	fn parse_string_like(&mut self, inner: &str, range: &Range) -> PResult<'lex, String> {
+	fn parse_string_like(&mut self, inner: &str, range: &Range) -> MessageResult<String> {
 		let inner = &inner[1..inner.len() - 1];
 		let mut str = String::with_capacity(inner.len());
 		let mut chars = inner.chars();
@@ -551,16 +588,15 @@ impl<'lex> Parser<'lex> {
 				Some('t') => str.push('\t'),
 				Some('0') => str.push('\0'),
 				_ => {
-					let message = format!("unknown escape sequence '\\{}'", char);
-					let diag = self.custom_diag(message, range);
-					return Err(diag.with_file_id(self.file_id));
+					let message = error_syntax!("unknown escape sequence '\\{}'", char);
+					return Err(message.range(*range));
 				}
 			}
 		}
 		Ok(str)
 	}
 
-	fn parse_numb(&mut self) -> PResult<'lex, ast::Literal> {
+	fn parse_numb(&mut self) -> MessageResult<ast::Literal> {
 		self.ensure_numb()?;
 		let range = self.take_range();
 		let text = self.take_text_and_next()?;
@@ -571,7 +607,7 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::Literal::Number(number))
 	}
 
-	fn parse_fn_expr(&mut self) -> PResult<'lex, ast::FnExpr> {
+	fn parse_fn_expr(&mut self) -> MessageResult<ast::FnExpr> {
 		let range = self.expect(Token::Fn)?;
 		let mut params = vec![];
 		self.expect(Token::LParen)?; // take '('
@@ -595,10 +631,23 @@ impl<'lex> Parser<'lex> {
 
 		let body = Box::new(self.parse_stmt()?);
 
-		Ok(ast::FnExpr { params, body, range, ret_type, type_id: None })
+		Ok(ast::FnExpr { params, body, range, ret_type })
 	}
 
-	fn parse_call_expr(&mut self, callee: ast::Expr) -> PResult<'lex, ast::Expr> {
+	// if (cond) { lexpr } else { rexpr }
+	fn parse_if_expr(&mut self) -> MessageResult<ast::IfExpr> {
+		let range = self.expect(Token::If)?;
+		self.expect(Token::LParen)?;
+		let cond = self.parse_expr(MIN_PDE)?;
+		self.expect_many(&[Token::RParen, Token::LBrace])?;
+		let then = self.parse_expr(MIN_PDE)?;
+		self.expect_many(&[Token::RBrace, Token::Else, Token::LBrace])?;
+		let otherwise = self.parse_expr(MIN_PDE)?;
+		self.expect(Token::RBrace)?;
+		Ok(ast::IfExpr::new(Box::new(cond), Box::new(then), Box::new(otherwise), range))
+	}
+
+	fn parse_call_expr(&mut self, callee: ast::Expr) -> MessageResult<ast::Expr> {
 		let mut range = self.expect(Token::LParen)?; // consume '('
 		let mut args = Vec::new();
 		let generics = vec![];
@@ -613,20 +662,20 @@ impl<'lex> Parser<'lex> {
 		Ok(ast::Expr::Call(call_expr))
 	}
 
-	fn parse_assign_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
+	fn parse_assign_expr(&mut self, left: ast::Expr) -> MessageResult<ast::Expr> {
 		let range = self.expect(Token::Assign)?;
 		let right = Box::new(self.parse_expr(MIN_PDE)?);
-		let assign_expr = ast::AssignExpr { left: Box::new(left), right, range, type_id: None };
+		let assign_expr = ast::AssignExpr { left: Box::new(left), right, range };
 		Ok(ast::Expr::Assign(assign_expr))
 	}
 
-	fn parse_pipe_expr(&mut self, left: ast::Expr) -> PResult<'lex, ast::Expr> {
+	fn parse_pipe_expr(&mut self, left: ast::Expr) -> MessageResult<ast::Expr> {
 		let range = self.expect(Token::Pipe)?;
 		let right = self.parse_expr(MIN_PDE)?;
 		let pipe_expr = ast::PipeExpr { left: Box::new(left), right: Box::new(right), range };
 		Ok(ast::Expr::Pipe(pipe_expr))
 	}
-	// fn parse_index_exper(&mut self, array: ast::Expr) -> PResult<'lex, ast::Expr> {
+	// fn parse_index_exper(&mut self, array: ast::Expr) ->MessageResult<ast::Expr> {
 	//   self.expect(Token::LBracket)?; // consume '['
 	//   let index = self.parse_expr(MIN_PDE)?;
 	//   self.expect(Token::RBracket)?; // consume ']'
@@ -635,22 +684,22 @@ impl<'lex> Parser<'lex> {
 
 	// helpers
 
-	fn ensure_numb(&mut self) -> PResult<'lex, ()> {
+	fn ensure_numb(&mut self) -> MessageResult<()> {
 		if !matches!(self.token, Some(Token::Decimal | Token::Hex | Token::Bin)) {
 			self.expect(Token::Decimal)?;
 		}
 		Ok(())
 	}
 
-	fn ensure_char(&mut self) -> PResult<'lex, ()> {
+	fn ensure_char(&mut self) -> MessageResult<()> {
 		if !matches!(self.token, Some(Token::Char)) {
 			self.expect(Token::Char)?;
 		}
 
 		// include "'"
 		if self.take_text().len() > 3 {
-			let diag = Diag::error("expected char literal", self.range.clone());
-			return Err(diag.with_file_id(self.file_id));
+			let message = error_syntax!("expected char literal");
+			return Err(message.range(self.range));
 		}
 		Ok(())
 	}
@@ -667,23 +716,23 @@ impl<'lex> Parser<'lex> {
 		(BASE_DECIMAL, text.to_string())
 	}
 
-	fn parse_binding(&mut self, with_self: bool) -> PResult<'lex, ast::Binding> {
+	fn parse_binding(&mut self, with_self: bool) -> MessageResult<ast::Binding> {
 		// suport &self or &mut self
 		if self.match_token(Token::And) {
 			if !with_self {
-				let diag = self.custom_diag("unexpected token '&'", &self.range);
-				return Err(diag.with_file_id(self.file_id));
+				let message = error_syntax!("unexpected token '&'");
+				return Err(message.range(self.range));
 			}
 
 			let ast_type = self.parse_type()?;
 			if let AstType::Borrow(borrow) = &ast_type {
 				if let Some((lexeme, range)) = borrow.extract_ident() {
-					let ident = ast::Ident { text: lexeme, range, type_id: None };
-					return Ok(ast::Binding { ident, ty: Some(ast_type), type_id: None });
+					let ident = ast::Ident { text: lexeme, range };
+					return Ok(ast::Binding { ident, ty: Some(ast_type) });
 				}
 			}
-			let diag = self.custom_diag("expected ident", &self.range);
-			return Err(diag.with_file_id(self.file_id));
+			let message = error_syntax!("expected ident");
+			return Err(message.range(self.range));
 		}
 
 		let ident = self.parse_ident()?;
@@ -692,16 +741,16 @@ impl<'lex> Parser<'lex> {
 			self.expect(Token::Colon)?;
 			ty = Some(self.parse_type()?);
 		}
-		Ok(ast::Binding { ident, ty, type_id: None })
+		Ok(ast::Binding { ident, ty })
 	}
 
-	fn parse_ident(&mut self) -> PResult<'lex, ast::Ident> {
+	fn parse_ident(&mut self) -> MessageResult<ast::Ident> {
 		if !self.match_token(Token::Ident) {
 			self.expect(Token::Ident)?;
 		}
-		let range = self.range.clone();
+		let range = self.range;
 		let text = self.take_text_and_next()?;
-		Ok(ast::Ident { text, range, type_id: None })
+		Ok(ast::Ident { text, range })
 	}
 
 	// helpers
@@ -715,28 +764,29 @@ impl<'lex> Parser<'lex> {
 		self.token.is_none()
 	}
 
-	fn take_text(&mut self) -> &'lex str {
-		self.lex.slice()
+	fn take_text(&mut self) -> &'p str {
+		self.lexer.slice()
 	}
 
-	fn take_text_and_next(&mut self) -> PResult<'lex, String> {
+	fn take_text_and_next(&mut self) -> MessageResult<String> {
 		let text = self.take_text();
 		self.next()?;
 		Ok(text.to_string())
 	}
 
-	fn next(&mut self) -> PResult<'lex, Option<Token>> {
+	fn next(&mut self) -> MessageResult<Option<Token>> {
 		let temp = self.token.take();
-		self.token = self.lex.next().transpose().map_err(|_| self.unexpected_token())?;
-		self.range = Range::from_span(self.lex.span());
+		self.token = self.lexer.next().transpose().map_err(|_| self.unexpected_token())?;
+		self.range = Range::from_span(self.lexer.span());
 		Ok(temp)
 	}
 
+	#[inline(always)]
 	fn take_range(&mut self) -> Range {
-		self.range.clone()
+		self.range
 	}
 
-	fn match_take(&mut self, token: Token) -> PResult<'lex, Option<&Range>> {
+	fn match_take(&mut self, token: Token) -> MessageResult<Option<&Range>> {
 		if self.match_token(token) {
 			self.next()?;
 			Ok(Some(&self.range))
@@ -745,14 +795,24 @@ impl<'lex> Parser<'lex> {
 		}
 	}
 
-	fn expect(&mut self, token: Token) -> PResult<'lex, Range> {
+	fn expect_many(&mut self, tokens: &[Token]) -> MessageResult<Option<Range>> {
+		let mut tokens = tokens.iter().copied();
+		let Some(first) = tokens.next() else {
+			return Ok(None);
+		};
+		tokens
+			.try_fold(self.expect(first)?, |acc, token| Ok(acc.merged_with(&self.expect(token)?)))
+			.map(Some)
+	}
+
+	fn expect(&mut self, token: Token) -> MessageResult<Range> {
 		if !self.match_token(token) {
 			// todo: add error message
 			let peeked = self.token.map(|t| t.to_string()).unwrap_or_else(|| "unkown".to_string());
-			let diag = Diag::error(format!("expected {} but got {}", token, peeked), self.range.clone());
-			return Err(diag.with_file_id(self.file_id));
+			let message = error_syntax!("expected {} but got {}", token, peeked);
+			return Err(message.range(self.range));
 		}
-		let range = self.range.clone();
+		let range = self.range;
 		self.next()?;
 		Ok(range)
 	}
@@ -761,16 +821,11 @@ impl<'lex> Parser<'lex> {
 		self.token.as_ref().map(|t| *t == token).unwrap_or(false)
 	}
 
-	fn unexpected_token(&mut self) -> Diag {
+	fn unexpected_token(&mut self) -> Message {
 		if let Some(token) = self.token {
-			let message = format!("unexpected token '{}'", token);
-			let diag = Diag::error(message, self.range.clone());
-			return diag.with_file_id(self.file_id);
+			let message = error_syntax!("unexpected token '{}'", token);
+			return message.range(self.range);
 		}
-		self.custom_diag("unsupported token", &self.range)
-	}
-
-	pub fn custom_diag(&self, message: impl Into<String>, range: &Range) -> Diag {
-		Diag::error(message, range.clone()).with_file_id(self.file_id)
+		error_syntax!("unsupported token").range(self.range)
 	}
 }

@@ -1,10 +1,10 @@
-use crate::ast::{self};
+use crate::ast;
 
-use super::types::TypeId;
-use super::{synthesis, Checker, TyResult};
+use super::{synthesis, CheckResult, Checker, TypedValue};
 impl Checker<'_> {
-	pub fn check_literal(&mut self, lit: &ast::Literal) -> TyResult<TypeId> {
+	pub fn check_literal(&mut self, lit: &ast::Literal) -> CheckResult {
 		let type_id = synthesis::synthesise_literal(lit, self.ctx)?;
-		Ok(type_id)
+		let ptr = self.ctx.borrow.create_owner();
+		Ok(Some(TypedValue::new(type_id, ptr)))
 	}
 }

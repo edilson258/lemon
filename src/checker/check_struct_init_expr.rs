@@ -1,12 +1,12 @@
 use super::diags::SyntaxErr;
-use super::types::TypeId;
-use super::{Checker, TyResult};
+use super::{CheckResult, Checker, ExpectSome, TypedValue};
 use crate::ast;
 
 impl Checker<'_> {
-	pub fn check_struct_init_expr(&mut self, init: &mut ast::StructInitExpr) -> TyResult<TypeId> {
+	pub fn check_struct_init_expr(&mut self, init: &mut ast::StructInitExpr) -> CheckResult {
 		let lexeme = init.name.lexeme();
-		let found_id = self.ctx.type_store.get_type_by_name(lexeme).copied();
+		let range = init.get_range();
+		let found_id = self.ctx.type_store.lookup_type_definition(lexeme).copied();
 
 		if found_id.is_none() {
 			return Err(SyntaxErr::not_found_type(lexeme, init.name.get_range()));
@@ -14,9 +14,10 @@ impl Checker<'_> {
 
 		let found_id = found_id.unwrap();
 
-		init.set_type_id(found_id);
+		self.register_type(found_id, range);
+
 		// remove clone :(
-		let mut found_type = self.get_stored_type(found_id).clone();
+		let mut found_type = self.lookup_stored_type(found_id).clone();
 
 		if !found_type.is_struct() {
 			return Err(SyntaxErr::expect_instaced_type(
@@ -34,26 +35,26 @@ impl Checker<'_> {
 		}
 
 		for field_expr in init.fields.iter_mut() {
-			let value = self.check_expr(&mut field_expr.value)?;
+			let value_range = field_expr.value.get_range();
+			let value = self.check_expr(&mut field_expr.value).some(value_range)?;
 			let lexeme = field_expr.name.lexeme();
+			let range = field_expr.name.get_range();
 			if !found_struct_type.has_field(lexeme) {
-				return Err(SyntaxErr::not_found_field(lexeme, field_expr.name.get_range()));
+				return Err(SyntaxErr::not_found_field(lexeme, range));
 			}
 
 			let field_type = found_struct_type.get_field(lexeme).unwrap();
 
 			// if !field_type.is_mut {
-			// 	return Err(SyntaxErr::cannot_assign_immutable(lexeme, field_expr.name.get_range()));
+			// 	return Err(SyntaxErr::cannot_assign_immutable(lexeme, range));
 			// }
 			//
 			let expect = field_type.type_id;
-			let found = self.infer_type(expect, value)?;
-			self.equal_type_expected(expect, found, field_expr.name.get_range())?;
-			field_expr.name.set_type_id(field_type.type_id);
+			let found = self.infer_type_from_expected(expect, value.type_id);
+			self.equal_type_expected(expect, found, range)?;
+			self.register_type(found, range);
 		}
-
-		Ok(found_id)
-		// check fields
-		// Err(SyntaxErr::not_found_type(lexeme, init.name.get_range()))
+		let ptr = self.ctx.borrow.create_owner();
+		Ok(Some(TypedValue::new(found_id, ptr)))
 	}
 }

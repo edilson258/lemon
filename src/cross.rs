@@ -7,7 +7,7 @@ use inkwell::targets::{
 };
 use inkwell::OptimizationLevel;
 
-use crate::report::throw_cross_compile_error;
+use crate::throw_error;
 
 #[derive(Debug)]
 pub struct Cross {
@@ -62,7 +62,7 @@ impl Cross {
 		if let Some(target) = result {
 			return Ok(target);
 		}
-		throw_cross_compile_error("failed to create target machine");
+		throw_error!("failed to create target machine");
 	}
 
 	pub fn emit(&self, module: &Module, ty: FileType, path: &Path) -> Result<(), String> {

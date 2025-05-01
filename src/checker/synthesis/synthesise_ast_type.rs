@@ -3,15 +3,16 @@ use crate::{
 	checker::{
 		context::Context,
 		types::{BorrowType, FnType, TypeId},
-		TyResult,
 	},
+	error_type,
+	message::MessageResult,
 };
 
 pub fn synthesise_ast_type(
 	ast_type: &ast::AstType,
 	extern_borrow: bool,
 	ctx: &mut Context,
-) -> TyResult<TypeId> {
+) -> MessageResult<TypeId> {
 	match ast_type {
 		AstType::Number(number) => synthesise_number_type(number, ctx),
 		AstType::Float(float) => synthesise_float_type(float, ctx),
@@ -26,24 +27,26 @@ pub fn synthesise_ast_type(
 	}
 }
 
-fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> TyResult<TypeId> {
-	if ctx.has_impl_scope() && ident.lexeme() == "self" {
-		let self_type = ctx.self_scope_type().expect("error: self scope not found to infer type");
+fn synthesise_ident_type(ident: &ast::IdentType, ctx: &mut Context) -> MessageResult<TypeId> {
+	if ctx.has_implementation_scope() && ident.lexeme() == "self" {
+		let self_type = match ctx.get_self_scope_type() {
+			Some(self_type) => self_type,
+			None => return Err(error_type!("self scope not found to infer type")),
+		};
 		return Ok(self_type);
 	}
-
-	if let Some(infer_id) = ctx.type_store.get_infer_id(ident.lexeme()) {
+	if let Some(infer_id) = ctx.type_store.lookup_infer_id(ident.lexeme()) {
 		return Ok(*infer_id);
 	}
 
-	if let Some(type_id) = ctx.type_store.get_type_by_name(ident.lexeme()) {
+	if let Some(type_id) = ctx.type_store.lookup_type_definition(ident.lexeme()) {
 		return Ok(*type_id);
 	}
 
 	todo!("not found type '{}'", ident.lexeme())
 }
 
-fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> TyResult<TypeId> {
+fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> MessageResult<TypeId> {
 	if number.bits == 8 {
 		return if number.signed { Ok(TypeId::I8) } else { Ok(TypeId::U8) };
 	}
@@ -59,7 +62,7 @@ fn synthesise_number_type(number: &ast::NumberType, ctx: &mut Context) -> TyResu
 	unreachable!();
 }
 
-fn synthesise_float_type(float: &ast::FloatType, ctx: &mut Context) -> TyResult<TypeId> {
+fn synthesise_float_type(float: &ast::FloatType, ctx: &mut Context) -> MessageResult<TypeId> {
 	if float.bits == 32 {
 		return Ok(TypeId::F32);
 	}
@@ -69,7 +72,7 @@ fn synthesise_float_type(float: &ast::FloatType, ctx: &mut Context) -> TyResult<
 	unreachable!();
 }
 
-fn synthesise_fn_type(fn_type: &ast::FnType, ctx: &mut Context) -> TyResult<TypeId> {
+fn synthesise_fn_type(fn_type: &ast::FnType, ctx: &mut Context) -> MessageResult<TypeId> {
 	let args = fn_type
 		.params
 		.iter()
@@ -88,7 +91,7 @@ fn synthesise_borrow_type(
 	borrow_type: &ast::BorrowType,
 	external: bool,
 	ctx: &mut Context,
-) -> TyResult<TypeId> {
+) -> MessageResult<TypeId> {
 	let value = synthesise_ast_type(&borrow_type.value, false, ctx)?;
 	let borrow = BorrowType::new(value, borrow_type.mutable, external);
 	Ok(ctx.type_store.add_type(borrow.into()))

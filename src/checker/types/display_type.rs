@@ -1,6 +1,6 @@
 use super::{
-	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, NumRange, Number,
-	StructType, Type, TypeId, TypeStore,
+	BorrowType, ConstType, ExternFnType, FieldType, FnType, InferType, MethodType, ModuleType,
+	NumRange, Number, StructType, Type, TypeId, TypeStore,
 };
 
 impl Type {
@@ -21,6 +21,7 @@ impl Type {
 			Type::Fn(fn_type) => fn_type.display_type(text, type_store, omit),
 			Type::ExternFn(extern_fn_type) => extern_fn_type.display_type(text, type_store, omit),
 			Type::Struct(struct_type) => struct_type.display_type(text, type_store, omit),
+			Type::Mod(mod_type) => mod_type.display_type(text, type_store, omit),
 		}
 	}
 	pub fn display_ir_type(&self, text: &mut String, type_store: &TypeStore) {
@@ -80,7 +81,7 @@ impl StructType {
 			}
 			*text += &field.name;
 			*text += ": ";
-			*text += &type_store.get_display_type(field.type_id);
+			*text += &type_store.lookup_display_type(field.type_id);
 		}
 		*text += " }";
 	}
@@ -90,7 +91,7 @@ impl FieldType {
 	pub fn display_type(&self, text: &mut String, type_store: &TypeStore) {
 		*text += &self.name;
 		*text += ": ";
-		*text += &type_store.get_display_type(self.type_id);
+		*text += &type_store.lookup_display_type(self.type_id);
 	}
 }
 
@@ -102,11 +103,11 @@ impl MethodType {
 			if i > 0 {
 				*text += ", ";
 			}
-			*text += &type_store.get_display_type(*param);
+			*text += &type_store.lookup_display_type(*param);
 		}
 		*text += ")";
 		*text += " -> ";
-		*text += &type_store.get_display_type(self.ret);
+		*text += &type_store.lookup_display_type(self.ret);
 	}
 }
 
@@ -116,7 +117,7 @@ impl BorrowType {
 		if self.mutable {
 			*text += "mut ";
 		}
-		let value = type_store.get_type(self.value).unwrap();
+		let value = type_store.lookup_type(self.value).unwrap();
 		value.display_type(text, type_store, omit);
 	}
 }
@@ -126,7 +127,7 @@ impl ConstType {
 		// 	ConstKind::Fn => *text += "fn",
 		// 	ConstKind::Del => *text += "del",
 		// }
-		let type_value = type_store.get_type(self.value).unwrap();
+		let type_value = type_store.lookup_type(self.value).unwrap();
 		type_value.display_type(text, type_store, omit);
 	}
 }
@@ -138,11 +139,11 @@ impl FnType {
 			if i > 0 {
 				*text += ", ";
 			}
-			let type_value = type_store.get_type(*arg).unwrap();
+			let type_value = type_store.lookup_type(*arg).unwrap();
 			type_value.display_type(text, type_store, omit);
 		}
 		*text += ") -> ";
-		let type_value = type_store.get_type(self.ret).unwrap();
+		let type_value = type_store.lookup_type(self.ret).unwrap();
 		type_value.display_type(text, type_store, omit);
 	}
 }
@@ -154,7 +155,7 @@ impl ExternFnType {
 			if i > 0 {
 				*text += ", ";
 			}
-			let type_value = type_store.get_type(*arg).unwrap();
+			let type_value = type_store.lookup_type(*arg).unwrap();
 			type_value.display_type(text, type_store, omit);
 		}
 
@@ -162,20 +163,18 @@ impl ExternFnType {
 			*text += ", ...";
 		}
 		*text += ") -> ";
-		let type_value = type_store.get_type(self.ret).unwrap();
+		let type_value = type_store.lookup_type(self.ret).unwrap();
 		type_value.display_type(text, type_store, omit);
 	}
 }
 
 impl NumRange {
 	pub fn display_type(&self, text: &mut String) {
-		// if self.is_float {
-		// 	*text += "f";
-		// } else {
-		// 	*text += "i";
-		// }
-		// *text += "?";
-		self.as_number().display_type(text);
+		let kind = if self.is_float { "float" } else { "integer" };
+		let symbol = if self.is_float { "=" } else { "≤" };
+		let bits = self.bits.to_string();
+		let fmt = format!("{}({}{})", kind, symbol, bits);
+		*text += &fmt;
 	}
 }
 
@@ -210,9 +209,27 @@ impl TypeId {
 			TypeId::F32 => *text += "f32",
 			TypeId::F64 => *text += "f64",
 			_ => {
-				let type_value = type_store.get_type(*self).unwrap();
+				let type_value = type_store.lookup_type(*self).unwrap();
 				type_value.display_type(text, type_store, omit);
 			}
 		}
+	}
+}
+
+impl ModuleType {
+	pub fn display_type(&self, text: &mut String, type_store: &TypeStore, omit: bool) {
+		*text += "mod ";
+		*text += match &self.name {
+			Some(name) => name,
+			None => "<unknown>",
+		};
+		// *text += " { ";
+		// for (i, item) in self.items.iter().enumerate() {
+		// 	if i > 0 {
+		// 		*text += ", ";
+		// 	}
+		// 	*text += &type_store.lookup_display_type(*item);
+		// }
+		// *text += " }";
 	}
 }

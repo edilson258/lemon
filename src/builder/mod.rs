@@ -1,16 +1,19 @@
 pub mod context;
 use std::mem;
 
-use crate::checker::types::TypeStore;
+use crate::checker::events::{Event, EventId};
+use crate::checker::types::{TypeId, TypeStore};
 use crate::ir::{Instr, IR};
-use crate::source::Source;
-use crate::{ast, ir};
+use crate::loader::{Loader, ModId};
+use crate::range::Range;
+use crate::{ast, error_build, ir};
 use context::Context;
 
 mod build_assign_expr;
 mod build_binary_expr;
 mod build_borrow_expr;
 mod build_call_expr;
+mod build_if_expr;
 
 mod build_deref_expr;
 mod build_expr;
@@ -28,7 +31,6 @@ mod build_member_expr;
 mod build_ret_stmt;
 mod build_struct_def_stmt;
 mod build_struct_init_expr;
-mod build_type;
 mod build_type_def_stmt;
 mod build_utils;
 // mod build_const_del_stmt;
@@ -44,31 +46,73 @@ pub struct Builder<'br> {
 	ctx: Context,
 	ir: IR,
 	type_store: &'br TypeStore,
-	source: &'br Source,
+	event: &'br mut Event,
+	loader: &'br mut Loader,
+	mod_id: Option<ModId>,
 }
 
 impl<'br> Builder<'br> {
-	pub fn new(type_store: &'br TypeStore, source: &'br Source) -> Self {
-		Self { ctx: Context::new(), ir: IR::new(), source, type_store }
+	pub fn new(type_store: &'br TypeStore, event: &'br mut Event, loader: &'br mut Loader) -> Self {
+		Self { ctx: Context::new(), event, ir: IR::default(), type_store, loader, mod_id: None }
 	}
 
-	pub fn build(&mut self, program: &mut ast::Program) -> IR {
+	pub fn build(&mut self, mod_id: ModId) -> IR {
+		self.mod_id = Some(mod_id);
+		let mut program = self.loader.take_mod_result(mod_id).unwrap_or_else(|message| {
+			message.report(self.loader);
+		});
+
 		for stmt in program.stmts.iter_mut() {
 			self.build_stmt(stmt);
 		}
+		self.mod_id = None;
 		mem::take(&mut self.ir)
 	}
 
+	#[inline(always)]
+	pub fn mod_id_unchecked(&self) -> ModId {
+		self.mod_id.unwrap_or_else(|| self.internal_error("could not resolve module", self.loader))
+	}
+
+	pub fn lookup_event_type(&self, range: Range) -> TypeId {
+		let event_id = EventId::new(self.mod_id_unchecked(), range);
+		self.event.lookup_type(event_id).unwrap_or_else(|| {
+			self.internal_error_with_range("could not resolve event type", range, self.loader)
+		})
+	}
+
+	pub fn lookup_multi_event_types(&self, range: Range) -> Vec<TypeId> {
+		let event_id = EventId::new(self.mod_id_unchecked(), range);
+		self.event.lookup_multi_types(event_id).cloned().unwrap_or_default()
+	}
+
+	// #[inline(always)]
+	// pub fn lookup_event_drops(&self, _range: Range) -> Option<&FxHashSet<String>> {
+	// 	todo!()
+	// 	// self.event.lookup_drops(event_id)
+	// }
+	fn internal_error(&self, msg: &str, loader: &Loader) -> ! {
+		let m = error_build!("{}", msg);
+		m.note_internal().report(loader);
+	}
+	fn internal_error_with_range(&self, msg: &str, range: Range, loader: &Loader) -> ! {
+		let m = error_build!("{}", msg).mod_id(self.mod_id_unchecked());
+		m.note_internal().range(range).report(loader);
+	}
+
 	pub fn push_function_with_blocks(&mut self, mut function: ir::Function) {
-		let blocks = self.ctx.block.take_blocks();
+		let blocks = self.ctx.current_block.extract_blocks();
 		function.extend_blocks(blocks);
 		self.ir.add_function(function);
 	}
 
 	pub fn drop_local_function_values(&mut self, ret_value: Option<&str>) {
-		for value in self.ctx.get_free_values() {
+		for value in self.ctx.collect_unbound_values() {
 			if ret_value.map(|ret_value| value.value.as_str() != ret_value).unwrap_or(true) {
-				self.ctx.block.add_instr(Instr::Drop(value));
+				let result = self.ctx.current_block.append_instr(Instr::Drop(value));
+				result.unwrap_or_else(|message| {
+					message.mod_id(self.mod_id_unchecked()).report(self.loader);
+				});
 			}
 		}
 	}

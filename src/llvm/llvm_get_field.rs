@@ -1,5 +1,5 @@
 use super::Llvm;
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 use inkwell::types::StructType;
 
 type Pointer<'ll> = inkwell::values::PointerValue<'ll>;

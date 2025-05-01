@@ -1,13 +1,12 @@
-use super::{diags::SyntaxErr, Checker, TyResult};
+use super::{diags::SyntaxErr, CheckResult, Checker};
 use crate::ast;
 
-use super::types::TypeId;
-
 impl Checker<'_> {
-	pub fn check_const_fn_stmt(&mut self, const_fn: &mut ast::ConstFnStmt) -> TyResult<TypeId> {
+	pub fn check_const_fn_stmt(&mut self, c: &mut ast::ConstFnStmt) -> CheckResult {
 		if !self.ctx.is_global_scope() {
-			return Err(SyntaxErr::const_outside_global_scope(const_fn.range.clone()));
+			return Err(SyntaxErr::const_outside_global_scope(c.range));
 		}
-		Ok(TypeId::UNIT)
+		todo!()
+		// Ok(TypedValue::default())
 	}
 }

@@ -1,6 +1,6 @@
 use inkwell::{FloatPredicate, IntPredicate};
 
-use crate::{ir, report::throw_llvm_error};
+use crate::{error_codegen, ir};
 
 use super::Llvm;
 
@@ -27,6 +27,7 @@ impl Llvm<'_> {
 			return self.store(ptr, value);
 		}
 
-		throw_llvm_error(format!("unsupported types for comparison: {}", left.get_type()));
+		let message = error_codegen!("unsupported 'gt' {} to {}", left.get_type(), right.get_type());
+		message.report(self.loader);
 	}
 }

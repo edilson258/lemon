@@ -3,11 +3,14 @@ use crate::{
 	checker::{
 		context::Context,
 		types::{NumRange, TypeId},
-		TyResult,
 	},
+	message::MessageResult,
 };
 
-pub(crate) fn synthesise_literal(literal: &ast::Literal, ctx: &mut Context) -> TyResult<TypeId> {
+pub(crate) fn synthesise_literal(
+	literal: &ast::Literal,
+	ctx: &mut Context,
+) -> MessageResult<TypeId> {
 	match literal {
 		ast::Literal::Number(number) => synthesise_number_literal(number, ctx),
 		ast::Literal::String(string) => Ok(TypeId::STR),
@@ -17,7 +20,10 @@ pub(crate) fn synthesise_literal(literal: &ast::Literal, ctx: &mut Context) -> T
 	}
 }
 
-fn synthesise_number_literal(number: &ast::NumberLiteral, ctx: &mut Context) -> TyResult<TypeId> {
+fn synthesise_number_literal(
+	number: &ast::NumberLiteral,
+	ctx: &mut Context,
+) -> MessageResult<TypeId> {
 	if number.as_dot() {
 		let bits = synthesise_float_bits(number.text.as_str()).unwrap();
 		let float_type = NumRange::new(bits, true);

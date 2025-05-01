@@ -1,4 +1,4 @@
-use crate::{ast, ir::IrBasicValue, report::throw_llvm_error};
+use crate::{ast, ir::IrBasicValue, throw_error};
 
 use super::Builder;
 
@@ -17,13 +17,13 @@ impl Builder<'_> {
 		if literal.as_dot() {
 			#[rustfmt::skip]
   		let value = literal.text.parse::<f64>().unwrap_or_else(|_| {
-  			throw_llvm_error("failed to parse float literal")
+  			throw_error!("failed to parse float literal")
   		});
 			return value.into();
 		}
 		#[rustfmt::skip]
 		let value = literal.text.parse::<i64>().unwrap_or_else(|_| {
-		  throw_llvm_error("failed to parse number literal")
+		  throw_error!("failed to parse number literal")
 		});
 		value.into()
 	}

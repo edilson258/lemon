@@ -19,7 +19,7 @@ impl<'ir> Disassembler<'ir> {
 			output.push_str("...");
 		}
 
-		let type_name = self.type_store.get_display_ir_type(function.ret);
+		let type_name = self.type_store.lookup_display_ir_type(function.ret);
 		output.push_str(&format!("): {} = ", type_name));
 
 		if function.is_extern_function() {
@@ -40,7 +40,7 @@ impl<'ir> Disassembler<'ir> {
 
 	pub fn disassemble_args(&self, bind: &'ir ir::IrBasicValue, output: &mut String) {
 		output.push_str(bind.value.as_str());
-		let type_name = self.type_store.get_display_ir_type(bind.get_type());
+		let type_name = self.type_store.lookup_display_ir_type(bind.get_type());
 		output.push_str(&format!(": {}", type_name));
 	}
 }

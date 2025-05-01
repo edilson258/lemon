@@ -1,24 +1,27 @@
 use crate::{
 	ast::{self, OperatorKind},
 	ir::{self, BinInstr, IrBasicValue},
+	range::Range,
 };
 
 use super::Builder;
 
 impl Builder<'_> {
 	pub fn build_binary_expr(&mut self, binary_expr: &mut ast::BinaryExpr) -> IrBasicValue {
+		let range = binary_expr.get_range();
 		let lhs = self.build_expr(&mut binary_expr.left);
 		let rhs = self.build_expr(&mut binary_expr.right);
 
-		let type_id = self.build_type(binary_expr.get_type_id(), binary_expr.get_range());
-
-		let dest = self.ctx.new_register(type_id);
-
-		let alloc_instr = ir::SallocInstr::new(dest.clone(), type_id);
-		self.ctx.block.add_instr(alloc_instr.into());
-
-		let lhs = self.resolve_value(lhs);
-		let rhs = self.resolve_value(rhs);
+		let type_id = self.lookup_event_type(range);
+		let operator_id = self.lookup_event_type(binary_expr.operator.get_range());
+		let dest = self.ctx.create_register(operator_id);
+		let alloc_instr = ir::SallocInstr::new(dest.clone(), operator_id);
+		let result = self.ctx.current_block.append_instr(alloc_instr.into());
+		result.unwrap_or_else(|message| {
+			message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
+		});
+		let lhs = self.resolve_value(lhs, range).with_new_type(type_id);
+		let rhs = self.resolve_value(rhs, range).with_new_type(type_id);
 
 		let instr = BinInstr::new(dest.clone(), lhs, rhs);
 
@@ -41,16 +44,22 @@ impl Builder<'_> {
 			OperatorKind::SHR => ir::Instr::Shr(instr),
 			_ => todo!("code {:?}", binary_expr.operator.kind),
 		};
-		self.ctx.block.add_instr(instr);
-		self.resolve_value(dest)
+		let result = self.ctx.current_block.append_instr(instr);
+		result.unwrap_or_else(|message| {
+			message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
+		});
+		self.resolve_value(dest, range)
 	}
-	pub fn resolve_value(&mut self, value: IrBasicValue) -> IrBasicValue {
-		if value.is_register() && !self.ctx.is_dont_load(value.value.as_str()) {
-			let register = self.ctx.new_register(value.get_type());
+	pub fn resolve_value(&mut self, value: IrBasicValue, range: Range) -> IrBasicValue {
+		if value.is_register() && !self.ctx.should_skip_loading(value.value.as_str()) {
+			let register = self.ctx.create_register(value.get_type());
 			let instr = ir::UnInstr::new(register.clone(), value.clone());
-			self.ctx.block.add_instr(ir::Instr::Load(instr));
+			let result = self.ctx.current_block.append_instr(ir::Instr::Load(instr));
+			result.unwrap_or_else(|message| {
+				message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
+			});
 			// don't load the value again
-			self.ctx.add_dont_load(register.value.as_str());
+			self.ctx.mark_skip_loading(register.value.as_str());
 			return register;
 		}
 		value

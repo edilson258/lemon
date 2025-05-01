@@ -1,21 +1,24 @@
-use crate::ast::{self};
-
 use super::diags::SyntaxErr;
-use super::types::{Type, TypeId};
-use super::{Checker, TyResult};
+use super::{CheckResult, Checker, ExpectSome, TypedValue};
+use crate::ast;
+
 impl Checker<'_> {
-	pub fn check_deref_expr(&mut self, deref_expr: &mut ast::DerefExpr) -> TyResult<TypeId> {
-		let ref_id = self.check_expr(&mut deref_expr.expr)?;
-		if ref_id.is_known() {
-			let ref_type = self.display_type(ref_id);
-			return Err(SyntaxErr::cannot_dereference(ref_type, deref_expr.get_range()));
+	pub fn check_deref_expr(&mut self, deref_expr: &mut ast::DerefExpr) -> CheckResult {
+		let range = deref_expr.get_range();
+		let reference = self.check_expr(&mut deref_expr.expr).some(range)?;
+
+		if reference.type_id.is_builtin_type() {
+			let ty = self.display_type(reference.type_id);
+			return Err(SyntaxErr::cannot_dereference(ty, range));
 		}
-		let ret_type = self.get_stored_type(ref_id);
-		if let Type::Borrow(borrow) = ret_type {
-			deref_expr.set_type_id(borrow.value);
-			return Ok(borrow.value);
+
+		if let Some(borrow) = self.lookup_stored_borrow(reference.type_id).cloned() {
+			self.register_type(borrow.value, range);
+			let result = TypedValue::new_source(borrow.value, reference.source);
+			return Ok(Some(result));
 		}
-		let ref_type = self.display_type(ref_id);
-		Err(SyntaxErr::cannot_dereference(ref_type, deref_expr.get_range()))
+
+		let ty = self.display_type(reference.type_id);
+		Err(SyntaxErr::cannot_dereference(ty, range))
 	}
 }
