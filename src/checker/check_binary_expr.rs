@@ -4,6 +4,7 @@ use super::{
 use crate::{
 	ast::{self, Operator, OperatorKind},
 	message::MessageResult,
+	range::Range,
 };
 
 impl Checker<'_> {
@@ -13,26 +14,39 @@ impl Checker<'_> {
 
 		let range = binary_expr.get_range();
 		let operator = &binary_expr.operator;
-		let type_id = match operator.kind {
+		let type_id = self.check_binary_operator(left.type_id, right.type_id, operator, range)?;
+		Ok(self.owned_typed_value(type_id))
+	}
+
+	fn check_binary_operator(
+		&mut self,
+		left: TypeId,
+		right: TypeId,
+		operator: &Operator,
+		range: Range,
+	) -> MessageResult<TypeId> {
+		use OperatorKind::*;
+		let left = self.infer_type_from_expected(right, left);
+		let right = self.infer_type_from_expected(left, right);
+		let found_id = match operator.kind {
 			// math
-			OperatorKind::ADD | OperatorKind::SUB | OperatorKind::MUL | OperatorKind::DIV => {
-				self._check_math_operator(left.type_id, right.type_id, operator)?
-			}
+			ADD | SUB | MUL | DIV => self._check_math_operator(left, right, operator)?,
+
 			// compare
-			OperatorKind::GT | OperatorKind::LE | OperatorKind::GE | OperatorKind::EQ => {
-				self.check_cmp_operator(left.type_id, right.type_id, operator)?
+			GT | LE | GE | EQ | LT => {
+				let type_id = self.unify_types(left, right)?.unwrap_or(left);
+				self.register_type(type_id, range);
+				self.register_type(TypeId::BOOL, operator.get_range());
+				return self.check_cmp_operator(left, right, operator);
 			}
-			OperatorKind::LT => self.check_cmp_operator(left.type_id, right.type_id, operator)?,
 
 			// range and mod
-			OperatorKind::RANGE => self._check_range_operator(left.type_id, right.type_id, operator)?,
-			OperatorKind::MOD => self._check_mod_operator(left.type_id, right.type_id, operator)?,
+			RANGE => self._check_range_operator(left, right, operator)?,
+			MOD => self._check_mod_operator(left, right, operator)?,
 
 			// bitwise
-			OperatorKind::AND | OperatorKind::OR | OperatorKind::SHL | OperatorKind::XOR => {
-				self._check_bitwise(left.type_id, right.type_id, operator)?
-			}
-			OperatorKind::SHR => self._check_bitwise(left.type_id, right.type_id, operator)?,
+			AND | OR | SHL | XOR => self._check_bitwise(left, right, operator)?,
+			SHR => self._check_bitwise(left, right, operator)?,
 			_ => todo!(),
 		};
 		self.register_type(type_id, range);
@@ -42,12 +56,10 @@ impl Checker<'_> {
 
 	fn _check_bitwise(
 		&self,
-		_left: TypeId,
-		_right: TypeId,
+		left: TypeId,
+		right: TypeId,
 		operator: &Operator,
 	) -> MessageResult<TypeId> {
-		let left = self.infer_type_from_expected(_right, _left);
-		let right = self.infer_type_from_expected(_left, _right);
 		if !left.is_int_type() || !right.is_int_type() {
 			let (left, right) = self.display_double_type(left, right);
 			return Err(SyntaxErr::unsupported_operator(left, right, operator));
@@ -70,12 +82,10 @@ impl Checker<'_> {
 
 	fn check_cmp_operator(
 		&self,
-		lt: TypeId,
-		rt: TypeId,
+		left: TypeId,
+		right: TypeId,
 		operator: &Operator,
 	) -> MessageResult<TypeId> {
-		let left = self.infer_type_from_expected(rt, lt);
-		let right = self.infer_type_from_expected(lt, rt);
 		if !self.equal_type_id(left, right) {
 			let (left, right) = self.display_double_type(left, right);
 			return Err(SyntaxErr::unsupported_operator(left, right, operator));
@@ -85,12 +95,10 @@ impl Checker<'_> {
 
 	fn _check_math_operator(
 		&self,
-		lt: TypeId,
-		rt: TypeId,
+		left: TypeId,
+		right: TypeId,
 		operator: &Operator,
 	) -> MessageResult<TypeId> {
-		let left = self.infer_type_from_expected(rt, lt);
-		let right = self.infer_type_from_expected(left, rt);
 		if !self.equal_type_id(left, right) {
 			let (left, right) = self.display_double_type(left, right);
 			return Err(SyntaxErr::unsupported_operator(left, right, operator));
@@ -100,13 +108,10 @@ impl Checker<'_> {
 
 	fn _check_mod_operator(
 		&self,
-		lt: TypeId,
-		rt: TypeId,
+		left: TypeId,
+		right: TypeId,
 		operator: &Operator,
 	) -> MessageResult<TypeId> {
-		let left = self.infer_type_from_expected(rt, lt);
-		let right = self.infer_type_from_expected(lt, rt);
-
 		if left.is_float() || right.is_float() {
 			let (left, right) = self.display_double_type(left, right);
 			return Err(SyntaxErr::unsupported_operator(left, right, operator));
