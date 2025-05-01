@@ -14,8 +14,7 @@ impl Checker<'_> {
 
 		let range = binary_expr.get_range();
 		let operator = &binary_expr.operator;
-		let type_id = self.check_binary_operator(left.type_id, right.type_id, operator, range)?;
-		Ok(self.owned_typed_value(type_id))
+		self.check_binary_operator(left.type_id, right.type_id, operator, range)
 	}
 
 	fn check_binary_operator(
@@ -24,7 +23,7 @@ impl Checker<'_> {
 		right: TypeId,
 		operator: &Operator,
 		range: Range,
-	) -> MessageResult<TypeId> {
+	) -> CheckResult {
 		use OperatorKind::*;
 		let left = self.infer_type_from_expected(right, left);
 		let right = self.infer_type_from_expected(left, right);
@@ -49,9 +48,9 @@ impl Checker<'_> {
 			SHR => self._check_bitwise(left, right, operator)?,
 			_ => todo!(),
 		};
-		self.register_type(type_id, range);
+		self.register_type(found_id, range);
 		let owner = self.ctx.borrow.create_owner();
-		Ok(Some(TypedValue::new(type_id, owner)))
+		Ok(Some(TypedValue::new(found_id, owner)))
 	}
 
 	fn _check_bitwise(
@@ -81,16 +80,17 @@ impl Checker<'_> {
 	}
 
 	fn check_cmp_operator(
-		&self,
+		&mut self,
 		left: TypeId,
 		right: TypeId,
 		operator: &Operator,
-	) -> MessageResult<TypeId> {
+	) -> CheckResult {
 		if !self.equal_type_id(left, right) {
 			let (left, right) = self.display_double_type(left, right);
 			return Err(SyntaxErr::unsupported_operator(left, right, operator));
 		}
-		Ok(TypeId::BOOL)
+		let owner = self.ctx.borrow.create_owner();
+		Ok(Some(TypedValue::new(TypeId::BOOL, owner)))
 	}
 
 	fn _check_math_operator(
