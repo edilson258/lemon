@@ -3,19 +3,18 @@ use crate::{
 	ast,
 	loader::{Loader, ModId},
 	message::MessageResult,
+	range::Range,
 };
 
+mod borrow;
 mod comptime;
 pub mod context;
 pub mod events;
-mod ownership;
 pub mod types;
 use context::Context;
-use ownership::{
-	pointer::PtrKind,
-	tracker::{PtrId, PTR_ID_NONE},
-};
-use types::{Type, TypeId};
+use diags::SyntaxErr;
+use typed_value::TypedValue;
+use types::{BorrowType, Type, TypeId};
 mod check_assign_expr;
 mod check_associate_expr;
 mod check_binary_expr;
@@ -46,30 +45,35 @@ mod equal_type;
 mod event;
 mod infer;
 mod synthesis;
+mod typed_value;
 
-pub struct TypedValue {
-	type_id: TypeId,
-	ptr: PtrId,
+type CheckResult = MessageResult<Option<TypedValue>>;
+pub trait ExpectSome<T> {
+	fn expect_some(self, range: Range) -> MessageResult<T>;
+	fn some(self, range: Range) -> MessageResult<T>;
 }
 
-impl TypedValue {
-	pub fn new(type_id: TypeId, ptr: PtrId) -> Self {
-		Self { type_id, ptr }
+impl ExpectSome<TypedValue> for MessageResult<Option<TypedValue>> {
+	fn expect_some(self, range: Range) -> MessageResult<TypedValue> {
+		match self? {
+			Some(value) => Ok(value),
+			None => Err(SyntaxErr::cannot_infer_type(range)),
+		}
 	}
-
-	pub fn change_type(&mut self, type_id: TypeId) {
-		self.type_id = type_id;
-	}
-
-	pub fn is_unit(&self) -> bool {
-		self.type_id == TypeId::UNIT
+	fn some(self, range: Range) -> MessageResult<TypedValue> {
+		self.expect_some(range)
 	}
 }
 
-impl Default for TypedValue {
-	fn default() -> Self {
-		Self { type_id: TypeId::UNIT, ptr: PTR_ID_NONE }
-	}
+#[macro_export]
+macro_rules! expect_some {
+	($opt_result:expr, $range:expr) => {
+		match $opt_result {
+			Ok(Some(value)) => Ok(value),
+			Ok(None) => Err($crate::checker::diags::SyntaxErr::cannot_infer_type($range)),
+			Err(e) => Err(e),
+		}
+	};
 }
 
 pub struct Checker<'ckr> {
@@ -89,27 +93,18 @@ impl<'ckr> Checker<'ckr> {
 		}
 	}
 
-	pub fn check_program(&mut self, mod_id: ModId) -> MessageResult<TypedValue> {
+	pub fn check_program(&mut self, mod_id: ModId) -> CheckResult {
 		self.ctx.add_entry_mod(mod_id);
 		let mut ast = self.loader.lookup_mod_result(mod_id).cloned().unwrap_or_else(|message| {
-			// todo: using throw_error_with_range here...
 			message.report(self.loader);
 		});
 		for stmt in ast.stmts.iter_mut() {
 			self.check_stmt(stmt)?;
 		}
-		Ok(TypedValue::default())
+		Ok(None)
 	}
 
-	#[inline(always)]
-	pub fn ptr_kind(&self, type_id: TypeId) -> PtrKind {
-		if type_id.is_builtin_type() {
-			return PtrKind::Copied;
-		}
-		PtrKind::Owned
-	}
-
-	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> MessageResult<TypedValue> {
+	pub(crate) fn check_stmt(&mut self, stmt: &mut ast::Stmt) -> CheckResult {
 		match stmt {
 			ast::Stmt::Expr(expr) => self.check_expr(expr),
 			ast::Stmt::Let(let_stmt) => self.check_let_stmt(let_stmt),
@@ -127,23 +122,25 @@ impl<'ckr> Checker<'ckr> {
 		}
 	}
 
-	fn get_stored_type(&self, type_id: TypeId) -> &Type {
-		match self.ctx.type_store.get_type(type_id) {
+	fn lookup_stored_type(&self, type_id: TypeId) -> &Type {
+		match self.ctx.type_store.lookup_type(type_id) {
 			Some(type_value) => type_value,
 			None => panic!("error: type not found"), // TODO: error handling
 		}
 	}
 
-	pub fn owned_typed_value(&mut self, type_id: TypeId) -> TypedValue {
-		let ptr = self.ctx.ownership.owned_pointer();
-		TypedValue::new(type_id, ptr)
+	pub fn lookup_stored_borrow(&self, type_id: TypeId) -> Option<&BorrowType> {
+		match self.ctx.type_store.lookup_type(type_id) {
+			Some(Type::Borrow(ref borrow)) => Some(borrow),
+			_ => None,
+		}
 	}
 
-	pub fn get_stored_type_without_borrow(&self, type_id: TypeId) -> &Type {
-		match self.ctx.type_store.get_type(type_id) {
+	pub fn lookup_stored_type_without_borrow(&self, type_id: TypeId) -> &Type {
+		match self.ctx.type_store.lookup_type(type_id) {
 			Some(type_value) => {
 				if let Type::Borrow(borrow) = type_value {
-					return self.get_stored_type_without_borrow(borrow.value);
+					return self.lookup_stored_type_without_borrow(borrow.value);
 				}
 				type_value
 			}
@@ -151,8 +148,8 @@ impl<'ckr> Checker<'ckr> {
 		}
 	}
 
-	pub fn get_stored_mut_type(&mut self, type_id: TypeId) -> &mut Type {
-		match self.ctx.type_store.get_mut_type(type_id) {
+	pub fn lookup_stored_mut_type(&mut self, type_id: TypeId) -> &mut Type {
+		match self.ctx.type_store.lookup_mut_type(type_id) {
 			Some(type_value) => type_value,
 			None => panic!("error: type not found"), // TODO: error handling
 		}
@@ -163,6 +160,7 @@ impl<'ckr> Checker<'ckr> {
 		type_id.display_type(&mut text, &self.ctx.type_store, false);
 		text
 	}
+
 	pub fn display_type_value(&self, type_value: &Type) -> String {
 		if let Type::Struct(struct_type) = type_value {
 			return format!("struct {}", struct_type.name);
@@ -187,5 +185,40 @@ impl<'ckr> Checker<'ckr> {
 		left.display_type(&mut left_text, &self.ctx.type_store, false);
 		right.display_type(&mut right_text, &self.ctx.type_store, false);
 		(left_text, right_text)
+	}
+	pub fn fn_signature(&mut self, f: TypeId, range: Range) -> MessageResult<(Vec<TypeId>, TypeId)> {
+		match self.lookup_stored_type(f).clone() {
+			Type::Fn(info) => Ok((info.args, info.ret)),
+			Type::ExternFn(info) => Ok((info.args, info.ret)),
+			_ => Err(SyntaxErr::not_a_fn(self.display_type(f), range)),
+		}
+	}
+
+	pub fn call_args_match(
+		&mut self,
+		params: &[TypeId],
+		args: &[TypedValue],
+		range: Range,
+	) -> MessageResult<()> {
+		if params.len() != args.len() {
+			return Err(SyntaxErr::wrong_arg_count(params.len(), args.len(), range));
+		}
+		for (i, (p, a)) in params.iter().zip(args).enumerate() {
+			if *p != a.type_id {
+				let exp = self.display_type(*p);
+				let got = self.display_type(a.type_id);
+				// return Err(SyntaxErr::arg_type_mismatch(i, exp, got));
+				return Err(SyntaxErr::type_mismatch(exp, got, range));
+			}
+		}
+		Ok(())
+	}
+
+	pub fn unwrap_typed_value(&mut self, value: Option<TypedValue>, range: Range) -> TypedValue {
+		if let Some(value) = value {
+			return value;
+		}
+		let message = SyntaxErr::cannot_infer_type(range);
+		message.report(self.loader);
 	}
 }

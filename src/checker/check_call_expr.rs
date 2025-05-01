@@ -1,104 +1,82 @@
-use rustc_hash::FxHashSet;
-
-use super::diags::SyntaxErr;
-use super::types::{Type, TypeId};
-use super::{Checker, TypedValue};
+use super::{CheckResult, Checker, ExpectSome, TypedValue};
 use crate::ast::{self};
-use crate::checker::ownership::pointer::PtrKind;
-use crate::message::{Message, MessageResult};
-use crate::range::Range;
+use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_call_expr(&mut self, call_expr: &mut ast::CallExpr) -> MessageResult<TypedValue> {
-		let callee = self.check_expr(&mut call_expr.callee)?;
-		let call_args = self.check_call_args(&mut call_expr.args)?;
-		match self.get_stored_type(callee.type_id).clone() {
-			Type::Fn(fn_type) => {
-				self.args_mismatch(fn_type.args.len(), call_args.len(), call_expr.get_range())?;
-				self.call_args_match(&fn_type.args, &call_args)?;
-				self.register_type(fn_type.ret, call_expr.get_range());
-				self.register_multi_type(fn_type.args, call_expr.get_range());
-				return self.create_return_value(&call_args, fn_type.ret);
-			}
+	pub fn check_call_expr(&mut self, c: &mut ast::CallExpr) -> CheckResult {
+		let callee = self.check_expr(&mut c.callee).some(c.callee.get_range())?;
+		let args = self.check_call_args(&mut c.args)?;
 
-			Type::ExternFn(fn_type) => {
-				if !fn_type.var_packed {
-					self.call_args_match(&fn_type.args, &call_args)?;
-				}
-				self.register_type(fn_type.ret, call_expr.get_range());
-				self.register_multi_type(fn_type.args, call_expr.get_range());
-				return self.create_return_value(&call_args, fn_type.ret);
-			}
-			_ => {}
-		}
-		Err(SyntaxErr::not_a_fn(self.display_type(callee.type_id), call_expr.get_range()))
+		let (params, ret_ty) = self.fn_signature(callee.type_id, c.get_range())?;
+		self.call_args_match(&params, &args, c.get_range())?;
+		self.register_multi_type(params, c.get_range());
+		self.register_type(ret_ty, c.get_range());
+
+		let owner = self.ctx.borrow.create_owner();
+		let value = TypedValue::new(ret_ty, owner);
+		Ok(Some(value))
+		// self.make_ret_value(&args, ret_ty, c.get_range())
 	}
-
-	fn create_return_value(
-		&mut self,
-		call_args: &[(TypedValue, Range)],
-		ret_id: TypeId,
-	) -> MessageResult<TypedValue> {
-		if ret_id.is_builtin_type() {
-			let ptr_kind = self.ptr_kind(ret_id);
-			let ptr_id = self.ctx.ownership.alloc_pointer(ptr_kind);
-			return Ok(TypedValue::new(ret_id, ptr_id));
+	pub fn check_call_args(&mut self, args: &mut [ast::Expr]) -> MessageResult<Vec<TypedValue>> {
+		let mut values = Vec::with_capacity(args.len());
+		for argument in args {
+			let arg_range = argument.get_range();
+			let tv = self.check_expr(argument).some(arg_range)?;
+			self.register_type(tv.type_id, arg_range);
+			values.push(tv);
 		}
-
-		let found = self.get_stored_type(ret_id);
-		if found.is_borrow() || found.is_borrow_mut() {
-			let mut addresses = FxHashSet::default();
-			let kind = if found.is_borrow_mut() { Some(PtrKind::MutableBorrow) } else { None }
-				.unwrap_or(PtrKind::ReadOnlyBorrow);
-
-			for (arg_value, _) in call_args {
-				let arg_value_addr = self.ctx.ownership.lookup_ptr(arg_value.ptr)?;
-				let ptr_kind = arg_value_addr.kind;
-				if ptr_kind.is_mutable_borrow() || ptr_kind.is_read_only_borrow() {
-					addresses.extend(arg_value_addr.addresses.clone());
-				}
-			}
-			if !addresses.is_empty() {
-				let ptr_id = self.ctx.ownership.alloc_pointer_with_addresses(addresses, kind);
-				return Ok(TypedValue::new(ret_id, ptr_id));
-			}
-			let message = Message::error_ownership("cannot return a borrowed value");
-			return Err(message.note_internal());
-		}
-
-		let ptr_id = self.ctx.ownership.owned_pointer();
-		Ok(TypedValue::new(ret_id, ptr_id))
+		Ok(values)
 	}
+	// pub fn make_ret_value(&mut self, args: &[TypedValue], ret: TypeId, span: Range) -> CheckResult {
+	// 	match self.lookup_stored_type(ret) {
+	// 		Type::Borrow(b) => self.ret_borrow(args, b, ret, span),
+	// 		// t if t.is_copy() => Ok(self.ret_copy(ret)),
+	// 		_ => Ok(self.ret_owned(ret)),
+	// 	}
+	// }
 
-	fn check_call_args(
-		&mut self,
-		exprs: &mut [ast::Expr],
-	) -> MessageResult<Vec<(TypedValue, Range)>> {
-		self.ctx.mark_use = true;
-		let mut results = Vec::with_capacity(exprs.len());
-		for expr in exprs {
-			let found = self.check_expr(expr)?;
-			results.push((found, expr.get_range()));
-		}
-		Ok(results)
-	}
+	// // ---------- caso &T / &mut T --------------------------------------
+	// fn ret_borrow(
+	// 	&mut self,
+	// 	args: &[TypedValue],
+	// 	borrow: BorrowType,
+	// 	ret_id: TypeId,
+	// 	span: Range,
+	// ) -> CheckResult {
+	// 	let src_ids = self.collect_borrow_sources(args, &borrow);
 
-	fn call_args_match(
-		&mut self,
-		expects: &[TypeId],
-		founds: &[(TypedValue, Range)],
-	) -> MessageResult<()> {
-		for (expected, (found, range)) in expects.iter().zip(founds) {
-			let found = self.infer_type_from_expected(*expected, found.type_id);
-			self.equal_type_expected(*expected, found, *range)?;
-		}
-		Ok(())
-	}
+	// 	if src_ids.is_empty() {
+	// 		return Err(SyntaxErr::internal("borrow return: no matching argument", span));
+	// 	}
 
-	fn args_mismatch(&self, left: usize, found: usize, range: Range) -> MessageResult<()> {
-		if left != found {
-			return Err(SyntaxErr::args_mismatch(left, found, range));
-		}
-		Ok(())
-	}
+	// 	let kind = if borrow.mutable { RefKind::Mutable } else { RefKind::Shared };
+	// 	let union = self.ctx.borrow.union_borrow(kind, &src_ids);
+
+	// 	Ok(TypedValue::from_borrow(&mut self.ctx.borrow, ret_id, union))
+	// }
+
+	// fn collect_borrow_sources(&self, args: &[TypedValue], borrow: &BorrowType) -> Vec<PtrId> {
+	// 	args
+	// 		.iter()
+	// 		.filter(|tv| tv.type_id == borrow.value)
+	// 		.filter_map(|tv| tv.ptr.as_ref())
+	// 		.filter(|ptr| match (borrow.mutable, ptr.kind) {
+	// 			(true, RefKind::Mutable) | (false, RefKind::Shared) => true,
+	// 			_ => false,
+	// 		})
+	// 		.map(|ptr| ptr.id)
+	// 		.collect()
+	// }
+
+	// fn ret_copy(&mut self, ret_id: TypeId) -> TypedValue {
+	// 	let id = self.ctx.borrow.alloc(RefKind::Copy);
+	// 	let ptr = self.ctx.borrow.get_ref(id);
+	// 	TypedValue::new(ret_id, Some(ptr))
+	// }
+
+	// fn ret_owned(&mut self, ret_id: TypeId) -> TypedValue {
+	// 	let id = self.ctx.borrow.alloc(RefKind::Owned);
+	// 	let ptr = self.ctx.borrow.get_ref(id);
+	// 	TypedValue::new(ret_id, Some(ptr))
+	// }
 }

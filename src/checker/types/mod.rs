@@ -10,7 +10,7 @@ pub use type_id::*;
 
 use crate::loader::ModId;
 
-use super::ownership::tracker::PtrId;
+use super::borrow::ptr::RefId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -373,7 +373,7 @@ impl StructType {
 	pub fn with_fields(&mut self, fields: Vec<FieldType>) {
 		self.fields = fields.into_iter().map(|field| (field.name.clone(), field)).collect();
 	}
-	pub fn add_fn(&mut self, name: String, fn_id: TypeId) {
+	pub fn add_function(&mut self, name: String, fn_id: TypeId) {
 		self.fns.insert(name, fn_id);
 	}
 
@@ -384,7 +384,7 @@ impl StructType {
 	// ceck methods
 	//
 
-	pub fn has_fn(&self, name: &str) -> bool {
+	pub fn has_function(&self, name: &str) -> bool {
 		self.fns.contains_key(name)
 	}
 
@@ -416,13 +416,13 @@ impl StructType {
 pub struct FieldType {
 	pub name: String,
 	pub type_id: TypeId,
-	pub ptr_id: PtrId,
+	pub ptr_id: RefId,
 	pub is_mut: bool,
 	pub is_pub: bool,
 }
 
 impl FieldType {
-	pub fn new(name: String, type_id: TypeId, ptr_id: PtrId) -> Self {
+	pub fn new(name: String, type_id: TypeId, ptr_id: RefId) -> Self {
 		Self { name, type_id, ptr_id, is_mut: false, is_pub: false }
 	}
 }

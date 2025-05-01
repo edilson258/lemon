@@ -1,35 +1,31 @@
 use crate::ast::{self};
 use crate::loader::ModId;
-use crate::message::MessageResult;
 use crate::range::Range;
 
 use super::diags::SyntaxErr;
 use super::types::ModuleType;
-use super::{Checker, TypedValue};
+use super::{CheckResult, Checker};
 
 impl Checker<'_> {
-	pub fn check_import_expr(
-		&mut self,
-		import_expr: &mut ast::ImportExpr,
-	) -> MessageResult<TypedValue> {
+	pub fn check_import_expr(&mut self, import_expr: &mut ast::ImportExpr) -> CheckResult {
 		let filename = import_expr.get_path();
 		let range = import_expr.get_range();
 		let mod_id = match import_expr.mod_id {
 			Some(mod_id) => mod_id,
 			None => return Err(SyntaxErr::not_found_module(filename.as_str(), range)),
 		};
-		if let Some(type_id) = self.ctx.type_store.get_mod(mod_id) {
-			return Ok(TypedValue::new(*type_id, usize::MAX));
+		if let Some(type_id) = self.ctx.type_store.lookup_mod(mod_id) {
+			return Ok(None);
 		}
 		self.ctx.add_mod(mod_id);
 		self.check_mod(mod_id, range)?;
 		let module_type = ModuleType::new(mod_id);
 		let type_id = self.ctx.type_store.add_type(module_type.into());
 		self.ctx.type_store.add_mod(mod_id, type_id);
-		Ok(TypedValue::new(type_id, usize::MAX))
+		Ok(None)
 	}
 
-	pub fn check_mod(&mut self, mod_id: ModId, range: Range) -> MessageResult<TypedValue> {
+	pub fn check_mod(&mut self, mod_id: ModId, range: Range) -> CheckResult {
 		let source = self.loader.lookup_source_unchecked(mod_id).clone();
 		#[rustfmt::skip]
 		let mut ast = self.loader.lookup_mod_result(mod_id).cloned().unwrap_or_else(|message| {
@@ -43,6 +39,6 @@ impl Checker<'_> {
 			}
 		}
 		self.ctx.swap_mod(temp_mod_id);
-		Ok(TypedValue::default())
+		Ok(None)
 	}
 }

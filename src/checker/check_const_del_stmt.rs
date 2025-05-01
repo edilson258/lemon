@@ -1,44 +1,33 @@
-use super::types::TypeId;
 use super::{diags::SyntaxErr, Checker};
-use super::{synthesis, TypedValue};
+use super::{synthesis, CheckResult, ExpectSome};
 use crate::ast;
-use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_const_del_stmt(
-		&mut self,
-		const_del: &mut ast::ConstDelStmt,
-	) -> MessageResult<TypedValue> {
+	pub fn check_const_del_stmt(&mut self, c: &mut ast::ConstDelStmt) -> CheckResult {
+		let range = c.get_range();
+		// todo: allow const del in fn scope and block scope
 		if !self.ctx.is_global_scope() {
-			return Err(SyntaxErr::const_outside_global_scope(const_del.range));
+			return Err(SyntaxErr::const_outside_global_scope(range));
 		}
-		let found = self.check_expr(&mut const_del.expr)?;
-
-		let lexeme = const_del.name.ident.text.clone();
+		let mut found = self.check_expr(&mut c.expr).some(range)?;
+		let lexeme = c.name.ident.text.clone();
 
 		if self.ctx.type_store.is_module(found.type_id) {
-			if const_del.name.ty.is_some() {
-				return Err(SyntaxErr::type_annotation_not_allowed_for_module(const_del.get_range()));
+			if c.name.ty.is_some() {
+				return Err(SyntaxErr::type_annotation_not_allowed_for_module(range));
 			}
-			self.ctx.type_store.add_mod_name(found.type_id, lexeme.as_str());
+			self.ctx.type_store.add_mod_name(found.type_id, &lexeme);
+			return Ok(Some(found));
 		}
 
-		let expect_id = match const_del.name.ty.as_ref() {
+		let expected_type = match c.name.ty.as_ref() {
 			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
 			None => {
-				todo!()
-				// found.change_type(self.infer_default_type(found.type_id));
-				// self.ctx.add_owned_value(lexeme.as_str(), found, false);
-				// self.register_type(found, const_del.get_range());
-				// return Ok(TypeId::UNIT);
+				found.infer_type(self.infer_default_type(found.type_id));
+				found.type_id
 			}
 		};
-		self.register_type(expect_id, const_del.get_range());
-		self.ctx.add_owned_value(lexeme.as_str(), expect_id, false);
-		Ok(TypedValue::default())
-	}
-
-	pub fn check_const_bind(&mut self, const_bind: &mut ast::Binding) -> MessageResult<TypeId> {
-		todo!()
+		self.register_type(expected_type, range);
+		Ok(Some(found))
 	}
 }

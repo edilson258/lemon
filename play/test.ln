@@ -1,6 +1,7 @@
 extern fn printf(fmt: str, ...): i32 = {};
 
 fn println(value: i32) = {
+
   printf("%d\n", value);
 }
 

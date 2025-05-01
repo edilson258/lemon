@@ -32,7 +32,7 @@ impl<'ll> Llvm<'ll> {
 			TypeId::I64 => self.ctx.i64_type().const_int(value, false).into(),
 			TypeId::U64 => self.ctx.i64_type().const_int(value, true).into(),
 			_ => {
-				let display = self.type_store.get_display_type(type_id);
+				let display = self.type_store.lookup_display_type(type_id);
 				error_codegen!("expected integer type, found '{}'", display).report(self.loader)
 			}
 		}
@@ -43,7 +43,7 @@ impl<'ll> Llvm<'ll> {
 			TypeId::F32 => self.ctx.f32_type().const_float(value).into(),
 			TypeId::F64 => self.ctx.f64_type().const_float(value).into(),
 			_ => {
-				let display = self.type_store.get_display_type(type_id);
+				let display = self.type_store.lookup_display_type(type_id);
 				error_codegen!("expected float type, found '{}'", display).report(self.loader)
 			}
 		}

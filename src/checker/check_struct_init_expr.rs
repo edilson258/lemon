@@ -1,13 +1,9 @@
 use super::diags::SyntaxErr;
-use super::{Checker, TypedValue};
+use super::{CheckResult, Checker, ExpectSome, TypedValue};
 use crate::ast;
-use crate::message::MessageResult;
 
 impl Checker<'_> {
-	pub fn check_struct_init_expr(
-		&mut self,
-		init: &mut ast::StructInitExpr,
-	) -> MessageResult<TypedValue> {
+	pub fn check_struct_init_expr(&mut self, init: &mut ast::StructInitExpr) -> CheckResult {
 		let lexeme = init.name.lexeme();
 		let range = init.get_range();
 		let found_id = self.ctx.type_store.lookup_type_definition(lexeme).copied();
@@ -21,7 +17,7 @@ impl Checker<'_> {
 		self.register_type(found_id, range);
 
 		// remove clone :(
-		let mut found_type = self.get_stored_type(found_id).clone();
+		let mut found_type = self.lookup_stored_type(found_id).clone();
 
 		if !found_type.is_struct() {
 			return Err(SyntaxErr::expect_instaced_type(
@@ -39,7 +35,8 @@ impl Checker<'_> {
 		}
 
 		for field_expr in init.fields.iter_mut() {
-			let value = self.check_expr(&mut field_expr.value)?;
+			let value_range = field_expr.value.get_range();
+			let value = self.check_expr(&mut field_expr.value).some(value_range)?;
 			let lexeme = field_expr.name.lexeme();
 			let range = field_expr.name.get_range();
 			if !found_struct_type.has_field(lexeme) {
@@ -57,7 +54,7 @@ impl Checker<'_> {
 			self.equal_type_expected(expect, found, range)?;
 			self.register_type(found, range);
 		}
-		let ptr = self.ctx.ownership.owned_pointer();
-		Ok(TypedValue::new(found_id, ptr))
+		let ptr = self.ctx.borrow.create_owner();
+		Ok(Some(TypedValue::new(found_id, ptr)))
 	}
 }

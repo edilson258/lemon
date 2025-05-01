@@ -9,7 +9,7 @@ impl Disassembler<'_> {
 		if ir_struct.fields.len() <= 5 {
 			output.push_str(&format!("type {} = {{ ", struct_name));
 			for (index, field) in ir_struct.fields.iter().enumerate() {
-				let type_text = self.type_store.get_display_ir_type(*field);
+				let type_text = self.type_store.lookup_display_ir_type(*field);
 				output.push_str(&type_text);
 				if index < ir_struct.fields.len() - 1 {
 					output.push_str(", ");
@@ -20,7 +20,7 @@ impl Disassembler<'_> {
 			let max_wrapper = 3;
 			output.push_str(&format!("type {} = {{\n", struct_name));
 			for (index, field) in ir_struct.fields.iter().enumerate() {
-				let type_text = self.type_store.get_display_ir_type(*field);
+				let type_text = self.type_store.lookup_display_ir_type(*field);
 				output.push_str(&type_text);
 				if index < ir_struct.fields.len() - 1 {
 					output.push_str(", ");

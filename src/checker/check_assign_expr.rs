@@ -1,26 +1,24 @@
 use crate::{
 	ast::{self, MemberExpr},
+	expect_some,
 	message::MessageResult,
 };
 
 use super::{
 	diags::SyntaxErr,
 	types::{Type, TypeId},
-	Checker, TypedValue,
+	CheckResult, Checker, ExpectSome,
 };
 
 impl Checker<'_> {
-	pub fn check_assign_expr(
-		&mut self,
-		assign_expr: &mut ast::AssignExpr,
-	) -> MessageResult<TypedValue> {
-		let found = self.check_expr(&mut assign_expr.right)?;
+	pub fn check_assign_expr(&mut self, assign_expr: &mut ast::AssignExpr) -> CheckResult {
+		let found = self.check_expr(&mut assign_expr.right).some(assign_expr.get_range())?;
 		if self.ctx.type_store.is_module(found.type_id) {
 			return Err(SyntaxErr::cannot_reassign_module(assign_expr.get_range()));
 		}
 		let expected = self.assign_left_expr(&mut assign_expr.left, found.type_id)?;
 		self.register_type(expected, assign_expr.get_range());
-		Ok(TypedValue::default())
+		Ok(Some(found))
 	}
 
 	fn assign_left_expr(&mut self, expr: &mut ast::Expr, found_id: TypeId) -> MessageResult<TypeId> {
@@ -38,9 +36,9 @@ impl Checker<'_> {
 			if !value.mutable {
 				return Err(SyntaxErr::cannot_assign_immutable(lexeme, ident.get_range()));
 			}
-			let found = self.infer_type_from_expected(value.type_id, found);
-			self.equal_type_expected(value.type_id, found, ident.get_range())?;
-			return Ok(value.type_id);
+			let found = self.infer_type_from_expected(value.typed_value.type_id, found);
+			self.equal_type_expected(value.typed_value.type_id, found, ident.get_range())?;
+			return Ok(value.typed_value.type_id);
 		}
 		Err(SyntaxErr::not_found_value(lexeme, ident.get_range()))
 	}
@@ -50,15 +48,16 @@ impl Checker<'_> {
 		deref: &mut ast::DerefExpr,
 		found: TypeId,
 	) -> MessageResult<TypeId> {
-		let expected = self.check_deref_expr(deref)?;
+		let range = deref.get_range();
+		let expected = self.check_deref_expr(deref).expect_some(range)?;
 
 		let (name, mutable) = self.try_mutate_expr(&deref.expr)?;
 		if !mutable {
-			return Err(SyntaxErr::cannot_assign_immutable(&name, deref.get_range()));
+			return Err(SyntaxErr::cannot_assign_immutable(&name, range));
 		}
 
 		let found = self.infer_type_from_expected(expected.type_id, found);
-		self.equal_type_expected(expected.type_id, found, deref.get_range())?;
+		self.equal_type_expected(expected.type_id, found, range)?;
 		Ok(expected.type_id)
 	}
 
@@ -67,9 +66,9 @@ impl Checker<'_> {
 		member: &mut MemberExpr,
 		found: TypeId,
 	) -> MessageResult<TypeId> {
-		let self_type = self.check_expr(&mut member.left)?;
+		let self_type = expect_some!(self.check_expr(&mut member.left), member.left.get_range())?;
 		// todo: don;t clone type
-		let self_type = self.get_stored_type(self_type.type_id).clone();
+		let self_type = self.lookup_stored_type(self_type.type_id).clone();
 		if let Type::Struct(struct_type) = self_type {
 			let lexeme = member.method.lexeme();
 			let field = struct_type.get_field(lexeme);
