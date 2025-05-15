@@ -1,5 +1,5 @@
 use crate::{checker::types::TypeId, throw_error};
-use std::mem;
+use std::{fmt::Display, mem};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BasicValue {
@@ -41,19 +41,39 @@ impl BasicValue {
 pub struct IrBasicValue {
 	pub value: BasicValue,
 	pub type_id: TypeId,
+	pub base_type: Option<TypeId>,
+	pub param: bool,
 }
 
 impl IrBasicValue {
 	pub fn new(value: BasicValue, type_id: TypeId) -> Self {
-		Self { value, type_id }
+		if value.is_register() {
+			return Self { value, type_id, base_type: Some(type_id), param: false };
+		}
+		Self { value, type_id, base_type: None, param: false }
+	}
+
+	pub fn new_register(value: BasicValue, type_id: TypeId, base_type: Option<TypeId>) -> Self {
+		let base_type = Some(base_type.unwrap_or(type_id));
+		Self { value, type_id, base_type, param: false }
 	}
 
 	pub fn with_new_type(&mut self, type_id: TypeId) -> Self {
-		Self { value: mem::take(&mut self.value), type_id }
+		Self { value: mem::take(&mut self.value), type_id, ..self.clone() }
 	}
 
 	pub fn get_type(&self) -> TypeId {
 		self.type_id
+	}
+
+	pub fn as_param(self) -> Self {
+		Self { value: self.value, type_id: self.type_id, base_type: self.base_type, param: true }
+	}
+	pub fn needs_load(&self) -> bool {
+		if self.param {
+			return false;
+		}
+		self.value.is_register() && self.base_type.is_some()
 	}
 
 	pub fn get_value(&self) -> &BasicValue {
@@ -70,6 +90,10 @@ impl IrBasicValue {
 
 	pub fn is_raw_value(&self) -> bool {
 		self.value.is_raw_value()
+	}
+
+	pub fn as_string(&self) -> &str {
+		self.value.as_str()
 	}
 }
 
@@ -97,6 +121,7 @@ impl From<i64> for IrBasicValue {
 }
 
 impl_from!(u64, Int, I64);
+impl_from!(f32, Float, F32);
 impl_from!(f64, Float, F64);
 impl_from!(String, String, STR);
 impl_from!(char, Char, CHAR);
@@ -111,5 +136,44 @@ impl Default for BasicValue {
 impl Default for IrBasicValue {
 	fn default() -> Self {
 		Self::new(BasicValue::None, TypeId::UNIT)
+	}
+}
+
+impl Display for BasicValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Int(value) => write!(f, "{}", value),
+			Self::Float(value) => write!(f, "{}", value),
+			Self::String(value) => write!(f, "\"{}\"", value),
+			Self::Char(value) => write!(f, "{}", value),
+			Self::Bool(value) => write!(f, "{}", value),
+			Self::Register(value) => write!(f, "{}", value),
+			Self::None => write!(f, "None"),
+		}
+	}
+}
+
+impl Display for IrBasicValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match &self.value {
+			BasicValue::Int(value) => write!(f, "{}", value),
+			BasicValue::Float(value) => write!(f, "{}", value),
+			BasicValue::String(value) => write!(f, "\"{}\"", value),
+			BasicValue::Char(value) => write!(f, "{}", value),
+			BasicValue::Bool(value) => write!(f, "{}", value),
+			BasicValue::Register(value) => {
+				if self.base_type.is_some() {
+					let base = self.base_type.unwrap();
+					if base == self.type_id {
+						write!(f, "{}, t_id: {}", value, self.type_id.as_usize())
+					} else {
+						write!(f, "{}, t_id: {}, b_id: {}", value, self.type_id.as_usize(), base.as_usize())
+					}
+				} else {
+					write!(f, "{}, t_id: {}", value, self.type_id.as_usize())
+				}
+			}
+			BasicValue::None => write!(f, "None"),
+		}
 	}
 }

@@ -19,10 +19,7 @@ impl Builder<'_> {
 
 		let instr = ir::JmpIfInstr::new(cond, then_block.into(), otherwise.into());
 		let cond_range = if_expr.cond.get_range();
-		let result = self.ctx.current_block.append_instr(instr.into());
-		result.unwrap_or_else(|message| {
-			message.mod_id(self.mod_id_unchecked()).range(cond_range).report(self.loader)
-		});
+		self.append_instr(instr.into(), Some(cond_range));
 
 		let result = self.ctx.current_block.switch_to_label(then_block);
 		let then_range = if_expr.then.get_range();
@@ -33,10 +30,7 @@ impl Builder<'_> {
 		self.build_stmt(&mut if_expr.then);
 		if !self.ctx.current_block.has_returned {
 			let jump = ir::JmpInstr::new(merge_block.into());
-			let result = self.ctx.current_block.append_instr(jump.into());
-			result.unwrap_or_else(|message| {
-				message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
-			});
+			self.append_instr(jump.into(), Some(then_range));
 		}
 
 		if let Some(otherwise) = &mut if_expr.otherwise {
@@ -49,10 +43,7 @@ impl Builder<'_> {
 
 			if !self.ctx.current_block.has_returned {
 				let jump = ir::JmpInstr::new(merge_block.into());
-				let result = self.ctx.current_block.append_instr(jump.into());
-				result.unwrap_or_else(|message| {
-					message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
-				});
+				self.append_instr(jump.into(), Some(otherwise_range));
 			}
 		}
 		let result = self.ctx.current_block.switch_to_label(merge_block);

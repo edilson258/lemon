@@ -130,11 +130,11 @@ impl JmpInstr {
 	}
 
 	pub fn llvm_label(&self) -> String {
-		format!("lx{}", self.label)
+		format!("blk{}", self.label)
 	}
 
 	pub fn display_label(&self) -> String {
-		format!("l_{}", self.label)
+		format!("blk{}", self.label)
 	}
 }
 #[derive(Debug, Clone)]
@@ -150,25 +150,31 @@ impl JmpIfInstr {
 	}
 
 	pub fn display_true_label(&self) -> String {
-		format!("l_{}", self.true_label)
+		if self.true_label == 1 {
+			return "entry".to_string();
+		}
+		format!("blk{}", self.true_label)
 	}
 
 	pub fn display_false_label(&self) -> String {
 		if self.false_label == 1 {
 			return "entry".to_string();
 		}
-		format!("l_{}", self.false_label)
+		format!("blk{}", self.false_label)
 	}
 
 	pub fn llvm_true_label(&self) -> String {
 		if self.true_label == 1 {
 			return "entry".to_string();
 		}
-		format!("lx{}", self.true_label)
+		format!("blk_{}", self.true_label)
 	}
 
 	pub fn llvm_false_label(&self) -> String {
-		format!("lx{}", self.false_label)
+		if self.false_label == 1 {
+			return "entry".to_string();
+		}
+		format!("blk_{}", self.false_label)
 	}
 }
 #[derive(Debug, Clone)]
@@ -206,7 +212,7 @@ impl IrBlock {
 	}
 
 	pub fn format_label(&self) -> String {
-		format!("l{}", self.label)
+		format!("blk{}", self.label)
 	}
 
 	pub fn llvm_name(&self) -> String {
@@ -214,7 +220,7 @@ impl IrBlock {
 		if self.label == 1 {
 			return "entry".to_string();
 		}
-		format!("lx{}", self.label)
+		format!("blk_{}", self.label)
 	}
 }
 #[derive(Debug, Clone)]

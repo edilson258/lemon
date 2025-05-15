@@ -6,13 +6,9 @@ impl Checker<'_> {
 	pub fn check_struct_init_expr(&mut self, init: &mut ast::StructInitExpr) -> CheckResult {
 		let lexeme = init.name.lexeme();
 		let range = init.get_range();
-		let found_id = self.ctx.type_store.lookup_type_definition(lexeme).copied();
-
-		if found_id.is_none() {
+		let Some(found_id) = self.ctx.type_store.lookup_type_definition(lexeme).copied() else {
 			return Err(SyntaxErr::not_found_type(lexeme, init.name.get_range()));
-		}
-
-		let found_id = found_id.unwrap();
+		};
 
 		self.register_type(found_id, range);
 

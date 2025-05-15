@@ -20,7 +20,7 @@ pub fn synthesise_field(
 	mod_id: ModId,
 ) -> MessageResult<FieldType> {
 	let name = field.lexeme().to_owned();
-	let type_id = synthesise_ast_type(&field.ast_type, false, ctx)?;
+	let type_id = synthesise_ast_type(&field.ast_type, ctx)?;
 	ctx.event.add_type(EventId::new(mod_id, field.get_range()), type_id);
 	// todo: is correct?
 	Ok(FieldType::new(name, type_id, ctx.borrow.create_owner()))

@@ -19,15 +19,11 @@ impl Builder<'_> {
 			None => throw_error!("cannot find a field"),
 		};
 
-		let dest = self.ctx.create_register(field_type);
+		let dest = self.create_basic_value(field_type);
 		// get pointer to field
 		//
 		let instr = ir::GetPtrInstr::new(self_name, self_value, offset, dest.clone());
-		let result = self.ctx.current_block.append_instr(instr.into());
-		result.unwrap_or_else(|message| {
-			message.mod_id(self.mod_id_unchecked()).range(range).report(self.loader)
-		});
-
+		self.append_instr(instr.into(), Some(range));
 		dest
 	}
 }

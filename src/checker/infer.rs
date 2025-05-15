@@ -21,7 +21,7 @@ impl Checker<'_> {
 			return found;
 		}
 		if let Type::NumRange(found_range) = self.lookup_stored_type(found) {
-			return found_range.into();
+			return TypeId::I64;
 		}
 		found
 	}

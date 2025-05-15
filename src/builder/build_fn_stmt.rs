@@ -20,13 +20,7 @@ impl Builder<'_> {
 	pub fn build_bind(&mut self, bind: &mut ast::Binding) -> ir::IrBasicValue {
 		let lexeme = bind.lexeme().to_owned();
 		let kind = self.lookup_event_type(bind.get_range());
-		let value = self.ctx.create_register(kind);
-		// fix: remove this
-		//
-		if !kind.is_str_type() {
-			self.ctx.mark_skip_loading(value.get_value().as_str());
-		}
-
+		let value = self.create_basic_value(kind).as_param();
 		self.ctx.define_local_variable(lexeme, value.clone());
 		value
 	}
@@ -34,13 +28,10 @@ impl Builder<'_> {
 	pub fn build_fn_body(&mut self, body: &mut ast::FnBody) {
 		if let ast::FnBody::Expr(expr) = body {
 			let ret_value = self.build_expr(expr);
-			let result = self.ctx.current_block.append_instr(ir::Instr::Ret(Some(ret_value)));
-			result.unwrap_or_else(|message| {
-				message.mod_id(self.mod_id_unchecked()).range(expr.get_range()).report(self.loader)
-			});
-			if !self.ctx.current_block.has_returned {
-				self.drop_local_function_values(None);
-			}
+			self.append_instr(ir::Instr::Ret(Some(ret_value)), Some(expr.get_range()));
+			// if !self.ctx.current_block.has_returned {
+			// 	self.drop_local_function_values(None);
+			// }
 		}
 		if let ast::FnBody::Block(block) = body {
 			for stmt in block.stmts.iter_mut() {

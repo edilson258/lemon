@@ -1,10 +1,13 @@
-use inkwell::{basic_block::BasicBlock, values::PointerValue};
+use inkwell::{
+	basic_block::BasicBlock,
+	values::{BasicValueEnum, PointerValue},
+};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
 pub struct Scope<'ll> {
 	block_store: FxHashMap<String, BasicBlock<'ll>>,
-	value_store: FxHashMap<String, inkwell::values::BasicValueEnum<'ll>>,
+	value_store: FxHashMap<String, BasicValueEnum<'ll>>,
 	temp_count: u32,
 }
 
@@ -16,7 +19,7 @@ impl<'ll> Scope<'ll> {
 	}
 
 	pub fn get_temp(&mut self) -> String {
-		let name = format!("t{}", self.temp_count);
+		let name = format!("temp_{}", self.temp_count);
 		self.temp_count += 1;
 		name
 	}
@@ -29,11 +32,11 @@ impl<'ll> Scope<'ll> {
 		self.block_store.insert(name.to_string(), block);
 	}
 
-	pub fn get_value(&self, name: &str) -> Option<&inkwell::values::BasicValueEnum<'ll>> {
+	pub fn get_value(&self, name: &str) -> Option<&BasicValueEnum<'ll>> {
 		self.value_store.get(name)
 	}
 
-	pub fn set_value(&mut self, name: &str, value: inkwell::values::BasicValueEnum<'ll>) {
+	pub fn set_value(&mut self, name: &str, value: BasicValueEnum<'ll>) {
 		self.value_store.insert(name.to_string(), value);
 	}
 

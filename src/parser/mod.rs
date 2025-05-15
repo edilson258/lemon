@@ -361,7 +361,7 @@ impl<'p> Parser<'p> {
 	}
 
 	fn parse_expr(&mut self, min_pde: u8) -> MessageResult<ast::Expr> {
-		let mut left = self.parse_primary()?;
+		let mut left = self.parse_primary(false)?;
 		while let Some(operator) = self.match_operator(min_pde)? {
 			let right = self.parse_expr(operator.pde())?;
 			left = ast::Expr::Binary(ast::BinaryExpr::new(Box::new(left), operator, Box::new(right)));
@@ -410,21 +410,24 @@ impl<'p> Parser<'p> {
 		Ok(Some(ast::Operator { kind, range }))
 	}
 
-	fn parse_primary(&mut self) -> MessageResult<ast::Expr> {
+	fn parse_primary(&mut self, parse_once: bool) -> MessageResult<ast::Expr> {
 		let expr = match self.token {
 			Some(Token::Ident) => self.parse_ident().map(ast::Expr::Ident)?,
 			Some(Token::And) => self.parse_borrow_expr().map(ast::Expr::Borrow)?,
-			Some(Token::Star) => self.parse_deref_expr().map(ast::Expr::Deref)?,
 			Some(Token::Char) => self.parse_char().map(ast::Expr::Literal)?,
 			Some(Token::String) => self.parse_string().map(ast::Expr::Literal)?,
 			Some(Token::Fn) => self.parse_fn_expr().map(ast::Expr::Fn)?,
 			Some(Token::If) => self.parse_if_expr().map(ast::Expr::If)?,
 			Some(Token::Import) => self.parse_import_expr().map(ast::Expr::Import)?,
+			Some(Token::Star) => self.parse_deref_expr().map(ast::Expr::Deref)?,
 			Some(Token::Decimal) | Some(Token::Hex) | Some(Token::Bin) => {
 				self.parse_numb().map(ast::Expr::Literal)?
 			}
 			_ => return Err(self.unexpected_token()),
 		};
+		if parse_once {
+			return Ok(expr);
+		}
 		self.parse_right_hand_expr(expr)
 	}
 
@@ -531,14 +534,14 @@ impl<'p> Parser<'p> {
 		if self.match_token(Token::Mut) {
 			mutable = Some(self.expect(Token::Mut)?);
 		}
-		let expr = self.parse_primary()?;
+		let expr = self.parse_primary(true)?;
 		Ok(ast::BorrowExpr { expr: Box::new(expr), range, mutable })
 	}
 
 	// *<expr>
 	fn parse_deref_expr(&mut self) -> MessageResult<ast::DerefExpr> {
 		let range = self.expect(Token::Star)?;
-		let expr = self.parse_primary()?;
+		let expr = self.parse_primary(true)?;
 		Ok(ast::DerefExpr { expr: Box::new(expr), range })
 	}
 
@@ -649,16 +652,17 @@ impl<'p> Parser<'p> {
 
 	fn parse_call_expr(&mut self, callee: ast::Expr) -> MessageResult<ast::Expr> {
 		let mut range = self.expect(Token::LParen)?; // consume '('
-		let mut args = Vec::new();
+		let mut arguments = Vec::new();
 		let generics = vec![];
 		while !self.match_token(Token::RParen) {
-			args.push(self.parse_expr(MIN_PDE)?);
+			let argument = self.parse_expr(MIN_PDE)?;
+			arguments.push(argument);
 			if !self.match_token(Token::RParen) {
 				self.expect(Token::Comma)?;
 			}
 		}
 		range.merge(&self.expect(Token::RParen)?); // consume ')'
-		let call_expr = ast::CallExpr::new(callee, args, range, generics);
+		let call_expr = ast::CallExpr::new(callee, arguments, range, generics);
 		Ok(ast::Expr::Call(call_expr))
 	}
 
@@ -796,13 +800,14 @@ impl<'p> Parser<'p> {
 	}
 
 	fn expect_many(&mut self, tokens: &[Token]) -> MessageResult<Option<Range>> {
-		let mut tokens = tokens.iter().copied();
-		let Some(first) = tokens.next() else {
-			return Ok(None);
-		};
-		tokens
-			.try_fold(self.expect(first)?, |acc, token| Ok(acc.merged_with(&self.expect(token)?)))
-			.map(Some)
+		let mut result: Option<Range> = None;
+		for token in tokens.iter() {
+			result = Some(match result {
+				None => self.expect(*token)?,
+				Some(x) => x.merged_with(&self.expect(*token)?),
+			});
+		}
+		Ok(result)
 	}
 
 	fn expect(&mut self, token: Token) -> MessageResult<Range> {

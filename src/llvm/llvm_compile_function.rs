@@ -42,7 +42,7 @@ impl<'ll> Llvm<'ll> {
 		let args_type = self.create_llvm_param_types(function);
 		// todo: ignore ret type of main function?
 		let ret_type = if function.is_main() { TypeId::I32 } else { function.ret };
-		let ret_type = self.type_store.resolve_borrow_type(ret_type);
+		// let ret_type = self.type_store.resolve_borrow_type(ret_type);
 		if ret_type.is_empty_type() {
 			return self.ctx.void_type().fn_type(&args_type, function.is_variadic_args());
 		}

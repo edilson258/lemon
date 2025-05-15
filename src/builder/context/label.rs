@@ -21,7 +21,7 @@ impl Default for Label {
 
 impl From<Label> for String {
 	fn from(label: Label) -> Self {
-		format!("l{}", label.id)
+		format!("blk_{}", label.id)
 	}
 }
 

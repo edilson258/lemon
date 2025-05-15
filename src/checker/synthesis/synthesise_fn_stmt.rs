@@ -21,7 +21,7 @@ pub fn synthesise_fn_stmt(
 
 	let params = synthesise_fn_binds(&mut fn_stmt.params, ctx, mod_id)?;
 	let ret = match fn_stmt.ret_type.as_ref() {
-		Some(ty) => synthesise_ast_type(ty, false, ctx)?,
+		Some(ty) => synthesise_ast_type(ty, ctx)?,
 		None => TypeId::VOID,
 	};
 	let event_id = EventId::new(mod_id, fn_stmt.get_range());
@@ -44,12 +44,13 @@ pub fn synthesise_generics(
 pub fn synthesise_generic(generic: &mut ast::Generic, ctx: &mut Context) -> MessageResult<TypeId> {
 	let mut bound_type = None;
 	if let Some(bound) = &mut generic.bound {
-		bound_type = Some(synthesise_ast_type(bound, false, ctx)?);
+		bound_type = Some(synthesise_ast_type(bound, ctx)?);
 	};
 	let infered = InferType { id: generic.lexeme(), extend: bound_type };
 	Ok(ctx.type_store.add_infer_type(infered))
 }
 
+#[inline]
 pub fn synthesise_fn_binds(
 	binds: &mut [ast::Binding],
 	ctx: &mut Context,
@@ -65,7 +66,7 @@ pub fn synthesise_binding(
 	mod_id: ModId,
 ) -> MessageResult<TypeId> {
 	if let Some(ty) = &mut binding.ty {
-		let type_id = synthesise_ast_type(ty, true, ctx)?;
+		let type_id = synthesise_ast_type(ty, ctx)?;
 		let event_id = EventId::new(mod_id, binding.get_range());
 		ctx.event.add_type(event_id, type_id);
 		return Ok(type_id);

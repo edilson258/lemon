@@ -11,7 +11,6 @@ pub enum ScopeKind {
 pub struct Scope {
 	kind: ScopeKind,
 	local_variables: FxHashMap<String, IrBasicValue>,
-	skip_loading: FxHashMap<String, bool>,
 	unbound_values: FxHashMap<String, IrBasicValue>,
 }
 
@@ -39,12 +38,9 @@ impl Scope {
 	}
 
 	fn new_with_kind(kind: ScopeKind) -> Self {
-		Self {
-			kind,
-			local_variables: FxHashMap::default(),
-			skip_loading: FxHashMap::default(),
-			unbound_values: FxHashMap::default(),
-		}
+		let local_variables = FxHashMap::default();
+		let unbound_values = FxHashMap::default();
+		Self { kind, local_variables, unbound_values }
 	}
 
 	pub fn return_type(&self) -> Option<TypeId> {
@@ -69,6 +65,7 @@ impl Scope {
 		matches!(self.kind, ScopeKind::Implementation { .. })
 	}
 
+	#[allow(dead_code)]
 	pub fn is_struct_member(&self) -> bool {
 		matches!(self.kind, ScopeKind::StructMember)
 	}
@@ -84,14 +81,6 @@ impl Scope {
 			}
 			_ => None,
 		}
-	}
-
-	pub fn mark_skip_loading(&mut self, key: impl Into<String>) {
-		self.skip_loading.insert(key.into(), true);
-	}
-
-	pub fn should_skip_loading(&self, key: &str) -> bool {
-		self.skip_loading.contains_key(key)
 	}
 
 	pub fn define_local_variable(&mut self, key: String, basic_value: IrBasicValue) {

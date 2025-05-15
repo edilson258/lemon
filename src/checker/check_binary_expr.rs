@@ -49,6 +49,7 @@ impl Checker<'_> {
 			_ => todo!(),
 		};
 		self.register_type(found_id, range);
+		self.register_type(found_id, operator.get_range());
 		let owner = self.ctx.borrow.create_owner();
 		Ok(Some(TypedValue::new(found_id, owner)))
 	}

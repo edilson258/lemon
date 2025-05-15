@@ -6,7 +6,8 @@ fn println(value: i32) = {
 
 fn test(x: i32): i32 = {
   if (x > 5) return x;
-  return 100;
+  let n = x + 1;
+  return n;
 }
 
 fn main() = {

@@ -31,10 +31,9 @@ impl<'ir> Disassembler<'ir> {
 		for (index, block) in function.blocks.iter().enumerate() {
 			self.disassemble_block(block, output);
 			if index != function.blocks.len() - 1 {
-				output.push('\n');
+				output.push_str("\n\n");
 			}
 		}
-
 		output.push_str("\n}\n");
 	}
 

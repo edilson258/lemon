@@ -17,15 +17,15 @@ impl Checker<'_> {
 		let lexeme = fn_stmt.name.lexeme();
 		self.check_exist_function_name(lexeme, range)?;
 
-		let ret_id = fn_type.ret;
-		let fn_arg_types = fn_type.args.clone();
+		let return_id = fn_type.ret;
+		let fn_args_types = fn_type.args.clone();
 		let fn_type_id = self.ctx.type_store.add_type(fn_type.into());
 
 		self.register_function_type(lexeme, fn_type_id, range)?;
-		self.register_type(ret_id, range);
-		self.ctx.enter_scope(ScopeKind::function(ret_id));
+		self.register_type(return_id, range);
+		self.ctx.enter_scope(ScopeKind::function(return_id));
 
-		self.register_fn_parameters(&mut fn_stmt.params, &fn_arg_types)?;
+		self.register_fn_parameters(&mut fn_stmt.params, &fn_args_types)?;
 
 		let ret_value = self.check_fn_body(&mut fn_stmt.body)?;
 
@@ -45,7 +45,7 @@ impl Checker<'_> {
 			let mutable = type_value.is_borrow_mut();
 			let param_name = param.lexeme();
 
-			let owner_id = self.ctx.borrow.create_external_owner();
+			let owner_id = self.ctx.borrow.create_owner();
 			let typed_value = TypedValue::new(*type_id, owner_id);
 			let value = Value::new(typed_value, mutable);
 			self.ctx.add_value(param_name, value);

@@ -30,7 +30,7 @@ impl Checker<'_> {
 	pub fn synthesise_alias(&mut self, type_def: &mut ast::TypeDefStmt) -> CheckResult {
 		let alias_def = type_def.get_alias().unwrap();
 		let lexeme = type_def.lexeme().to_string();
-		let type_id = synthesise_ast_type(alias_def, false, self.ctx)?;
+		let type_id = synthesise_ast_type(alias_def, self.ctx)?;
 		self.ctx.type_store.add_type_definition(lexeme, type_id);
 		Ok(None)
 	}
