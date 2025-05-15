@@ -13,7 +13,7 @@ impl Checker<'_> {
 		}
 
 		if let Some(borrow) = self.lookup_stored_borrow(reference.type_id).cloned() {
-			self.register_type(borrow.value, range);
+			self.register_type(reference.type_id, range);
 			let result = TypedValue::new_source(borrow.value, reference.source);
 			return Ok(Some(result));
 		}

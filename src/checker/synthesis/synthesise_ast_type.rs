@@ -8,11 +8,7 @@ use crate::{
 	message::MessageResult,
 };
 
-pub fn synthesise_ast_type(
-	ast_type: &ast::AstType,
-	extern_borrow: bool,
-	ctx: &mut Context,
-) -> MessageResult<TypeId> {
+pub fn synthesise_ast_type(ast_type: &ast::AstType, ctx: &mut Context) -> MessageResult<TypeId> {
 	match ast_type {
 		AstType::Number(number) => synthesise_number_type(number, ctx),
 		AstType::Float(float) => synthesise_float_type(float, ctx),
@@ -21,7 +17,7 @@ pub fn synthesise_ast_type(
 		AstType::String(string) => Ok(TypeId::STRING),
 		AstType::Str(str_type) => Ok(TypeId::STR),
 		AstType::Fn(fn_type) => synthesise_fn_type(fn_type, ctx),
-		AstType::Borrow(borrow) => synthesise_borrow_type(borrow, extern_borrow, ctx),
+		AstType::Borrow(borrow) => synthesise_borrow_type(borrow, ctx),
 		AstType::Ident(ident) => synthesise_ident_type(ident, ctx),
 		_ => todo!("code {:?}", ast_type),
 	}
@@ -76,23 +72,22 @@ fn synthesise_fn_type(fn_type: &ast::FnType, ctx: &mut Context) -> MessageResult
 	let args = fn_type
 		.params
 		.iter()
-		.map(|param| synthesise_ast_type(param, false, ctx))
+		.map(|param| synthesise_ast_type(param, ctx))
 		.collect::<Result<Vec<_>, _>>()?;
 
 	let ret = match fn_type.ret_type.as_ref() {
-		Some(ty) => synthesise_ast_type(ty, false, ctx)?,
+		Some(ty) => synthesise_ast_type(ty, ctx)?,
 		None => TypeId::VOID,
 	};
 	let fn_type = FnType::new(args, ret);
 	Ok(ctx.type_store.add_type(fn_type.into()))
 }
 
-fn synthesise_borrow_type(
+pub fn synthesise_borrow_type(
 	borrow_type: &ast::BorrowType,
-	external: bool,
 	ctx: &mut Context,
 ) -> MessageResult<TypeId> {
-	let value = synthesise_ast_type(&borrow_type.value, false, ctx)?;
-	let borrow = BorrowType::new(value, borrow_type.mutable, external);
+	let value = synthesise_ast_type(&borrow_type.value, ctx)?;
+	let borrow = BorrowType::new(value, borrow_type.mutable);
 	Ok(ctx.type_store.add_type(borrow.into()))
 }

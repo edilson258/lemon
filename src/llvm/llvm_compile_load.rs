@@ -12,6 +12,6 @@ impl Llvm<'_> {
 			self.env.set_value(binary.dest.value.as_str(), value);
 			return;
 		}
-		error_codegen!("cannot load from non-pointer '{:#?}'", binary.src).report(self.loader);
+		error_codegen!("cannot load from non-pointer '{}'", binary.src).report(self.loader);
 	}
 }

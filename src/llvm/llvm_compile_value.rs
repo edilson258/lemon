@@ -29,7 +29,7 @@ impl<'ll> Llvm<'ll> {
 			TypeId::I32 => self.ctx.i32_type().const_int(value, false).into(),
 			TypeId::U32 => self.ctx.i32_type().const_int(value, true).into(),
 
-			TypeId::I64 => self.ctx.i64_type().const_int(value, false).into(),
+			TypeId::I64 => self.ctx.i32_type().const_int(value, false).into(),
 			TypeId::U64 => self.ctx.i64_type().const_int(value, true).into(),
 			_ => {
 				let display = self.type_store.lookup_display_type(type_id);

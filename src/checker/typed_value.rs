@@ -25,17 +25,22 @@ impl RefSource {
 pub struct TypedValue {
 	pub type_id: TypeId,
 	pub source: RefSource,
+	pub module: bool,
 	// metadata
 	// pub range: Range,
 }
 
 impl TypedValue {
 	pub fn new(type_id: TypeId, owner: RefId) -> Self {
-		Self { type_id, source: RefSource::Single(owner) }
+		Self { type_id, source: RefSource::Single(owner), module: false }
 	}
 
 	pub fn new_source(type_id: TypeId, source: RefSource) -> Self {
-		Self { type_id, source }
+		Self { type_id, source, module: false }
+	}
+
+	pub fn new_module(type_id: TypeId, owner: RefId) -> Self {
+		Self { type_id, source: RefSource::Single(owner), module: true }
 	}
 
 	pub fn infer_type(&mut self, infered: TypeId) {

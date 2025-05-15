@@ -97,11 +97,11 @@ pub struct RefData {
 
 impl RefData {
 	pub fn new(id: RefId, access: RefAccess) -> Self {
-		Self { id, access, state: RefState::default(), origin: RefOrigin::Local }
+		Self { id, access, state: RefState::default(), origin: RefOrigin::External }
 	}
 
-	pub fn new_external(id: RefId, access: RefAccess) -> Self {
-		Self { id, access, state: RefState::default(), origin: RefOrigin::External }
+	pub fn new_local(id: RefId, access: RefAccess) -> Self {
+		Self { id, access, state: RefState::default(), origin: RefOrigin::Local }
 	}
 
 	pub fn new_owned(id: RefId) -> Self {

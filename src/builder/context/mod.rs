@@ -85,6 +85,7 @@ impl Context {
 		self.scope_stack.iter().rev().any(Scope::is_implementation)
 	}
 
+	#[allow(dead_code)]
 	pub fn in_struct_member_scope(&self) -> bool {
 		self.current_scope().is_struct_member()
 	}
@@ -98,9 +99,16 @@ impl Context {
 	}
 
 	pub fn create_register(&mut self, type_id: TypeId) -> IrBasicValue {
-		let register = format!("r{}", self.next_register_id);
+		let register = format!("R{}", self.next_register_id);
 		self.next_register_id += 1;
 		IrBasicValue::new(BasicValue::Register(register), type_id)
+	}
+
+	pub fn create_reference(&mut self, type_id: TypeId, base: Option<TypeId>) -> IrBasicValue {
+		let register = format!("R{}", self.next_register_id);
+		self.next_register_id += 1;
+		let value = BasicValue::Register(register);
+		IrBasicValue::new_register(value, type_id, base)
 	}
 
 	pub fn pop_scope(&mut self) {
@@ -121,14 +129,6 @@ impl Context {
 
 	pub fn lookup_local_variable(&self, name: &str) -> Option<&IrBasicValue> {
 		self.scope_stack.iter().rev().find_map(|scope| scope.lookup_local_variable(name))
-	}
-
-	pub fn mark_skip_loading(&mut self, key: impl Into<String>) {
-		self.current_scope_mut().mark_skip_loading(key);
-	}
-
-	pub fn should_skip_loading(&self, key: &str) -> bool {
-		self.current_scope().should_skip_loading(key)
 	}
 
 	pub fn register_unbound_value(&mut self, value: IrBasicValue) {

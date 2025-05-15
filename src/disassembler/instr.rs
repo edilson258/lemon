@@ -104,6 +104,10 @@ impl<'ir> Disassembler<'ir> {
 		let dest = self.disassemble_basic_value(&instr.dest);
 		let type_name = self.type_store.lookup_display_ir_type(instr.ret_id);
 
+		if instr.dest.type_id.is_empty_type() {
+			output.push_str(&format!("call {} {}({})", type_name, instr.callee, args.join(", ")));
+			return;
+		}
 		let fmt = format!("{} = call {} {}({})", dest, type_name, instr.callee, args.join(", "));
 		output.push_str(&fmt);
 	}

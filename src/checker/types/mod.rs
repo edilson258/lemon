@@ -84,12 +84,7 @@ impl Type {
 	pub fn is_borrow_mut(&self) -> bool {
 		matches!(self, Type::Borrow(BorrowType { mutable: true, .. }))
 	}
-	pub fn is_local_borrow(&self) -> bool {
-		matches!(self, Type::Borrow(BorrowType { external: false, .. }))
-	}
-	pub fn is_external_borrow(&self) -> bool {
-		matches!(self, Type::Borrow(BorrowType { external: true, .. }))
-	}
+
 	pub fn is_const(&self) -> bool {
 		matches!(self, Type::Const(_))
 	}
@@ -266,7 +261,6 @@ impl Number {
 pub struct BorrowType {
 	pub value: TypeId,
 	pub mutable: bool,
-	pub external: bool,
 }
 impl PartialEq for BorrowType {
 	fn eq(&self, other: &Self) -> bool {
@@ -275,20 +269,12 @@ impl PartialEq for BorrowType {
 }
 
 impl BorrowType {
-	pub fn new(value: TypeId, mutable: bool, external: bool) -> Self {
-		Self { value, mutable, external }
+	pub fn new(value: TypeId, mutable: bool) -> Self {
+		Self { value, mutable }
 	}
 
 	pub fn change_value(&mut self, value: TypeId) {
 		self.value = value;
-	}
-
-	pub fn new_external(value: TypeId, mutable: bool) -> Self {
-		Self::new(value, mutable, true)
-	}
-
-	pub fn new_internal(value: TypeId, mutable: bool) -> Self {
-		Self::new(value, mutable, false)
 	}
 }
 

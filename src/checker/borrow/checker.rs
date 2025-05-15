@@ -23,7 +23,7 @@ impl BorrowChecker {
 
 	pub fn create_ref(&mut self, access: RefAccess) -> RefId {
 		let id = RefId(self.arena.len());
-		let data = RefData::new(id, access);
+		let data = RefData::new_local(id, access);
 		self.arena.insert(data)
 	}
 
@@ -33,9 +33,9 @@ impl BorrowChecker {
 		self.arena.insert(data)
 	}
 
-	pub fn create_external_owner(&mut self) -> RefId {
+	pub fn create_local_owner(&mut self) -> RefId {
 		let id = RefId(self.arena.len());
-		let data = RefData::new_external(id, RefAccess::Owner);
+		let data = RefData::new_local(id, RefAccess::Owner);
 		self.arena.insert(data)
 	}
 
@@ -146,8 +146,8 @@ impl BorrowChecker {
 	}
 
 	pub fn can_borrow_immutable(&mut self, value: &TypedValue) -> MessageResult<()> {
-		// let debug = self.dump_tracker_state();
-		// println!("{}", debug);
+		let debug = self.dump_tracker_state();
+		println!("{}", debug);
 		if self.lookup_alive_borrowers(&value.source).any(|id| self.arena[id].access.is_mutable()) {
 			let owner_name = value.source.as_string();
 			let message = error::immutable_while_mutable_exists(owner_name);

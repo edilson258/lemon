@@ -1,6 +1,5 @@
+use crate::ir;
 use rustc_hash::FxHashMap;
-
-use crate::ir::{self};
 #[derive(Debug, Clone)]
 
 pub struct Frame {

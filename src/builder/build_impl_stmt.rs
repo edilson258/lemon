@@ -1,20 +1,16 @@
+use super::Builder;
 use crate::{
 	ast::{FnStmt, ImplStmt},
 	ir,
 };
 
-use super::Builder;
-
 impl Builder<'_> {
 	pub fn build_impl_stmt(&mut self, impl_stmt: &mut ImplStmt) {
 		let self_name = impl_stmt.self_name.lexeme();
+		let self_range = impl_stmt.self_name.get_range();
 		let self_type = self.type_store.lookup_type_definition(self_name).copied();
 		let self_type = self_type.unwrap_or_else(|| {
-			self.internal_error_with_range(
-				"could not resolve type of self",
-				impl_stmt.self_name.get_range(),
-				self.loader,
-			)
+			self.internal_error_with_range("could not resolve type of self", self_range, self.loader)
 		});
 		self.ctx.push_implementation_scope(self_name, self_type);
 

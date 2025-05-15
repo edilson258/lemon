@@ -18,7 +18,7 @@ pub fn synthesise_extren_fn_stmt(
 ) -> MessageResult<ExternFnType> {
 	let params = synthesise_fn_binds(&mut fn_stmt.params, ctx, mod_id)?;
 	let ret = match fn_stmt.ret_type.as_ref() {
-		Some(ty) => synthesise_ast_type(ty, false, ctx)?,
+		Some(ty) => synthesise_ast_type(ty, ctx)?,
 		None => TypeId::VOID,
 	};
 	let event_id = EventId::new(mod_id, fn_stmt.get_range());

@@ -29,7 +29,6 @@ mod check_extern_fn_stmt;
 mod check_fn_stmt;
 mod check_for_stmt;
 mod check_ident_expr;
-mod check_if_expr;
 mod check_if_stmt;
 mod check_impl_stmt;
 mod check_import_expr;
@@ -186,10 +185,14 @@ impl<'ckr> Checker<'ckr> {
 		right.display_type(&mut right_text, &self.ctx.type_store, false);
 		(left_text, right_text)
 	}
-	pub fn fn_signature(&mut self, f: TypeId, range: Range) -> MessageResult<(Vec<TypeId>, TypeId)> {
+	pub fn fn_signature(
+		&mut self,
+		f: TypeId,
+		range: Range,
+	) -> MessageResult<(Vec<TypeId>, TypeId, bool)> {
 		match self.lookup_stored_type(f).clone() {
-			Type::Fn(info) => Ok((info.args, info.ret)),
-			Type::ExternFn(info) => Ok((info.args, info.ret)),
+			Type::Fn(info) => Ok((info.args, info.ret, false)),
+			Type::ExternFn(info) => Ok((info.args, info.ret, info.var_packed)),
 			_ => Err(SyntaxErr::not_a_fn(self.display_type(f), range)),
 		}
 	}
@@ -199,8 +202,9 @@ impl<'ckr> Checker<'ckr> {
 		params: &[TypeId],
 		args: &[TypedValue],
 		range: Range,
+		var_packed: bool,
 	) -> MessageResult<()> {
-		if params.len() != args.len() {
+		if !var_packed && params.len() != args.len() {
 			return Err(SyntaxErr::wrong_arg_count(params.len(), args.len(), range));
 		}
 		for (i, (p, a)) in params.iter().zip(args).enumerate() {

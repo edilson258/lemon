@@ -11,8 +11,7 @@ impl Checker<'_> {
 		}
 		let mut found = self.check_expr(&mut c.expr).some(range)?;
 		let lexeme = c.name.ident.text.clone();
-
-		if self.ctx.type_store.is_module(found.type_id) {
+		if found.module {
 			if c.name.ty.is_some() {
 				return Err(SyntaxErr::type_annotation_not_allowed_for_module(range));
 			}
@@ -21,7 +20,7 @@ impl Checker<'_> {
 		}
 
 		let expected_type = match c.name.ty.as_ref() {
-			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, false, self.ctx)?,
+			Some(ast_type) => synthesis::synthesise_ast_type(ast_type, self.ctx)?,
 			None => {
 				found.infer_type(self.infer_default_type(found.type_id));
 				found.type_id
